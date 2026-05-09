@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compliance Reports - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18; --purple:#9933cc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);display:flex;align-items:center;gap:8px;}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;} .btn-primary:hover{filter:brightness(1.15);}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .btn-run{color:var(--green-text);border-color:var(--green-text);}
+  .btn-run:hover{background:#0a2a14;}
+  .btn-download{color:var(--blue);border-color:var(--blue);}
+  .btn-download:hover{background:#0a1a2a;}
+  .content{padding:12px 16px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:16px;overflow-x:auto;}
+  .schedule-panel{width:340px;flex-shrink:0;}
+  .reports-panel{flex:1;min-width:0;}
+  .on-demand-panel{width:100%;margin-top:4px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-pci{background:#0a1f3a;color:#5ba3e0;}
+  .badge-hipaa{background:#0a1f0a;color:var(--green-text);}
+  .badge-gdpr{background:#2a1a00;color:var(--orange);}
+  .badge-soc2{background:#1a0a2a;color:var(--purple);}
+  .badge-active{background:#0a1f0a;color:var(--green-text);}
+  .badge-inactive{background:#2a2a2a;color:var(--text-secondary);}
+  .on-demand-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+  .form-group{display:flex;flex-direction:column;gap:4px;}
+  .form-group label{font-size:12px;color:var(--text-secondary);}
+  .form-group select,.form-group input{background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .form-group select:focus,.form-group input:focus{border-color:var(--blue);outline:none;}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1f6b33;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;display:none;z-index:9999;}
+  .toast.err{background:#7a0a25;}
+  .running{color:var(--yellow);font-style:italic;font-size:13px;}
+  .reg-card-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:0;}
+  .reg-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:16px 20px;flex:1;min-width:180px;}
+  .reg-card-title{font-size:14px;font-weight:600;margin-bottom:6px;}
+  .reg-card-sub{font-size:12px;color:var(--text-secondary);}
+  .reg-card-pci .reg-card-title{color:#5ba3e0;}
+  .reg-card-hipaa .reg-card-title{color:var(--green-text);}
+  .reg-card-gdpr .reg-card-title{color:var(--orange);}
+  .reg-card-soc2 .reg-card-title{color:var(--purple);}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Compliance Reports</div>
+</div>
+
+<div class="content">
+  <!-- Regulation summary cards -->
+  <div style="width:100%">
+    <div class="reg-card-row" id="reg-cards">
+      <div class="reg-card reg-card-pci"><div class="reg-card-title">PCI-DSS</div><div class="reg-card-sub">Payment Card Industry</div></div>
+      <div class="reg-card reg-card-hipaa"><div class="reg-card-title">HIPAA</div><div class="reg-card-sub">Health Insurance Portability</div></div>
+      <div class="reg-card reg-card-gdpr"><div class="reg-card-title">GDPR</div><div class="reg-card-sub">General Data Protection</div></div>
+      <div class="reg-card reg-card-soc2"><div class="reg-card-title">SOC2</div><div class="reg-card-sub">System & Organisation Controls</div></div>
+    </div>
+  </div>
+
+  <!-- On-demand report -->
+  <div class="panel on-demand-panel">
+    <div class="panel-header">Run On-Demand Report</div>
+    <div class="panel-body">
+      <div class="on-demand-form">
+        <div class="form-group">
+          <label>Regulation</label>
+          <select id="od-regulation">
+            <option>PCI-DSS</option><option>HIPAA</option><option>GDPR</option><option>SOC2</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Lookback (days)</label>
+          <input type="number" id="od-days" value="7" min="1" max="365" style="width:100px">
+        </div>
+        <div class="form-group">
+          <label>Recipients (optional, comma-separated)</label>
+          <input type="text" id="od-recipients" placeholder="user@company.com" style="width:260px">
+        </div>
+        <button class="btn btn-primary" onclick="runOnDemand()" id="od-btn">Generate PDF</button>
+        <span id="od-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled reports -->
+  <div class="panel schedule-panel">
+    <div class="panel-header">Report Schedules</div>
+    <div class="panel-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Regulation</th>
+            <th>Frequency</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="schedule-body">
+          <tr><td colspan="4" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Generated report files -->
+  <div class="panel reports-panel">
+    <div class="panel-header">
+      <span>Generated Reports</span>
+      <button class="btn btn-sm" onclick="loadReports()">Refresh</button>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Regulation</th>
+            <th>Generated</th>
+            <th>Size</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reports-body">
+          <tr><td colspan="5" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function regBadge(r){
+  const m={'PCI-DSS':'badge-pci','HIPAA':'badge-hipaa','GDPR':'badge-gdpr','SOC2':'badge-soc2'};
+  return `<span class="badge ${m[r]||''}">${r}</span>`;
+}
+
+async function loadSchedules(){
+  const res = await fetch('/api/compliance-reports/schedules');
+  const data = await res.json();
+  const rows = data.schedules || [];
+  const tbody = document.getElementById('schedule-body');
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No schedules configured</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td>${regBadge(s.regulation)}</td>
+      <td>${s.frequency}</td>
+      <td>${s.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>'}</td>
+      <td>
+        <button class="btn btn-sm ${s.is_active ? 'btn-delete' : 'btn-run'}" onclick="toggleSchedule(${s.schedule_id},${!s.is_active})">
+          ${s.is_active ? 'Disable' : 'Enable'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function toggleSchedule(id, active){
+  const res = await fetch(`/api/compliance-reports/schedules/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({is_active: active}),
+  });
+  const data = await res.json();
+  if(!res.ok){ showToast(data.detail||'Error', true); return; }
+  showToast(active ? 'Schedule enabled' : 'Schedule disabled');
+  loadSchedules();
+}
+
+async function loadReports(){
+  const res = await fetch('/api/compliance-reports');
+  const data = await res.json();
+  const rows = data.reports || [];
+  const tbody = document.getElementById('reports-body');
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No reports generated yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td style="font-size:12px;font-family:monospace">${r.filename}</td>
+      <td>${regBadge(r.regulation)}</td>
+      <td style="font-size:12px">${r.generated_at}</td>
+      <td style="font-size:12px">${r.size_kb} KB</td>
+      <td><a class="btn btn-sm btn-download" href="/api/compliance-reports/download/${encodeURIComponent(r.filename)}" target="_blank">Download</a></td>
+    </tr>
+  `).join('');
+}
+
+async function runOnDemand(){
+  const regulation = document.getElementById('od-regulation').value;
+  const days       = parseInt(document.getElementById('od-days').value)||7;
+  const recipients = document.getElementById('od-recipients').value.trim();
+  const btn  = document.getElementById('od-btn');
+  const stat = document.getElementById('od-status');
+  btn.disabled = true;
+  stat.className = 'running';
+  stat.textContent = 'Generating…';
+  const res = await fetch('/api/compliance-reports/run', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({regulation, lookback_days: days, recipients}),
+  });
+  const data = await res.json();
+  btn.disabled = false;
+  if(!res.ok){
+    stat.className = '';
+    stat.style.color='var(--red-text)';
+    stat.textContent = data.detail || 'Error';
+    return;
+  }
+  stat.className = '';
+  stat.style.color='var(--green-text)';
+  stat.textContent = `Done: ${data.filename}`;
+  showToast(`Report generated: ${data.filename}`);
+  loadReports();
+}
+
+function showToast(msg, err=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err?' err':'');
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',3500);
+}
+
+loadSchedules();
+loadReports();
+</script>
+</body>
+</html>

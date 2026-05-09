@@ -3407,6 +3407,598 @@ background:#1f4e79;color:#fff;font-size:14px;cursor:pointer;}}
         raise HTTPException(status_code=500, detail=f"Email send failed: {e}")
 
 
+# ---------------------------------------------------------------------------
+# GRC Phase 5: Policy Management UI
+# ---------------------------------------------------------------------------
+
+# ── Page routes ──────────────────────────────────────────────────────────────
+
+@app.get("/grc/policies", response_class=HTMLResponse)
+async def grc_policies_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "firewall_policies.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/grc/audit-log", response_class=HTMLResponse)
+async def grc_audit_log_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "firewall_audit_log.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/grc/compliance-reports", response_class=HTMLResponse)
+async def grc_compliance_reports_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "compliance_reports.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/grc/risk-dashboard", response_class=HTMLResponse)
+async def grc_risk_dashboard_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "risk_dashboard.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/grc/masking-rules", response_class=HTMLResponse)
+async def grc_masking_rules_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "masking_rules.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+# ── Firewall Policies API ────────────────────────────────────────────────────
+
+@app.get("/api/firewall-policies")
+async def api_get_policies(
+    action: str = None, regulation: str = None, is_active: str = None
+):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        conditions = ["1=1"]
+        params = []
+        if action:
+            conditions.append("action=%s"); params.append(action)
+        if regulation:
+            conditions.append("regulation=%s"); params.append(regulation)
+        if is_active is not None:
+            conditions.append("is_active=%s"); params.append(is_active.lower() == "true")
+        cur.execute(
+            f"""SELECT policy_id, policy_name, vendor, action, condition_type,
+                       condition_value, severity, regulation, priority, is_active,
+                       created_at, updated_at
+                FROM config.firewall_policies
+                WHERE {' AND '.join(conditions)}
+                ORDER BY priority, policy_id""",
+            params,
+        )
+        cols = [d[0] for d in cur.description]
+        policies = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("created_at"): d["created_at"] = d["created_at"].isoformat()
+            if d.get("updated_at"): d["updated_at"] = d["updated_at"].isoformat()
+            policies.append(d)
+        return JSONResponse({"policies": policies})
+    except Exception as e:
+        db_write_log(f"api_get_policies failed: {e}", 0, "api_get_policies", "")
+        return JSONResponse({"error": str(e), "policies": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/firewall-policies")
+async def api_create_policy(request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """INSERT INTO config.firewall_policies
+                (policy_name, vendor, action, condition_type, condition_value,
+                 priority, is_active, regulation, severity)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING policy_id""",
+            (
+                data["policy_name"],
+                data.get("vendor", "all"),
+                data.get("action", "ALERT"),
+                data.get("condition_type", "query_pattern"),
+                data.get("condition_value", ""),
+                data.get("priority", 100),
+                data.get("is_active", True),
+                data.get("regulation"),
+                data.get("severity", "MEDIUM"),
+            ),
+        )
+        policy_id = cur.fetchone()[0]
+        conn.commit()
+        from processes.firewall_policy_engine import reload_policy_cache
+        reload_policy_cache()
+        db_write_log(f"Policy created: {data['policy_name']} (id={policy_id})", 0, "api_create_policy", "")
+        return JSONResponse({"message": "Policy created", "policy_id": policy_id})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_create_policy failed: {e}", 0, "api_create_policy", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.put("/api/firewall-policies/{policy_id}")
+async def api_update_policy(policy_id: int, request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        sets, params = [], []
+        for key in ("policy_name", "vendor", "action", "condition_type", "condition_value",
+                    "priority", "is_active", "regulation", "severity"):
+            if key in data:
+                sets.append(f"{key}=%s"); params.append(data[key])
+        if not sets:
+            return JSONResponse({"detail": "Nothing to update"}, status_code=400)
+        sets.append("updated_at=NOW()")
+        params.append(policy_id)
+        cur.execute(f"UPDATE config.firewall_policies SET {', '.join(sets)} WHERE policy_id=%s", params)
+        conn.commit()
+        from processes.firewall_policy_engine import reload_policy_cache
+        reload_policy_cache()
+        db_write_log(f"Policy updated id={policy_id}", 0, "api_update_policy", "")
+        return JSONResponse({"message": "Policy updated"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_update_policy failed: {e}", 0, "api_update_policy", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.delete("/api/firewall-policies/{policy_id}")
+async def api_delete_policy(policy_id: int):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute("DELETE FROM config.firewall_policies WHERE policy_id=%s", (policy_id,))
+        conn.commit()
+        from processes.firewall_policy_engine import reload_policy_cache
+        reload_policy_cache()
+        db_write_log(f"Policy deleted id={policy_id}", 0, "api_delete_policy", "")
+        return JSONResponse({"message": "Policy deleted"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_delete_policy failed: {e}", 0, "api_delete_policy", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/firewall-policies/apply-template")
+async def api_apply_template(request: Request):
+    """Insert the default seed policies for a regulation (skips conflicts)."""
+    data = await request.json()
+    regulation = data.get("regulation", "")
+    if regulation not in ("PCI-DSS", "HIPAA", "GDPR", "SOC2"):
+        return JSONResponse({"detail": "Unknown regulation"}, status_code=400)
+    # (policy_name, action, condition_type, condition_value, priority, severity)
+    _TEMPLATES = {
+        "PCI-DSS": [
+            ("PCI-DSS: Block card data export",  "BLOCK", "query_pattern",
+             r"INTO\s+OUTFILE|INTO\s+DUMPFILE|xp_cmdshell|BULK\s+INSERT",         5,  "CRITICAL"),
+            ("PCI-DSS: Block anonymous logins",  "BLOCK", "user",
+             "anonymous|guest|public",                                             10, "HIGH"),
+            ("PCI-DSS: Alert bulk SELECT",       "ALERT", "query_pattern",
+             r"SELECT.{0,200}(TOP\s+[1-9]\d{3,}|LIMIT\s+[1-9]\d{3,})",           20, "HIGH"),
+            ("PCI-DSS: Mask cardholder columns", "MASK",  "table_name",
+             "credit_card|cardholder|pan|card_number",                             40, "HIGH"),
+        ],
+        "HIPAA": [
+            ("HIPAA: Block PHI export",          "BLOCK", "query_pattern",
+             r"INTO\s+OUTFILE|xp_cmdshell",                                        5,  "CRITICAL"),
+            ("HIPAA: Alert PHI table access",    "ALERT", "table_name",
+             "patient|medical_record|phi|diagnosis|prescription",                  15, "HIGH"),
+            ("HIPAA: Block after-hours SA",      "BLOCK", "time_range",
+             "00:00-06:00",                                                        10, "HIGH"),
+            ("HIPAA: Mask PHI columns",          "MASK",  "table_name",
+             "phi|patient_data|health_record",                                     30, "HIGH"),
+        ],
+        "GDPR": [
+            ("GDPR: Block DROP on PII tables",   "BLOCK", "query_pattern",
+             r"^\s*DROP\s+(TABLE|DATABASE|SCHEMA)",                                5,  "CRITICAL"),
+            ("GDPR: Alert PII column SELECT",    "ALERT", "query_pattern",
+             "ssn|social_security|passport|credit_card|date_of_birth",             20, "MEDIUM"),
+            ("GDPR: Mask PII data",              "MASK",  "table_name",
+             "customers|users|persons|employees",                                  25, "HIGH"),
+            ("GDPR: Alert bulk PII access",      "ALERT", "query_pattern",
+             r"SELECT\s+\*\s+FROM",                                                30, "MEDIUM"),
+        ],
+        "SOC2": [
+            ("SOC2: Block SQL injection",        "BLOCK", "query_pattern",
+             r";\s*DROP|;\s*DELETE|UNION\s+SELECT|' OR '1'='1",                   5,  "CRITICAL"),
+            ("SOC2: Alert sysadmin activity",    "ALERT", "role",
+             "sysadmin|db_owner|DBA|SYSDBA|rdsadmin|sa",                          30, "MEDIUM"),
+            ("SOC2: Alert off-hours admin",      "ALERT", "time_range",
+             "22:00-06:00",                                                        40, "MEDIUM"),
+        ],
+    }
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        added = 0
+        for (name, action, ctype, cvalue, priority, severity) in _TEMPLATES.get(regulation, []):
+            cur.execute(
+                """INSERT INTO config.firewall_policies
+                    (policy_name, vendor, action, condition_type, condition_value,
+                     priority, regulation, severity)
+                   VALUES (%s,'all',%s,%s,%s,%s,%s,%s)
+                   ON CONFLICT DO NOTHING""",
+                (name, action, ctype, cvalue, priority, regulation, severity),
+            )
+            added += cur.rowcount
+        conn.commit()
+        from processes.firewall_policy_engine import reload_policy_cache
+        reload_policy_cache()
+        db_write_log(f"Template applied: {regulation} ({added} policies)", 0, "api_apply_template", "")
+        return JSONResponse({"message": "Template applied", "added": added})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_apply_template failed: {e}", 0, "api_apply_template", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Firewall Audit Log API ───────────────────────────────────────────────────
+
+@app.get("/api/audit-log")
+async def api_audit_log(
+    page: int = 1, page_size: int = 50,
+    action: str = None, server_name: str = None, db_user: str = None,
+    from_dt: str = None, to_dt: str = None,
+):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        conditions = ["1=1"]
+        params = []
+        if action:
+            conditions.append("a.action_taken=%s"); params.append(action)
+        if server_name:
+            conditions.append("a.server_name ILIKE %s"); params.append(f"%{server_name}%")
+        if db_user:
+            conditions.append("a.db_user ILIKE %s"); params.append(f"%{db_user}%")
+        if from_dt:
+            conditions.append("a.event_time >= %s"); params.append(from_dt)
+        if to_dt:
+            conditions.append("a.event_time <= %s"); params.append(to_dt)
+        where = " AND ".join(conditions)
+
+        cur.execute(
+            f"""SELECT COUNT(*) FROM log.firewall_audit_log a
+                LEFT JOIN config.firewall_policies p ON p.policy_id = a.matched_policy
+                WHERE {where}""",
+            params,
+        )
+        total = cur.fetchone()[0]
+
+        offset = (page - 1) * page_size
+        cur.execute(
+            f"""SELECT a.audit_id AS event_id, a.event_time, a.server_name, a.vendor,
+                       a.db_user, a.client_ip, a.db_name, a.action_taken,
+                       p.policy_name, a.regulation, a.risk_score,
+                       left(a.sql_statement, 200) AS sql_statement
+                FROM log.firewall_audit_log a
+                LEFT JOIN config.firewall_policies p ON p.policy_id = a.matched_policy
+                WHERE {where}
+                ORDER BY a.event_time DESC
+                LIMIT %s OFFSET %s""",
+            params + [page_size, offset],
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("event_time"):
+                d["event_time"] = d["event_time"].isoformat()
+            rows.append(d)
+        return JSONResponse({"total": total, "rows": rows})
+    except Exception as e:
+        db_write_log(f"api_audit_log failed: {e}", 0, "api_audit_log", "")
+        return JSONResponse({"error": str(e), "total": 0, "rows": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Compliance Reports API ───────────────────────────────────────────────────
+
+@app.get("/api/compliance-reports/schedules")
+async def api_get_schedules():
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT schedule_id, regulation, frequency, is_active,
+                      recipients, last_run_at
+               FROM config.compliance_report_schedules
+               ORDER BY regulation"""
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("last_run_at"):
+                d["last_run_at"] = d["last_run_at"].isoformat()
+            rows.append(d)
+        return JSONResponse({"schedules": rows})
+    except Exception as e:
+        db_write_log(f"api_get_schedules failed: {e}", 0, "api_get_schedules", "")
+        return JSONResponse({"error": str(e), "schedules": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.put("/api/compliance-reports/schedules/{schedule_id}")
+async def api_update_schedule(schedule_id: int, request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        sets, params = [], []
+        for key in ("is_active", "recipients", "frequency"):
+            if key in data:
+                sets.append(f"{key}=%s"); params.append(data[key])
+        if not sets:
+            return JSONResponse({"detail": "Nothing to update"}, status_code=400)
+        params.append(schedule_id)
+        cur.execute(
+            f"UPDATE config.compliance_report_schedules SET {', '.join(sets)} WHERE schedule_id=%s",
+            params,
+        )
+        conn.commit()
+        return JSONResponse({"message": "Schedule updated"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_update_schedule failed: {e}", 0, "api_update_schedule", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.get("/api/compliance-reports")
+async def api_list_reports():
+    """List generated PDF files in the reports/compliance directory."""
+    import glob as _glob
+    from pathlib import Path
+    report_dir = os.path.join(BASE_DIR, "reports", "compliance")
+    try:
+        pdfs = sorted(Path(report_dir).glob("*.pdf"), key=os.path.getmtime, reverse=True) if os.path.isdir(report_dir) else []
+        reports = []
+        for p in pdfs:
+            name = p.name
+            reg  = "UNKNOWN"
+            for r in ("PCI-DSS", "HIPAA", "GDPR", "SOC2"):
+                if r.lower().replace("-", "_") in name.lower() or r in name.upper():
+                    reg = r; break
+            mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            size  = round(p.stat().st_size / 1024, 1)
+            reports.append({"filename": name, "regulation": reg, "generated_at": mtime, "size_kb": size})
+        return JSONResponse({"reports": reports})
+    except Exception as e:
+        db_write_log(f"api_list_reports failed: {e}", 0, "api_list_reports", "")
+        return JSONResponse({"error": str(e), "reports": []}, status_code=500)
+
+
+@app.get("/api/compliance-reports/download/{filename}")
+async def api_download_report(filename: str):
+    report_dir = os.path.join(BASE_DIR, "reports", "compliance")
+    safe_name  = os.path.basename(filename)
+    path       = os.path.join(report_dir, safe_name)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return FileResponse(path, media_type="application/pdf", filename=safe_name)
+
+
+@app.post("/api/compliance-reports/run")
+async def api_run_report(request: Request):
+    data       = await request.json()
+    regulation = data.get("regulation", "")
+    days       = int(data.get("lookback_days", 7))
+    recipients = data.get("recipients", "")
+    if regulation not in ("PCI-DSS", "HIPAA", "GDPR", "SOC2"):
+        return JSONResponse({"detail": "Unknown regulation"}, status_code=400)
+    try:
+        from processes.compliance_report_generator import run_compliance_report_on_demand
+        pdf_path = run_compliance_report_on_demand(regulation, days, recipients)
+        filename = os.path.basename(pdf_path)
+        db_write_log(f"On-demand report generated: {filename}", 0, "api_run_report", "")
+        return JSONResponse({"message": "Report generated", "filename": filename})
+    except Exception as e:
+        db_write_log(f"api_run_report failed: {e}", 0, "api_run_report", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+
+
+# ── Risk Scores API ──────────────────────────────────────────────────────────
+
+@app.get("/api/risk-scores")
+async def api_risk_scores(
+    min_risk_score: int = 0, server_name: str = None, login_name: str = None
+):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        conditions = ["risk_score >= %s"]
+        params = [min_risk_score]
+        if server_name:
+            conditions.append("server_name ILIKE %s"); params.append(f"%{server_name}%")
+        if login_name:
+            conditions.append("login_name ILIKE %s"); params.append(f"%{login_name}%")
+        cur.execute(
+            f"""SELECT server_name, login_name, risk_score, consecutive_high_risk,
+                       avg_queries_per_hour, avg_duration_secs, avg_logical_reads,
+                       typical_tables, typical_hour_start, typical_hour_end,
+                       last_updated
+                FROM monitoring.user_risk_profiles
+                WHERE {' AND '.join(conditions)}
+                ORDER BY risk_score DESC, login_name""",
+            params,
+        )
+        cols = [d[0] for d in cur.description]
+        users = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("last_updated"):
+                d["last_updated"] = d["last_updated"].isoformat()
+            users.append(d)
+        return JSONResponse({"users": users})
+    except Exception as e:
+        db_write_log(f"api_risk_scores failed: {e}", 0, "api_risk_scores", "")
+        return JSONResponse({"error": str(e), "users": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.get("/api/risk-scores/{server_name}/{login_name}/events")
+async def api_risk_events(server_name: str, login_name: str):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT event_time, risk_score, risk_factors
+               FROM monitoring.user_risk_events
+               WHERE server_name=%s AND login_name=%s
+               ORDER BY event_time DESC LIMIT 20""",
+            (server_name, login_name),
+        )
+        cols = [d[0] for d in cur.description]
+        events = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("event_time"):
+                d["event_time"] = d["event_time"].isoformat()
+            events.append(d)
+        return JSONResponse({"events": events})
+    except Exception as e:
+        db_write_log(f"api_risk_events failed: {e}", 0, "api_risk_events", "")
+        return JSONResponse({"error": str(e), "events": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Masking Rules API ────────────────────────────────────────────────────────
+
+@app.get("/api/masking-rules")
+async def api_get_masking_rules(
+    pii_type: str = None, mask_type: str = None,
+    is_active: str = None, server_name: str = None,
+):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        conditions = ["1=1"]
+        params = []
+        if pii_type:
+            conditions.append("pii_type=%s"); params.append(pii_type)
+        if mask_type:
+            conditions.append("mask_type=%s"); params.append(mask_type)
+        if is_active is not None:
+            conditions.append("is_active=%s"); params.append(is_active.lower() == "true")
+        if server_name:
+            conditions.append("server_name ILIKE %s"); params.append(f"%{server_name}%")
+        cur.execute(
+            f"""SELECT rule_id, server_name, database_name, table_name, column_name,
+                       pii_type, mask_type, allowed_roles, regulation, is_active, updated_at
+                FROM config.masking_rules
+                WHERE {' AND '.join(conditions)}
+                ORDER BY server_name, table_name, column_name""",
+            params,
+        )
+        cols = [d[0] for d in cur.description]
+        rules = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("updated_at"):
+                d["updated_at"] = d["updated_at"].isoformat()
+            rules.append(d)
+        return JSONResponse({"rules": rules})
+    except Exception as e:
+        db_write_log(f"api_get_masking_rules failed: {e}", 0, "api_get_masking_rules", "")
+        return JSONResponse({"error": str(e), "rules": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/masking-rules")
+async def api_create_masking_rule(request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """INSERT INTO config.masking_rules
+                (server_name, database_name, table_name, column_name,
+                 pii_type, mask_type, allowed_roles, regulation)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (server_name, table_name, column_name) DO UPDATE
+                 SET pii_type=EXCLUDED.pii_type, mask_type=EXCLUDED.mask_type,
+                     allowed_roles=EXCLUDED.allowed_roles, regulation=EXCLUDED.regulation,
+                     updated_at=NOW()
+               RETURNING rule_id""",
+            (
+                data["server_name"], data.get("database_name", ""),
+                data["table_name"], data["column_name"],
+                data.get("pii_type", "GENERIC"), data.get("mask_type", "HASH"),
+                data.get("allowed_roles") or [], data.get("regulation"),
+            ),
+        )
+        rule_id = cur.fetchone()[0]
+        conn.commit()
+        from processes.data_masking_engine import reload_rule_cache
+        reload_rule_cache()
+        db_write_log(f"Masking rule upserted id={rule_id}", 0, "api_create_masking_rule", "")
+        return JSONResponse({"message": "Rule saved", "rule_id": rule_id})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_create_masking_rule failed: {e}", 0, "api_create_masking_rule", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.put("/api/masking-rules/{rule_id}")
+async def api_update_masking_rule(rule_id: int, request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        sets, params = [], []
+        for key in ("pii_type", "mask_type", "allowed_roles", "regulation", "is_active",
+                    "server_name", "table_name", "column_name", "database_name"):
+            if key in data:
+                sets.append(f"{key}=%s"); params.append(data[key])
+        if not sets:
+            return JSONResponse({"detail": "Nothing to update"}, status_code=400)
+        sets.append("updated_at=NOW()")
+        params.append(rule_id)
+        cur.execute(f"UPDATE config.masking_rules SET {', '.join(sets)} WHERE rule_id=%s", params)
+        conn.commit()
+        from processes.data_masking_engine import reload_rule_cache
+        reload_rule_cache()
+        db_write_log(f"Masking rule updated id={rule_id}", 0, "api_update_masking_rule", "")
+        return JSONResponse({"message": "Rule updated"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_update_masking_rule failed: {e}", 0, "api_update_masking_rule", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/masking-rules/sync")
+async def api_sync_masking_rules():
+    """Trigger an immediate sync from monitoring.sensitive_schema."""
+    try:
+        from processes.data_masking_engine import sync_masking_rules
+        sync_masking_rules()
+        db_write_log("Masking rules synced via UI", 0, "api_sync_masking_rules", "")
+        return JSONResponse({"message": "Sync complete — rules reloaded from sensitive_schema"})
+    except Exception as e:
+        db_write_log(f"api_sync_masking_rules failed: {e}", 0, "api_sync_masking_rules", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+
+
 # This is the key addition - run the server when the script is executed
 if __name__ == "__main__":
     _ip = get_public_or_ip ()
