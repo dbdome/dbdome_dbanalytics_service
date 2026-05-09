@@ -1,0 +1,39 @@
+{
+  "report": {
+    "title": "Order / Group by",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Order / Group by"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: SQL injection -order / Group by. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select distinct server , query , to_timeStamp(creation_time::bigint/1000) last_request_end_time , avg_elapsed_time duration \r\nFROM monitoring.expensive_queries  where query   ILIKE ANY (ARRAY['%ORDER BY 1%', '%ORDER BY%2'])",
+      "headers": [
+        "server",
+        "query",
+        "last_request_end_time",
+        "duration"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sql_injection_-order_group_by_order_group_by",
+    "html": "rpt_sql_injection_-order_group_by_order_group_by"
+  }
+}

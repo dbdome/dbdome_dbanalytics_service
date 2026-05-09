@@ -1,0 +1,38 @@
+{
+  "report": {
+    "title": "comment based injections",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "comment based injections"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: SQL injection - Comment based. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select   server, to_timestamp(creation_time::bigint/1000) \"end time \"        ,  '(--.*?$|/\\*.*?\\*/)' \"used to truncate the query\"\r\n, QUERY from monitoring.expensive_queries where query  ILIKE ANY (ARRAY['%/*%*/%', '%--%']  )",
+      "headers": [
+        "server",
+        "query",
+        "QUERY"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sql_injection_-_comment_based_comment_based_injections",
+    "html": "rpt_sql_injection_-_comment_based_comment_based_injections"
+  }
+}

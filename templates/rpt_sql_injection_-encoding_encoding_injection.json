@@ -1,0 +1,39 @@
+{
+  "report": {
+    "title": "Encoding injection",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Encoding injection"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: SQL injection -Encoding. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select server , query , to_timeStamp(creation_time::bigint/1000) , avg_elapsed_time duration \r\nFROM monitoring.expensive_queries where query  ILIKE ANY (ARRAY['%0x414243%', '%CHAR(65,66,67)%'])",
+      "headers": [
+        "server",
+        "query",
+        "to_timeStamp(creation_time::bigint/1000)",
+        "duration"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sql_injection_-encoding_encoding_injection",
+    "html": "rpt_sql_injection_-encoding_encoding_injection"
+  }
+}

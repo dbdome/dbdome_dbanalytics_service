@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servers - dbdome</title>
+    <link rel="stylesheet" href="../static/css/serverform_style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* ==========================================================
+         Grafana-style theme override.
+         Loaded after serverform_style.css so these rules win.
+         Color palette taken from Grafana dark theme tokens.
+         ========================================================== */
+      :root {
+        --gf-bg-canvas:     #111217;
+        --gf-bg-primary:    #181b1f;
+        --gf-bg-secondary:  #22252b;
+        --gf-bg-elevated:   #2c3037;
+        --gf-bg-hover:      #2e3034;
+        --gf-text-primary:  #ccccdc;
+        --gf-text-secondary:#9d9da7;
+        --gf-text-disabled: #6c707b;
+        --gf-border-weak:   #34373d;
+        --gf-border-medium: #2c3037;
+        --gf-border-strong: #181b1f;
+        --gf-brand:         #f55f3e;
+        --gf-brand-hover:   #fa6f50;
+        --gf-success:       #1a7f4b;
+        --gf-success-fg:    #6ccf8e;
+        --gf-error:         #c4162a;
+        --gf-error-fg:      #f87171;
+        --gf-warning-fg:    #fade2a;
+        --gf-radius:        2px;
+        --gf-radius-lg:     4px;
+        --gf-shadow-1:      0 1px 2px rgba(0,0,0,0.3);
+        --gf-shadow-2:      0 4px 8px rgba(0,0,0,0.4);
+        --gf-font-sans:     'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--gf-bg-canvas) !important;
+        color: var(--gf-text-primary) !important;
+        font-family: var(--gf-font-sans) !important;
+        font-size: 14px;
+        line-height: 1.5;
+        min-height: 100vh;
+      }
+
+      /* Top app bar - Grafana's slim dark header */
+      .app-header {
+        background: var(--gf-bg-primary) !important;
+        border-bottom: 1px solid var(--gf-border-weak) !important;
+        padding: 12px 24px !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 48px;
+        box-sizing: border-box;
+      }
+      .app-header .brand {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        color: var(--gf-text-primary) !important;
+        letter-spacing: 0.2px;
+        text-transform: lowercase;
+      }
+      .app-header .brand::before {
+        content: "";
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        margin-right: 10px;
+        vertical-align: -5px;
+        background: var(--gf-brand);
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 4px var(--gf-bg-primary), 0 0 0 1px var(--gf-brand);
+      }
+
+      /* Centered card container */
+      .form-container {
+        max-width: 480px !important;
+        margin: 32px auto !important;
+        padding: 0 16px !important;
+      }
+
+      /* The form acts as a Grafana panel/card */
+      .server-form {
+        background: var(--gf-bg-primary) !important;
+        border: 1px solid var(--gf-border-weak) !important;
+        border-radius: var(--gf-radius-lg) !important;
+        padding: 24px !important;
+        box-shadow: var(--gf-shadow-1) !important;
+      }
+
+      .form-title {
+        margin: 0 0 20px 0 !important;
+        font-size: 20px !important;
+        font-weight: 500 !important;
+        color: var(--gf-text-primary) !important;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--gf-border-weak);
+      }
+
+      .form-field {
+        margin-bottom: 14px !important;
+        position: relative;
+      }
+
+      /* Inputs and selects - Grafana style */
+      .form-input,
+      input.form-input,
+      select.form-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 7px 10px !important;
+        height: 32px !important;
+        font-family: var(--gf-font-sans) !important;
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+        color: var(--gf-text-primary) !important;
+        background: var(--gf-bg-secondary) !important;
+        border: 1px solid var(--gf-border-weak) !important;
+        border-radius: var(--gf-radius) !important;
+        outline: none;
+        transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+      }
+
+      .form-input::placeholder { color: var(--gf-text-disabled) !important; }
+
+      .form-input:hover { border-color: var(--gf-text-secondary) !important; }
+      .form-input:focus {
+        border-color: var(--gf-brand) !important;
+        box-shadow: 0 0 0 1px var(--gf-brand) !important;
+      }
+      .form-input:disabled {
+        color: var(--gf-text-disabled) !important;
+        background: var(--gf-bg-primary) !important;
+        cursor: not-allowed;
+      }
+
+      /* Select arrow tweak */
+      select.form-input {
+        -webkit-appearance: none;
+                appearance: none;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%239d9da7' d='M0 0l5 6 5-6z'/></svg>") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 10px center !important;
+        background-size: 10px 6px !important;
+        background-color: var(--gf-bg-secondary) !important;
+        padding-right: 28px !important;
+      }
+
+      /* Buttons - flat Grafana style. Primary = brand orange, secondary = muted. */
+      .primary-btn,
+      button.primary-btn {
+        height: 32px;
+        padding: 0 14px !important;
+        font-family: var(--gf-font-sans) !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: #fff !important;
+        background: var(--gf-brand) !important;
+        border: 1px solid var(--gf-brand) !important;
+        border-radius: var(--gf-radius) !important;
+        cursor: pointer;
+        transition: background-color 120ms ease, border-color 120ms ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .primary-btn:hover { background: var(--gf-brand-hover) !important; border-color: var(--gf-brand-hover) !important; }
+      .primary-btn:focus-visible { outline: 2px solid var(--gf-brand-hover); outline-offset: 1px; }
+      .primary-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+      /* Secondary button (Test Connection) - the page already overrides bg via inline style;
+         we tighten it to Grafana's neutral secondary instead so it doesn't fight the brand color. */
+      #testBtn {
+        background: var(--gf-bg-secondary) !important;
+        border-color: var(--gf-border-weak) !important;
+        color: var(--gf-text-primary) !important;
+      }
+      #testBtn:hover {
+        background: var(--gf-bg-elevated) !important;
+        border-color: var(--gf-text-secondary) !important;
+      }
+
+      /* Result banner under the buttons */
+      #testResult {
+        font-size: 13px !important;
+        font-family: var(--gf-font-sans) !important;
+        padding: 8px 12px !important;
+        border-radius: var(--gf-radius) !important;
+        border: 1px solid var(--gf-border-weak);
+      }
+
+      /* Inline success toast */
+      .success-message {
+        background: var(--gf-bg-primary) !important;
+        border: 1px solid var(--gf-success) !important;
+        color: var(--gf-success-fg) !important;
+        padding: 10px 14px !important;
+        border-radius: var(--gf-radius) !important;
+        font-size: 13px !important;
+        box-shadow: var(--gf-shadow-2);
+      }
+
+      /* Sparkles overlay (kept; just don't let it block the form) */
+      .sparkles-container { pointer-events: none; }
+
+      /* Honour reduced-motion users */
+      @media (prefers-reduced-motion: reduce) {
+        .form-input, .primary-btn { transition: none !important; }
+      }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">dbdome</div>
+    </header>
+
+    <main class="form-container">
+        <form class="server-form" id="serverForm" action="/submit-serverform" method="POST">
+            <h1 class="form-title">Servers</h1>
+
+            <div class="form-field">
+                <select id="add_delete_modify" name="add_delete_modify" class="form-input" required>
+                    <option value="Add">Add</option>
+                    <option value="Update">Update</option>
+                    <option value="Delete">Delete</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <input type="text" id="ipAddress" name="ipAddress" class="form-input" placeholder="IP Address" required>
+            </div>
+
+            <div class="form-field">
+                <input type="text" id="server" name="server" class="form-input" placeholder="Server" required>
+            </div>
+
+            <div class="form-field">
+                <input type="text" id="service_name" name="service_name" class="form-input" placeholder="service_name">
+            </div>
+
+            <div class="form-field">
+                <input type="number" id="port" name="port" class="form-input" placeholder="Port" required>
+            </div>
+
+            <div class="form-field">
+                <select id="dbVendor" name="dbVendor" class="form-input" required>
+                    <option value="mssql">mssql</option>
+                    <option value="Oracle">oracle</option>
+                    <option value="postgres">postgres</option>
+                    <option value="mysql">mysql</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <select id="authType" name="authType" class="form-input" onchange="toggleAuthFields()" required>
+                    <option value="win">win</option>
+                    <option value="sql">sql</option>
+                </select>
+            </div>
+
+            <div id="sqlAuthFields" style="display: none;">
+                <div class="form-field">
+                    <input type="text" id="user" name="user" class="form-input" placeholder="User" required>
+                </div>
+
+                <div class="form-field">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Password" required>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button type="submit" class="primary-btn" id="deployBtn">Submit</button>
+                <button type="button" class="primary-btn" id="testBtn" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="testResult" style="margin-top: 12px; padding: 10px; border-radius: 6px; display: none;"></div>
+        </form>
+    </main>
+
+    <!-- Sparkles Container -->
+    <div id="sparklesContainer" class="sparkles-container"></div>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="success-message">The data has been saved successfully.</div>
+
+    <script src="../static/js/server_form_script.js"></script>
+</body>
+</html>
+
+<script>
+async function testConnection() {
+    const btn = document.getElementById('testBtn');
+    const resultDiv = document.getElementById('testResult');
+
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#22252b';
+    resultDiv.style.color = '#9d9da7';
+    resultDiv.style.borderColor = '#34373d';
+    resultDiv.textContent = 'Connecting...';
+
+    const formData = new FormData();
+    formData.append('ipAddress', document.getElementById('ipAddress').value);
+    formData.append('port', document.getElementById('port').value);
+    formData.append('dbVendor', document.getElementById('dbVendor').value);
+    formData.append('authType', document.getElementById('authType').value);
+    formData.append('user', document.getElementById('user').value || '');
+    formData.append('password', document.getElementById('password').value || '');
+    formData.append('service_name', document.getElementById('service_name').value || '');
+
+    try {
+        const resp = await fetch('/test-connection', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (data.success) {
+            resultDiv.style.background = 'rgba(26, 127, 75, 0.15)';
+            resultDiv.style.borderColor = '#1a7f4b';
+            resultDiv.style.color = '#6ccf8e';
+            resultDiv.textContent = '✅ ' + data.message;
+        } else {
+            resultDiv.style.background = 'rgba(196, 22, 42, 0.15)';
+            resultDiv.style.borderColor = '#c4162a';
+            resultDiv.style.color = '#f87171';
+            resultDiv.textContent = '❌ ' + data.message;
+        }
+    } catch (e) {
+        resultDiv.style.background = 'rgba(196, 22, 42, 0.15)';
+        resultDiv.style.borderColor = '#c4162a';
+        resultDiv.style.color = '#f87171';
+        resultDiv.textContent = '❌ Connection test failed: ' + e.message;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Test Connection';
+}
+
+function toggleAuthFields() {
+    const authType = document.getElementById("authType").value;
+    const sqlAuthFields = document.getElementById("sqlAuthFields");
+
+    if (authType === "sql") {
+        sqlAuthFields.style.display = "block";
+        document.getElementById("user").required = true;
+        document.getElementById("password").required = true;
+    } else {
+        sqlAuthFields.style.display = "none";
+        document.getElementById("user").required = false;
+        document.getElementById("password").required = false;
+    }
+}
+</script>

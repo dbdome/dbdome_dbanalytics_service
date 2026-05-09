@@ -1,0 +1,39 @@
+{
+  "report": {
+    "title": "Already engaged metrics",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Already engaged metrics"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Configuration. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select s.servername , s.is_active , s.server  \"ip address\"    , r.routine_name metric\r\nfrom metrics.servers s \r\nleft outer join   metrics.servers_routines sr on s.row_id = sr.server_id\r\nleft outer join metrics.\"routines\" r on r.row_id = sr.routine_id",
+      "headers": [
+        "servername",
+        "is_active",
+        "address",
+        "metric"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_configuration_already_engaged_metrics",
+    "html": "rpt_configuration_already_engaged_metrics"
+  }
+}

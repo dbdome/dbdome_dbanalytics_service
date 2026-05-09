@@ -1,0 +1,144 @@
+import requests
+from datetime import datetime
+import unittest
+from ..utils.config_dotenv import get_connection_string
+from ..utils.log4dbexpert import db_write_log
+from sqlalchemy import create_engine, func , text
+from sqlalchemy import MetaData, Table
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import MetaData, Table
+import pandas as pd
+
+      
+def send_results(   _server , 
+                            _root_cause_id,
+                            _status, 
+                            _result_count,
+                            _evidence,
+                            _severity, 
+                            impact_score       
+                ):
+    try:
+        root_cause_result_send(
+                            _root_cause_id,
+                            _status, 
+                            _result_count,
+                            _evidence,
+                            _severity, 
+                            impact_score                           
+        )
+
+    except Exception as e:
+        db_write_log(f"❌ root_cause_result_send Request failed:{e}", 0, "root_cause_result_send", "")
+
+    finally:
+                db_write_log(f"✅ root_cause_result_send Request succeeded", 0, "root_cause_result_send", "")
+
+def root_cause_result_send(_server , 
+                            _root_cause_id:str,
+                            _status:str , 
+                            _result_count:int,
+                            _evidence:str,
+                            _severity:str , 
+                            impact_score:int                            
+                           ): 
+    pg_connection_string = get_connection_string()
+    postgres_engine = create_engine(pg_connection_string)
+    metadata = MetaData(schema="monitoring")
+    raw_conn = postgres_engine.raw_connection()
+    try: 
+        p_sql_cmd = f"""      
+                select  value  from config.global_params where key = 'INGEST_API_KEY'            
+                """
+        df = pd.read_sql_query(p_sql_cmd, con=raw_conn)
+        if df.empty:
+            return
+        for _, row in df.iterrows():            
+                        api_key  = row[0]
+
+        p_sql_cmd = f"""      
+                select  value  from config.global_params where key = 'INGEST_URL'            
+                """
+        df = pd.read_sql_query(p_sql_cmd, con=raw_conn)
+        if df.empty:
+            return
+        for _, row in df.iterrows():            
+                        ingest_url  = row[0]
+
+        p_sql_cmd = """
+                select server_id
+                from metrics.servers
+                where server = %s
+                """
+
+        df = pd.read_sql_query(p_sql_cmd, con=raw_conn, params=[_server])        
+        server_id = None
+        if df.empty:
+            return
+        for _, row in df.iterrows():            
+                        server_id  = row[0]
+
+
+ 
+
+ 
+
+        url = ingest_url
+
+        headers = {
+            "accept": "application/json",
+            "X-Ingest-API-Key": f"{api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "server_id": server_id,
+            "results": [
+            {
+                "root_cause_id": _root_cause_id,
+                "status": _status,
+                "result_count": _result_count,
+                "evidence": _evidence,
+                "severity": _severity,
+                "impact_score": impact_score,
+                "checked_at": datetime.utcnow().isoformat() + "Z"
+            }
+        ]
+    }
+
+        response = None
+
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+
+            response.raise_for_status()
+            
+            db_write_log(f"✅ root_cause_result_send Request succeeded", 0, "root_cause_result_send", "")
+            print("Status:", response.status_code)
+            print("Response:", response.json())
+            db_write_log(f"✅ root_cause_result_send Request succeeded:{response.json()}", 0, "root_cause_result_send", "")
+
+        except Exception as e:
+            db_write_log(f"root_cause_result_send failed with error: {e}", 0, "root_cause_result_send", "")
+        except requests.exceptions.Timeout:
+            print("❌ Request timed out")
+            db_write_log(f"❌ Request timed out root_cause_result_send failed with error: {e}", 0, "root_cause_result_send", "")
+
+        except requests.exceptions.HTTPError as e:
+            print("❌ HTTP error:", e)
+            db_write_log(f"❌ HTTP error root_cause_result_send failed with error: {e}", 0, "root_cause_result_send", "")
+            if response is not None:
+                print("Response:", response.text)
+
+        except requests.exceptions.RequestException as e:
+            print("❌ Request failed:", e)
+            db_write_log(f"❌ ❌ Request failed root_cause_result_send failed with error: {e}", 0, "root_cause_result_send", "")
+
+        finally:
+            db_write_log("root_cause_result_send finished successfully", 0, "root_cause_result_send", "")
+            print("🔚 Request finished")
+            raw_conn.close();
+    except Exception as e:
+        db_write_log(f"root_cause_result_send failed with error: {e}", 0, "root_cause_result_send", "")
+    finally:
+          return response

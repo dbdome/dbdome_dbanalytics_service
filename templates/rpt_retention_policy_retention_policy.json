@@ -1,0 +1,39 @@
+{
+  "report": {
+    "title": "Retention policy",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Retention policy"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Retention  policy. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select row_id , server , table_name  , days_to_keep from config.retention_policy",
+      "headers": [
+        "row_id",
+        "server",
+        "table_name",
+        "days_to_keep"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_retention_policy_retention_policy",
+    "html": "rpt_retention_policy_retention_policy"
+  }
+}

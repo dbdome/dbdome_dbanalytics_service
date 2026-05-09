@@ -1,0 +1,36 @@
+{
+  "report": {
+    "title": "Locked accounts",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Locked accounts"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Locked accounts. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select distinct server from monitoring.v_oracle_locked_accounts",
+      "headers": [
+        "server"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_locked_accounts_locked_accounts",
+    "html": "rpt_locked_accounts_locked_accounts"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Connectivity",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Connectivity"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Connectivity. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select * from monitoring.TCP_"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_connectivity_connectivity_13",
+    "html": "rpt_connectivity_connectivity_13"
+  }
+}

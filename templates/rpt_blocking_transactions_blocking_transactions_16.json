@@ -1,0 +1,37 @@
+{
+  "report": {
+    "title": "Blocking transactions",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Blocking transactions"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Blocking transactions. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select distinct   TO_CHAR(to_timestamp(start_time::bigint / 1000 ), 'YYYY-MM-DD') AS \"start time\" from monitoring.v_blocking_transactions\r\norder by TO_CHAR(to_timestamp(start_time::bigint / 1000 ), 'YYYY-MM-DD')",
+      "headers": [
+        ")",
+        "start"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_blocking_transactions_blocking_transactions_16",
+    "html": "rpt_blocking_transactions_blocking_transactions_16"
+  }
+}

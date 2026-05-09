@@ -1,0 +1,38 @@
+{
+  "report": {
+    "title": "Error based injections",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Error based injections"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: SQL injection -Error based injection. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  distinct server , to_timestamp(creation_time::bigint/1000) , query  from monitoring.expensive_queries where query  ILIKE ANY (ARRAY['%CONVERT%', '%CAST%'])",
+      "headers": [
+        "server",
+        "to_timestamp(creation_time::bigint/1000)",
+        "query"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sql_injection_-error_based_injection_error_based_injections",
+    "html": "rpt_sql_injection_-error_based_injection_error_based_injections"
+  }
+}

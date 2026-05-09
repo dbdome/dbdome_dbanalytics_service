@@ -1,0 +1,79 @@
+{
+  "report": {
+    "title": "Sales Performance Report",
+    "author": "Analytics Team",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "my_database",
+    "user": "postgres",
+    "password": "your_password"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Executive Summary"
+    },
+    {
+      "type": "text",
+      "content": "This report provides an overview of sales performance for the current quarter."
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Sales by Region"
+    },
+    {
+      "type": "table",
+      "query": "SELECT region, SUM(sales_amount) as total_sales, COUNT(*) as num_orders FROM sales GROUP BY region ORDER BY total_sales DESC",
+      "headers": ["Region", "Total Sales", "Number of Orders"],
+      "format": {
+        "Total Sales": "currency"
+      }
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Monthly Trends"
+    },
+    {
+      "type": "chart",
+      "chart_type": "line",
+      "query": "SELECT DATE_TRUNC('month', order_date) as month, SUM(sales_amount) as total FROM sales WHERE order_date >= CURRENT_DATE - INTERVAL '12 months' GROUP BY month ORDER BY month",
+      "x_column": "month",
+      "y_column": "total",
+      "title": "Sales Trend - Last 12 Months",
+      "x_label": "Month",
+      "y_label": "Sales ($)",
+      "caption": "Monthly sales performance over the past year"
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Top Products"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "SELECT product_name, SUM(quantity) as total_qty FROM sales GROUP BY product_name ORDER BY total_qty DESC LIMIT 10",
+      "x_column": "product_name",
+      "y_column": "total_qty",
+      "title": "Top 10 Products by Quantity Sold",
+      "x_label": "Product",
+      "y_label": "Quantity",
+      "caption": "Best-selling products by quantity"
+    },
+    {
+      "type": "text",
+      "query": "SELECT COUNT(DISTINCT customer_id) as customer_count FROM sales WHERE order_date >= CURRENT_DATE - INTERVAL '30 days'",
+      "template": "In the last 30 days, we served {customer_count} unique customers."
+    }
+  ],
+  "output": {
+    "pdf": "/mnt/user-data/outputs/sales_report.pdf",
+    "html": "/mnt/user-data/outputs/sales_report.html"
+  }
+}

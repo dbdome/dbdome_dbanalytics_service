@@ -1,0 +1,40 @@
+{
+  "report": {
+    "title": "Take action",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Take action"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Take Action. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select row_id , action_name, action_description, server, case when is_active  = true then 'Enabled' else 'disabled' end  Enabled  from config.action_types\r\nwhere  server != 'unknown'\r\norder by server , action_name",
+      "headers": [
+        "row_id",
+        "action_name",
+        "action_description",
+        "server",
+        "Enabled"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_take_action_take_action",
+    "html": "rpt_take_action_take_action"
+  }
+}

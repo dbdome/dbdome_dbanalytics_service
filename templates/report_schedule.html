@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Report Scheduling - dbdome</title>
+<style>
+  :root {
+    --bg-canvas: #111217;
+    --bg-primary: #181b1f;
+    --bg-secondary: #22252b;
+    --border: #343436;
+    --text-primary: rgb(204, 204, 220);
+    --text-secondary: rgba(204, 204, 220, 0.65);
+    --text-emphasis: #ffffff;
+    --blue: #33a2e5;
+    --blue-base: #3d71d9;
+    --green: #1a7f4b;
+    --green-text: #6ccf8e;
+    --red: #d10e5c;
+    --red-text: #ff5286;
+    --yellow: #ecbb13;
+    --orange: #eb7b18;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Inter, Helvetica, Arial, sans-serif; background: var(--bg-canvas); color: var(--text-primary); }
+
+  /* Navbar */
+  .navbar {
+    background: var(--bg-primary); height: 52px;
+    display: flex; align-items: center; padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .navbar-brand {
+    font-size: 18px; font-weight: 500; color: var(--text-emphasis);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .navbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 16px; }
+  .navbar-title { font-size: 16px; color: var(--text-primary); }
+
+  /* Layout */
+  .page-layout {
+    display: flex; gap: 12px; padding: 12px; align-items: flex-start;
+    flex-wrap: wrap; justify-content: center;
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--bg-primary); border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .panel-header {
+    padding: 10px 16px; font-size: 14px; font-weight: 500;
+    color: var(--text-emphasis); border-bottom: 1px solid var(--border);
+  }
+  .panel-body { padding: 16px; }
+
+  /* Form */
+  .form-panel { width: 480px; }
+  .table-panel { width: 760px; max-height: 80vh; overflow-y: auto; }
+
+  .field-group { margin-bottom: 14px; }
+  .field-label {
+    display: block; font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 4px; font-weight: 500;
+  }
+
+  select, input, textarea {
+    width: 100%; padding: 8px 10px;
+    background: var(--bg-secondary); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--blue); }
+  select option { background: var(--bg-secondary); color: var(--text-primary); }
+  textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 12px; }
+
+  .radio-group { display: flex; gap: 16px; padding: 6px 0; }
+  .radio-option {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-primary); font-size: 13px; cursor: pointer;
+  }
+  .radio-option input { width: 14px; height: 14px; accent-color: var(--blue); }
+
+  .btn-primary {
+    background: var(--blue-base); color: #fff; border: none;
+    padding: 8px 20px; border-radius: 4px; cursor: pointer;
+    font-size: 13px; font-weight: 500; font-family: inherit;
+    width: 100%; margin-top: 8px;
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+
+  .btn-sm {
+    background: transparent; color: var(--blue); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 3px; cursor: pointer;
+    font-size: 11px; font-family: inherit;
+  }
+  .btn-sm:hover { background: var(--bg-secondary); }
+  .btn-danger { color: var(--red-text); border-color: var(--red-text); }
+  .btn-danger:hover { background: rgba(209, 14, 92, 0.1); }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th {
+    padding: 8px 10px; text-align: left;
+    background: var(--bg-secondary); color: var(--text-secondary);
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 7px 10px; border-bottom: 1px solid var(--border);
+    color: var(--text-primary); vertical-align: top;
+  }
+  .data-table tr:hover td { background: rgba(51, 162, 229, 0.04); }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 600;
+  }
+  .badge-active { background: rgba(26, 127, 75, 0.2); color: var(--green-text); }
+  .badge-inactive { background: rgba(209, 14, 92, 0.15); color: var(--red-text); }
+  .badge-daily { background: rgba(236, 187, 19, 0.15); color: var(--yellow); }
+  .badge-json { background: rgba(51, 162, 229, 0.15); color: var(--blue); }
+
+  .success-toast {
+    position: fixed; top: 60px; right: 20px;
+    background: var(--bg-secondary); border: 1px solid var(--green-text);
+    border-radius: 4px; padding: 12px 20px; color: var(--green-text);
+    font-size: 13px; font-weight: 500; opacity: 0;
+    transform: translateX(100px); transition: all 0.3s ease; z-index: 100;
+  }
+  .success-toast.show { opacity: 1; transform: translateX(0); }
+
+  .text-truncate {
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; display: inline-block;
+  }
+
+  .empty-state {
+    text-align: center; padding: 40px; color: var(--text-secondary);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/dbdome" class="navbar-brand" style="text-decoration:none; color:inherit;">
+    <img src="/static/images/dbdome_logo.png" alt="dbdome" style="height:28px" />
+    dbdome
+  </a>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Report Scheduling</div>
+</nav>
+
+<div class="page-layout">
+  <!-- Form Panel -->
+  <div class="panel form-panel">
+    <div class="panel-header">Configure Report Schedule</div>
+    <div class="panel-body">
+      <form id="reportForm" method="POST" action="/submit-report-schedule">
+
+        <div class="field-group">
+          <label class="field-label">Report</label>
+          <select id="report_id" name="report_id" required>
+            <option value="" disabled selected>Select a report...</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Schedule</label>
+          <select id="schedule" name="schedule" required>
+            <option value="" disabled selected>Select schedule...</option>
+            <option value="daily">Daily</option>
+            <option value="hourly">Hourly</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="once">Run Once</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Run At (time)</label>
+          <input type="time" id="occurs_at" name="occurs_at" value="06:00" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Recipients (comma-separated emails)</label>
+          <input type="text" id="recipients" name="recipients" placeholder="user@example.com, admin@example.com" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Report Type</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="report_type" value="json" checked />
+              <span>JSON Template</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="report_type" value="query" />
+              <span>SQL Query</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field-group" id="queryGroup" style="display:none;">
+          <label class="field-label">SQL Query</label>
+          <textarea id="report_query" name="report_query" placeholder="SELECT ..."></textarea>
+        </div>
+
+        <div class="field-group" id="urlGroup">
+          <label class="field-label">JSON Template Path</label>
+          <input type="text" id="report_url" name="report_url" placeholder="templates/report_name.json" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Active</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="is_active" value="true" checked />
+              <span>Active</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="is_active" value="false" />
+              <span>Inactive</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">Save Report Schedule</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Table Panel -->
+  <div class="panel table-panel">
+    <div class="panel-header">Configured Reports</div>
+    <div class="panel-body">
+      <table class="data-table" id="reportsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Report Name</th>
+            <th>Schedule</th>
+            <th>Time</th>
+            <th>Recipients</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reportsBody">
+          <tr><td colspan="8" class="empty-state">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="success-toast" id="toast"></div>
+
+<script>
+// Toggle query/url fields based on report type
+document.querySelectorAll('input[name="report_type"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('queryGroup').style.display = r.value === 'query' ? 'block' : 'none';
+    document.getElementById('urlGroup').style.display = r.value === 'json' ? 'block' : 'none';
+  });
+});
+
+// Load reports on page load
+async function loadReports() {
+  try {
+    const resp = await fetch('/api/report-schedules');
+    const data = await resp.json();
+
+    // Populate report dropdown
+    const sel = document.getElementById('report_id');
+    sel.innerHTML = '<option value="" disabled selected>Select a report...</option>' +
+      '<option value="new">+ Create New Report</option>';
+    data.reports.forEach(r => {
+      sel.innerHTML += `<option value="${r.row_id}">${r.report_name}</option>`;
+    });
+
+    // Populate table
+    const tbody = document.getElementById('reportsBody');
+    if (!data.schedules || data.schedules.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No scheduled reports configured yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.schedules.map(s => `
+      <tr>
+        <td>${s.report_id}</td>
+        <td>${s.report_name}</td>
+        <td><span class="badge badge-daily">${s.occurance || '-'}</span></td>
+        <td>${s.occurs_at || '-'}</td>
+        <td><span class="text-truncate">${s.recipients || '-'}</span></td>
+        <td><span class="badge badge-json">${s.report_url ? 'JSON' : 'SQL'}</span></td>
+        <td><span class="badge ${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn-sm" onclick="editReport(${s.report_id})">Edit</button>
+          <button class="btn-sm btn-danger" onclick="toggleReport(${s.report_id}, ${!s.is_active})">${s.is_active ? 'Disable' : 'Enable'}</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    console.error('Failed to load reports:', e);
+  }
+}
+
+// Show new report name field when "Create New" is selected
+document.getElementById('report_id').addEventListener('change', function() {
+  const existing = document.querySelector('.new-name-group');
+  if (this.value === 'new') {
+    if (!existing) {
+      const div = document.createElement('div');
+      div.className = 'field-group new-name-group';
+      div.innerHTML = '<label class="field-label">New Report Name</label><input type="text" name="report_name" placeholder="My Report Name" required />';
+      this.parentElement.after(div);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
+});
+
+// Form submit
+document.getElementById('reportForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  try {
+    const resp = await fetch('/submit-report-schedule', {
+      method: 'POST',
+      body: new URLSearchParams(formData)
+    });
+    const result = await resp.json();
+    showToast(result.message || 'Report schedule saved');
+    loadReports();
+    this.reset();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+});
+
+async function toggleReport(reportId, active) {
+  try {
+    const resp = await fetch('/api/toggle-report', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({report_id: reportId, is_active: active})
+    });
+    loadReports();
+    showToast(active ? 'Report activated' : 'Report deactivated');
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+function editReport(reportId) {
+  document.getElementById('report_id').value = reportId;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+loadReports();
+</script>
+</body>
+</html>

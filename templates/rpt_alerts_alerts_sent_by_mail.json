@@ -1,0 +1,49 @@
+{
+  "report": {
+    "title": "Alerts Sent by Mail",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Alerts Sent by Mail"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Alerts. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "SELECT mal.server, COALESCE(d.name, '') AS domain, COALESCE(a.name, '') AS area, COALESCE(i.name, '') AS issue, mal.metric_name AS root_cause_id, COALESCE(rc.name, mal.metric_name) AS root_cause, COALESCE(ds.expected->>'severity', 'medium') AS severity, mal.recipients, mal.entry_date AT TIME ZONE 'Asia/Jerusalem' AS sent_at FROM alerts.mail_alert_log mal LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = mal.metric_name LEFT JOIN rootcause.issues i ON i.issue_id = rc.issue_id LEFT JOIN rootcause.domains d ON d.code = i.domain_code LEFT JOIN rootcause.areas a ON a.code = i.area_code AND a.database_type_code = i.database_type_code LEFT JOIN rootcause.detection_paths dp ON dp.root_cause_id = mal.metric_name AND dp.is_active = true LEFT JOIN rootcause.detection_path_steps dps ON dps.detection_path_id = dp.id AND dps.sequence = 1 LEFT JOIN rootcause.detection_steps ds ON ds.id = dps.detection_step_id WHERE mal.entry_date >= $__timeFrom() AND mal.entry_date <= $__timeTo() ORDER BY mal.entry_date DESC",
+      "headers": [
+        "server",
+        "name",
+        "domain",
+        "name",
+        "area",
+        "name",
+        "issue",
+        "root_cause_id",
+        "name",
+        "root_cause",
+        "expected->>'severity",
+        "severity",
+        "recipients",
+        "sent_at"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_alerts_alerts_sent_by_mail",
+    "html": "rpt_alerts_alerts_sent_by_mail"
+  }
+}

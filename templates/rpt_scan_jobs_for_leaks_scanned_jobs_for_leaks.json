@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Scanned jobs for leaks",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Scanned jobs for leaks"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Scan jobs for leaks. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  * from monitoring.v_scan_jobs_for_leak"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_scan_jobs_for_leaks_scanned_jobs_for_leaks",
+    "html": "rpt_scan_jobs_for_leaks_scanned_jobs_for_leaks"
+  }
+}

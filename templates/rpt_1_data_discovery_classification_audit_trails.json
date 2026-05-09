@@ -1,0 +1,37 @@
+{
+  "report": {
+    "title": "Audit trails",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Audit trails"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: 1. Data Discovery & Classification. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select count(*) , server  from monitoring.v_oracle_audit_expired\r\n group by server",
+      "headers": [
+        "count(*)",
+        "server"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_1_data_discovery_classification_audit_trails",
+    "html": "rpt_1_data_discovery_classification_audit_trails"
+  }
+}

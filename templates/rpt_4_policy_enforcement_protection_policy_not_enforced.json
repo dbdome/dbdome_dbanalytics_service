@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Policy not enforced",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Policy not enforced"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: 4. Policy Enforcement & Protection. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  * from monitoring.v_policy_enforeced"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_4_policy_enforcement_protection_policy_not_enforced",
+    "html": "rpt_4_policy_enforcement_protection_policy_not_enforced"
+  }
+}

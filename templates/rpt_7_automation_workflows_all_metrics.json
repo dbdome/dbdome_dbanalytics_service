@@ -1,0 +1,37 @@
+{
+  "report": {
+    "title": "all metrics",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "all metrics"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: 7. Automation & Workflows. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  max(entry_date)entry_date , metric_name  from  monitoring.general_metric_metadata_results\r\ngroup by metric_name\r\norder by entry_date desc",
+      "headers": [
+        "max(entry_date)entry_date",
+        "metric_name"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_7_automation_workflows_all_metrics",
+    "html": "rpt_7_automation_workflows_all_metrics"
+  }
+}

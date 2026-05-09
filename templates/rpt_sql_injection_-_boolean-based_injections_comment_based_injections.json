@@ -1,0 +1,43 @@
+{
+  "report": {
+    "title": "comment based injections",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "comment based injections"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: SQL injection - Boolean-based injections. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  SERVER , COLUMNS ,TABLES ,CONDITION   , FUNC AS FUCTION  , JOINS , LITERAL    , QUERY from monitoring.v_new_queries_last_hour where query  ILIKE ANY (ARRAY['%OR 1=1%', '%AND 1=1%' , '%OR ''a''=''a%'''])",
+      "headers": [
+        "SERVER",
+        "COLUMNS",
+        "TABLES",
+        "CONDITION",
+        "FUCTION",
+        "JOINS",
+        "LITERAL",
+        "QUERY"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sql_injection_-_boolean-based_injections_comment_based_injections",
+    "html": "rpt_sql_injection_-_boolean-based_injections_comment_based_injections"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "report": {
+    "title": "Connectivity",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Connectivity"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Connectivity. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select server, connect_time, net_transport, protocol_type, endpoint_id, encrypt_option, auth_scheme, node_affinity, num_reads, num_writes, last_read, last_write, net_packet_size, client_net_address, client_tcp_port, local_net_address, local_tcp_port\r\nfrom monitoring.tcp_connections \r\norder by connect_Time desc",
+      "headers": [
+        "server",
+        "connect_time",
+        "net_transport",
+        "protocol_type",
+        "endpoint_id",
+        "encrypt_option",
+        "auth_scheme",
+        "node_affinity",
+        "num_reads",
+        "num_writes",
+        "last_read",
+        "last_write",
+        "net_packet_size",
+        "client_net_address",
+        "client_tcp_port",
+        "local_net_address",
+        "local_tcp_port"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_connectivity_connectivity",
+    "html": "rpt_connectivity_connectivity"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "report": {
+    "title": "Engaged custom metrics to servers",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Engaged custom metrics to servers"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Configuration. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select distinct s.servername , s.is_active , s.server  \"ip address\"    , s.db_vendor\r\nfrom metrics.servers s \r\nleft outer join   metrics.servers_routines sr on s.row_id = sr.server_id\r\nleft outer join metrics.\"routines\" r on r.row_id = sr.routine_id\r\nwhere routine_name  not  IN('collect_all_metrics_postgres_queries','collect_all_metrics_mssql_queries','collect_all_metrics_mysql_queries')",
+      "headers": [
+        "servername",
+        "is_active",
+        "address",
+        "db_vendor"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_configuration_engaged_custom_metrics_to_servers",
+    "html": "rpt_configuration_engaged_custom_metrics_to_servers"
+  }
+}

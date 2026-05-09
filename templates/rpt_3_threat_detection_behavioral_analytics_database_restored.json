@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Database restored",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Database restored"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: 3. Threat Detection & Behavioral Analytics. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  * from monitoring.v_database_restored"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_3_threat_detection_behavioral_analytics_database_restored",
+    "html": "rpt_3_threat_detection_behavioral_analytics_database_restored"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "report": {
+    "title": "Executive Summary Highlight (risk score, total alerts)",
+    "author": "dbdome Team",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Executive Summary"
+    },
+    {
+      "type": "text",
+      "content": "This report summerises daily intrusions and attacks"
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "SQL injection by type"
+    },
+	
+	{
+      "type": "chart",
+      "chart_type": "line",
+      "query": "SELECT DATE_TRUNC('hour', entry_date) as hour, count(*) as "No. of SQL Injections" FROM monitoring.alerts_open WHERE entry_date >= CURRENT_DATE - INTERVAL '1 day' GROUP BY hour ORDER BY hour",
+      "x_column": "Hour",
+      "y_column": "No. of SQL Injections",
+      "title": "Attack trend",
+      "x_label": "hour",
+      "y_label": "No. of SQL Injections",
+      "caption": "Daily SQL Injections last day"
+    },
+    {
+      "type": "table",
+      "query": "select server , root_cause , issue_id ,  substring (query,1,100) query from monitoring.alerts_open where entry_date > CURRENT_DATE - INTERVAL '1 day'",
+      "headers": ["server" , "root_cause" , "issue_id",  "query"
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Top Products"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "select COUNT(A.login_name)"NUMBER OF TRUNSACTIONS" , A.login_name  
+from 
+(
+select at.server ,at.login_name , at.query , last_request_end_time AT TIME ZONE 'Asia/Jerusalem'last_request_end_time , c.column_name , c.table_name from monitoring.active_transactions at
+ join(
+select TABLE_NAME ,  column_name from monitoring.schema 
+
+union all  
+select  table_name , column_name  from monitoring.sensitive_schema 
+) c on at.query like '%'||c.column_name ||'%'
+where  last_request_end_time >= CURRENT_DATE - interval '1 day'
+and login_name not in ( 'dbdome_mon_usr','ERNNO1\ErnSqlServerAgentUse','NT SERVICE\SQLAgent$ERN','NT SERVICE\SQLTELEMETRY$ERN','ERNNO1\ErnSqlServerUser','NT SERVICE\SQLTELEMETRY')
+and login_name like '%\\%'
+)A
+GROUP BY  A.login_name
+",
+      "x_column": "LOGIN_NAME",
+      "y_column": "NUMBER OF TRANSACTIONS",
+      "title": "Sensitive transactions per user",
+      "x_label": "Login_name",
+      "y_label": "Quantity",
+      "caption": "Sensitive data per user"
+    },
+    {
+      "type": "text",
+      "query": "select count(*) customer_count from monitoring.active_transactions at
+ join(
+select TABLE_NAME ,  column_name from monitoring.schema 
+
+union all  
+select  table_name , column_name  from monitoring.sensitive_schema 
+) c on at.query like '%'||c.column_name ||'%'
+where  last_request_end_time >= CURRENT_DATE - interval '1 day'
+and login_name not in ( 'dbdome_mon_usr','ERNNO1\ErnSqlServerAgentUse','NT SERVICE\SQLAgent$ERN','NT SERVICE\SQLTELEMETRY$ERN','ERNNO1\ErnSqlServerUser','NT SERVICE\SQLTELEMETRY')
+and login_name like '%\\%'
+",
+      "template": "In the last  day, we discovered {customer_count} issues."
+    }
+  ],
+  "output": {
+    "pdf": "C:\\ProgramData\\dbdome\\bin\\reports\\report_daily_executive_alert_summary.pdf",
+    "html": "C:\\ProgramData\\dbdome\\bin\\reports\\report_daily_executive_alert_summary.html"
+  }
+}

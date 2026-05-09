@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servers</title>
+    <link rel="stylesheet" href="../static/css/serverform_style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">dbdome</div>
+    </header>
+    
+    <main class="form-container">
+        <form class="server-form" id="serverForm" action="/submit-serverform" method="POST">
+            <h1 class="form-title">Servers</h1>
+            
+            <div class="form-field">
+                <select id="add_delete_modify" name="add_delete_modify" class="form-input" required>                    
+                    <option value="Add">Add</option>
+                    <option value="Update">Update</option>
+                    <option value="Delete">Delete</option>
+                </select>
+            </div>
+            
+            <div class="form-field">
+                <input type="text" id="ipAddress" name="ipAddress" class="form-input" placeholder="Id Address" required>
+            </div>
+            
+            <div class="form-field">
+                <input type="text" id="server" name="server" class="form-input" placeholder="Server" required>
+            </div>
+             <div class="form-field">
+                <input type="text" id="service_name" name="service_name" class="form-input" placeholder="service_name">
+            </div>
+
+            <div class="form-field">
+                <input type="number" id="port" name="port" class="form-input" placeholder="Port" required>
+            </div>
+            
+            <div class="form-field">
+                <select id="dbVendor" name="dbVendor" class="form-input" required>                    
+                    <option value="mssql">mssql</option>
+                    <option value="Oracle">oracle</option>
+                    <option value="postgres">postgres</option>
+                    <option value="mysql">mysql</option>
+                </select>
+            </div>
+           
+             <div class="form-field">
+                <select id="authType" name="authType"  class="form-input" onchange="toggleAuthFields()" required>                    
+                    <option value="win">win</option>
+                    <option value="sql">sql</option>                    
+                </select>
+            </div>
+            
+            <div id="sqlAuthFields" style="display: none;">
+            <div class="form-field">
+                <input type="text" id="user" name="user" class="form-input" placeholder="User" required>
+            </div>
+            
+            <div class="form-field">
+                <input type="password" id="password" name="password" class="form-input" placeholder="Password" required>
+            </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button type="submit" class="primary-btn" id="deployBtn">Submit</button>
+                <button type="button" class="primary-btn" id="testBtn" style="background: #2d7d46;" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="testResult" style="margin-top: 12px; padding: 10px; border-radius: 6px; display: none;"></div>
+        </form>
+    </main>
+    
+    <!-- Sparkles Container -->
+    <div id="sparklesContainer" class="sparkles-container"></div>
+    
+    <!-- Success Message -->
+    <div id="successMessage" class="success-message">The data has been saved successfully.</div>
+    
+    <script src="../static/js/server_form_script.js"></script>
+</body>
+</html>
+
+<script>
+async function testConnection() {
+    const btn = document.getElementById('testBtn');
+    const resultDiv = document.getElementById('testResult');
+
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#1e1e2e';
+    resultDiv.style.color = '#aaa';
+    resultDiv.textContent = 'Connecting...';
+
+    const formData = new FormData();
+    formData.append('ipAddress', document.getElementById('ipAddress').value);
+    formData.append('port', document.getElementById('port').value);
+    formData.append('dbVendor', document.getElementById('dbVendor').value);
+    formData.append('authType', document.getElementById('authType').value);
+    formData.append('user', document.getElementById('user').value || '');
+    formData.append('password', document.getElementById('password').value || '');
+    formData.append('service_name', document.getElementById('service_name').value || '');
+
+    try {
+        const resp = await fetch('/test-connection', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (data.success) {
+            resultDiv.style.background = '#1a3a2a';
+            resultDiv.style.color = '#4ade80';
+            resultDiv.textContent = '\u2705 ' + data.message;
+        } else {
+            resultDiv.style.background = '#3a1a1a';
+            resultDiv.style.color = '#f87171';
+            resultDiv.textContent = '\u274c ' + data.message;
+        }
+    } catch (e) {
+        resultDiv.style.background = '#3a1a1a';
+        resultDiv.style.color = '#f87171';
+        resultDiv.textContent = '\u274c Connection test failed: ' + e.message;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Test Connection';
+}
+
+function toggleAuthFields() {
+    const authType = document.getElementById("authType").value;
+    const sqlAuthFields = document.getElementById("sqlAuthFields");
+
+    if (authType === "sql") {
+        sqlAuthFields.style.display = "block";
+        document.getElementById("user").required = true;
+        document.getElementById("password").required = true;
+    } else {
+        sqlAuthFields.style.display = "none";
+        document.getElementById("user").required = false;
+        document.getElementById("password").required = false;
+    }
+}
+</script>

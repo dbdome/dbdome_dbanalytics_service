@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Enabled sysadmin",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Enabled sysadmin"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Enabled sysadmin. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select * from monitoring.v_enabled_sysadmin  where entry_date > $__timeFrom()"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_enabled_sysadmin_enabled_sysadmin_9",
+    "html": "rpt_enabled_sysadmin_enabled_sysadmin_9"
+  }
+}

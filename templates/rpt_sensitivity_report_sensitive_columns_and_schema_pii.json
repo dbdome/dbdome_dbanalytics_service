@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Sensitive columns and schema (PII)",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Sensitive columns and schema (PII)"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Sensitivity report. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select * from monitoring.v_sensitive_columns"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_sensitivity_report_sensitive_columns_and_schema_pii",
+    "html": "rpt_sensitivity_report_sensitive_columns_and_schema_pii"
+  }
+}

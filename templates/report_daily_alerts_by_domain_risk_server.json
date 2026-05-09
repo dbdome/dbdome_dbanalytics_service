@@ -1,0 +1,102 @@
+{
+  "report": {
+    "title": "Daily Alert Summary - by Domain, Risk, Server, Root Cause",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Daily Alert Summary"
+    },
+    {
+      "type": "text",
+      "content": "Mail alerts dispatched in the last 24 hours, categorised by domain, risk level, server, and root cause. Source: alerts.mail_alert_log joined to the rootcause taxonomy (root_causes -> issues -> domains, plus detection_steps.expected->>'severity' for risk_level)."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "1. Executive Summary"
+    },
+    {
+      "type": "text",
+      "query": "SELECT COUNT(*) AS total_alerts, COUNT(DISTINCT mal.server) AS servers_affected, COUNT(DISTINCT mal.metric_name) AS distinct_root_causes, SUM(CASE WHEN COALESCE(ds.expected->>'severity','medium') = 'critical' THEN 1 ELSE 0 END) AS critical_alerts, SUM(CASE WHEN COALESCE(ds.expected->>'severity','medium') = 'high' THEN 1 ELSE 0 END) AS high_alerts, SUM(CASE WHEN COALESCE(ds.expected->>'severity','medium') = 'medium' THEN 1 ELSE 0 END) AS medium_alerts, SUM(CASE WHEN COALESCE(ds.expected->>'severity','medium') = 'low' THEN 1 ELSE 0 END) AS low_alerts FROM alerts.mail_alert_log mal LEFT JOIN rootcause.detection_paths dp ON dp.root_cause_id = mal.metric_name AND dp.is_active = true LEFT JOIN rootcause.detection_path_steps dps ON dps.detection_path_id = dp.id AND dps.sequence = 1 LEFT JOIN rootcause.detection_steps ds ON ds.id = dps.detection_step_id WHERE mal.entry_date >= NOW() - INTERVAL '24 hours'",
+      "template": "Last 24h: {total_alerts} alerts across {servers_affected} servers, {distinct_root_causes} distinct root causes. By risk level - critical: {critical_alerts}, high: {high_alerts}, medium: {medium_alerts}, low: {low_alerts}."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "2. Alerts by Domain"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "SELECT COALESCE(d.name, '(unmapped)') AS domain, COUNT(*) AS alert_count FROM alerts.mail_alert_log mal LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = mal.metric_name LEFT JOIN rootcause.issues i ON i.issue_id = rc.issue_id LEFT JOIN rootcause.domains d ON d.code = i.domain_code WHERE mal.entry_date >= NOW() - INTERVAL '24 hours' GROUP BY COALESCE(d.name, '(unmapped)') ORDER BY alert_count DESC",
+      "x_column": "domain",
+      "y_column": "alert_count",
+      "title": "Alerts by Domain (last 24h)",
+      "x_label": "Domain",
+      "y_label": "Alerts",
+      "caption": "Count of mail alerts grouped by domain in the last 24 hours."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "3. Alerts by Risk Level"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "SELECT COALESCE(ds.expected->>'severity','medium') AS risk_level, COUNT(*) AS alert_count FROM alerts.mail_alert_log mal LEFT JOIN rootcause.detection_paths dp ON dp.root_cause_id = mal.metric_name AND dp.is_active = true LEFT JOIN rootcause.detection_path_steps dps ON dps.detection_path_id = dp.id AND dps.sequence = 1 LEFT JOIN rootcause.detection_steps ds ON ds.id = dps.detection_step_id WHERE mal.entry_date >= NOW() - INTERVAL '24 hours' GROUP BY COALESCE(ds.expected->>'severity','medium') ORDER BY CASE COALESCE(ds.expected->>'severity','medium') WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END",
+      "x_column": "risk_level",
+      "y_column": "alert_count",
+      "title": "Alerts by Risk Level (last 24h)",
+      "x_label": "Risk level",
+      "y_label": "Alerts",
+      "caption": "Count of mail alerts grouped by risk level (critical -> low)."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "4. Top 10 Servers"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "SELECT mal.server, COUNT(*) AS alert_count FROM alerts.mail_alert_log mal WHERE mal.entry_date >= NOW() - INTERVAL '24 hours' GROUP BY mal.server ORDER BY alert_count DESC LIMIT 10",
+      "x_column": "server",
+      "y_column": "alert_count",
+      "title": "Top 10 Servers by Alert Count (last 24h)",
+      "x_label": "Server",
+      "y_label": "Alerts",
+      "caption": "Servers with the most mail alerts in the last 24 hours."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "5. Detail: Domain x Risk Level x Server x Root Cause"
+    },
+    {
+      "type": "table",
+      "query": "SELECT COALESCE(d.name, '(unmapped)') AS domain, COALESCE(ds.expected->>'severity','medium') AS risk_level, mal.server, COALESCE(rc.name, mal.metric_name) AS root_cause, COUNT(*) AS alert_count, MIN(mal.entry_date AT TIME ZONE 'Asia/Jerusalem') AS first_seen, MAX(mal.entry_date AT TIME ZONE 'Asia/Jerusalem') AS last_seen FROM alerts.mail_alert_log mal LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = mal.metric_name LEFT JOIN rootcause.issues i ON i.issue_id = rc.issue_id LEFT JOIN rootcause.domains d ON d.code = i.domain_code LEFT JOIN rootcause.detection_paths dp ON dp.root_cause_id = mal.metric_name AND dp.is_active = true LEFT JOIN rootcause.detection_path_steps dps ON dps.detection_path_id = dp.id AND dps.sequence = 1 LEFT JOIN rootcause.detection_steps ds ON ds.id = dps.detection_step_id WHERE mal.entry_date >= NOW() - INTERVAL '24 hours' GROUP BY COALESCE(d.name, '(unmapped)'), COALESCE(ds.expected->>'severity','medium'), mal.server, COALESCE(rc.name, mal.metric_name) ORDER BY CASE COALESCE(ds.expected->>'severity','medium') WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, alert_count DESC, domain, mal.server, root_cause",
+      "headers": ["domain", "risk_level", "server", "root_cause", "alert_count", "first_seen", "last_seen"]
+    }
+  ],
+  "output": {
+    "pdf": "report_daily_alerts_by_domain_risk_server",
+    "html": "report_daily_alerts_by_domain_risk_server"
+  }
+}

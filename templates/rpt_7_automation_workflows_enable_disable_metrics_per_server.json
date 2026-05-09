@@ -1,0 +1,41 @@
+{
+  "report": {
+    "title": "Enable  / Disable metrics per server",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Enable  / Disable metrics per server"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: 7. Automation & Workflows. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select \r\n\tsr.row_id , s.\"server\" \"IP Address\" , s.servername ,  r.routine_name metric_rule ,  case when sr.is_active = true then 'Active' else 'Inactive' end as Active , r.db_version as  \"db vendor\" from metrics.routines r\r\njoin metrics.servers_routines sr on sr.routine_id = r.row_id\r\njoin metrics.servers s on s.row_id = sr.server_id\r\norder by s.server , metric_rule",
+      "headers": [
+        "row_id",
+        "Address",
+        "servername",
+        "metric_rule",
+        "Active",
+        "db"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_7_automation_workflows_enable_disable_metrics_per_server",
+    "html": "rpt_7_automation_workflows_enable_disable_metrics_per_server"
+  }
+}

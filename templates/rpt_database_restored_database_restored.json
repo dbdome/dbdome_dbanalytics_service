@@ -1,0 +1,36 @@
+{
+  "report": {
+    "title": "Database restored",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Database restored"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Database restored. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select  server from monitoring.v_database_restored",
+      "headers": [
+        "server"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_database_restored_database_restored",
+    "html": "rpt_database_restored_database_restored"
+  }
+}

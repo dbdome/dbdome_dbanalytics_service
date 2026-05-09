@@ -1,0 +1,37 @@
+{
+  "report": {
+    "title": "Send report by mail",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Send report by mail"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Send report by mail. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select distinct  TO_CHAR(last_request_end_time, 'YYYY-MM-DD') AS \"end time\" from monitoring.v_combined_transactions",
+      "headers": [
+        "TO_CHAR(last_request_end_time",
+        "end"
+      ]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_send_report_by_mail_send_report_by_mail_5",
+    "html": "rpt_send_report_by_mail_send_report_by_mail_5"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "report": {
+    "title": "Email configuration",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5444,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "Email configuration"
+    },
+    {
+      "type": "text",
+      "content": "Report from dashboard: Configuration. Generated automatically by DBDOME."
+    },
+    {
+      "type": "table",
+      "query": "select * from config.mail_config"
+    }
+  ],
+  "output": {
+    "pdf": "rpt_configuration_email_configuration",
+    "html": "rpt_configuration_email_configuration"
+  }
+}
