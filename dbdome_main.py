@@ -65,6 +65,10 @@ def start_scheduler():
     from utils.log4dbexpert import db_write_log
     from job_operation_scheduler import get_function_by_name
     from processes.grc_firewall_scanner import run_grc_firewall_scan
+    from processes.compliance_report_generator import (
+        run_compliance_reports_daily,
+        run_compliance_reports_weekly,
+    )
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
@@ -130,6 +134,18 @@ def start_scheduler():
         run_grc_firewall_scan, 'interval', seconds=60,
         id="grc_firewall_scan", max_instances=1,
         coalesce=True, misfire_grace_time=30,
+    )
+
+    scheduler.add_job(
+        run_compliance_reports_daily, 'interval', seconds=86400,
+        id="compliance_reports_daily", max_instances=1,
+        coalesce=True, misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        run_compliance_reports_weekly, 'interval', seconds=604800,
+        id="compliance_reports_weekly", max_instances=1,
+        coalesce=True, misfire_grace_time=3600,
     )
 
     print("[scheduler] Started")
