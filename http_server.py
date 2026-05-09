@@ -3999,6 +3999,389 @@ async def api_sync_masking_rules():
         return JSONResponse({"detail": str(e)}, status_code=500)
 
 
+# ---------------------------------------------------------------------------
+# GRC Phase 6: Automated Threat Response UI
+# ---------------------------------------------------------------------------
+
+@app.get("/grc/threat-response", response_class=HTMLResponse)
+async def grc_threat_response_page(request: Request):
+    with open(os.path.join(TEMPLATE_DIR, "threat_response.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+# ── Security Incidents ───────────────────────────────────────────────────────
+
+@app.get("/api/threat-response/incidents")
+async def api_get_incidents(status: str = None, severity: str = None):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        conditions = ["1=1"]
+        params = []
+        if status:
+            conditions.append("status=%s"); params.append(status)
+        else:
+            conditions.append("status IN ('OPEN','ACKNOWLEDGED')")
+        if severity:
+            conditions.append("severity=%s"); params.append(severity)
+        cur.execute(
+            f"""SELECT incident_id, title, severity, regulation, server_name,
+                       db_user, client_ip, description, status, created_at, updated_at
+                FROM log.security_incidents
+                WHERE {' AND '.join(conditions)}
+                ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2
+                         WHEN 'MEDIUM' THEN 3 ELSE 4 END, created_at DESC
+                LIMIT 200""",
+            params,
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            for k in ("created_at", "updated_at"):
+                if d.get(k): d[k] = d[k].isoformat()
+            rows.append(d)
+        return JSONResponse({"incidents": rows})
+    except Exception as e:
+        db_write_log(f"api_get_incidents failed: {e}", 0, "api_get_incidents", "")
+        return JSONResponse({"error": str(e), "incidents": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/threat-response/incidents")
+async def api_create_incident(request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """INSERT INTO log.security_incidents
+                (title, severity, regulation, server_name, db_user, client_ip, description, status)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING incident_id""",
+            (
+                data["title"], data.get("severity", "HIGH"), data.get("regulation"),
+                data.get("server_name"), data.get("db_user"), data.get("client_ip"),
+                data.get("description"), data.get("status", "OPEN"),
+            ),
+        )
+        incident_id = cur.fetchone()[0]
+        conn.commit()
+        db_write_log(f"Incident created: #{incident_id} {data['title']}", 0, "api_create_incident", "")
+        return JSONResponse({"message": "Incident created", "incident_id": incident_id})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_create_incident failed: {e}", 0, "api_create_incident", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.put("/api/threat-response/incidents/{incident_id}")
+async def api_update_incident(incident_id: int, request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        sets, params = [], []
+        for key in ("title", "severity", "regulation", "server_name", "db_user",
+                    "client_ip", "description", "status"):
+            if key in data:
+                sets.append(f"{key}=%s"); params.append(data[key])
+        if not sets:
+            return JSONResponse({"detail": "Nothing to update"}, status_code=400)
+        sets.append("updated_at=NOW()")
+        if data.get("status") == "RESOLVED":
+            sets.append("resolved_at=NOW()")
+        params.append(incident_id)
+        cur.execute(f"UPDATE log.security_incidents SET {', '.join(sets)} WHERE incident_id=%s", params)
+        conn.commit()
+        db_write_log(f"Incident #{incident_id} updated", 0, "api_update_incident", "")
+        return JSONResponse({"message": "Incident updated"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_update_incident failed: {e}", 0, "api_update_incident", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Blocked IPs ──────────────────────────────────────────────────────────────
+
+@app.get("/api/threat-response/blocked-ips")
+async def api_get_blocked_ips():
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT block_id, ip_address::text, reason, blocked_by, blocked_at, expires_at
+               FROM config.blocked_ips
+               WHERE is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())
+               ORDER BY blocked_at DESC"""
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            for k in ("blocked_at", "expires_at"):
+                if d.get(k): d[k] = d[k].isoformat()
+            rows.append(d)
+        return JSONResponse({"blocked_ips": rows})
+    except Exception as e:
+        db_write_log(f"api_get_blocked_ips failed: {e}", 0, "api_get_blocked_ips", "")
+        return JSONResponse({"error": str(e), "blocked_ips": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/threat-response/blocked-ips")
+async def api_block_ip(request: Request):
+    data = await request.json()
+    ip   = data.get("ip_address", "").strip()
+    if not ip:
+        return JSONResponse({"detail": "ip_address is required"}, status_code=400)
+    duration = data.get("duration_mins")
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        expires_expr = f"NOW() + INTERVAL '{int(duration)} minutes'" if duration else "NULL"
+        cur.execute(
+            f"""INSERT INTO config.blocked_ips (ip_address, reason, blocked_by, expires_at)
+                VALUES (%s,%s,'manual',{expires_expr})
+                ON CONFLICT (ip_address) DO UPDATE
+                  SET reason=EXCLUDED.reason, blocked_at=NOW(), is_active=TRUE,
+                      expires_at={'EXCLUDED.expires_at' if duration else 'NULL'}""",
+            (ip, data.get("reason", "Manual block")),
+        )
+        conn.commit()
+        from processes.threat_response_engine import reload_entity_cache
+        reload_entity_cache()
+        db_write_log(f"IP blocked: {ip}", 0, "api_block_ip", "")
+        return JSONResponse({"message": f"IP {ip} blocked"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_block_ip failed: {e}", 0, "api_block_ip", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.delete("/api/threat-response/blocked-ips/{block_id}")
+async def api_release_ip(block_id: int):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute("UPDATE config.blocked_ips SET is_active=FALSE WHERE block_id=%s", (block_id,))
+        conn.commit()
+        from processes.threat_response_engine import reload_entity_cache
+        reload_entity_cache()
+        db_write_log(f"IP block released id={block_id}", 0, "api_release_ip", "")
+        return JSONResponse({"message": "IP released"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_release_ip failed: {e}", 0, "api_release_ip", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Suspended Users ──────────────────────────────────────────────────────────
+
+@app.get("/api/threat-response/suspended-users")
+async def api_get_suspended_users():
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT suspension_id, server_name, login_name, reason,
+                      suspended_by, suspended_at, expires_at
+               FROM config.suspended_users
+               WHERE is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())
+               ORDER BY suspended_at DESC"""
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            for k in ("suspended_at", "expires_at"):
+                if d.get(k): d[k] = d[k].isoformat()
+            rows.append(d)
+        return JSONResponse({"suspended_users": rows})
+    except Exception as e:
+        db_write_log(f"api_get_suspended_users failed: {e}", 0, "api_get_suspended_users", "")
+        return JSONResponse({"error": str(e), "suspended_users": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/threat-response/suspended-users")
+async def api_suspend_user(request: Request):
+    data     = await request.json()
+    server   = data.get("server_name", "").strip()
+    login    = data.get("login_name", "").strip()
+    if not server or not login:
+        return JSONResponse({"detail": "server_name and login_name are required"}, status_code=400)
+    duration = data.get("duration_mins")
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        expires_expr = f"NOW() + INTERVAL '{int(duration)} minutes'" if duration else "NULL"
+        cur.execute(
+            f"""INSERT INTO config.suspended_users (server_name, login_name, reason, suspended_by, expires_at)
+                VALUES (%s,%s,%s,'manual',{expires_expr})
+                ON CONFLICT (server_name, login_name) DO UPDATE
+                  SET reason=EXCLUDED.reason, suspended_at=NOW(), is_active=TRUE,
+                      expires_at={'EXCLUDED.expires_at' if duration else 'NULL'}""",
+            (server, login, data.get("reason", "Manual suspension")),
+        )
+        conn.commit()
+        from processes.threat_response_engine import reload_entity_cache
+        reload_entity_cache()
+        db_write_log(f"User suspended: {login}@{server}", 0, "api_suspend_user", "")
+        return JSONResponse({"message": f"User {login}@{server} suspended"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_suspend_user failed: {e}", 0, "api_suspend_user", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.delete("/api/threat-response/suspended-users/{suspension_id}")
+async def api_release_user(suspension_id: int):
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute("UPDATE config.suspended_users SET is_active=FALSE WHERE suspension_id=%s", (suspension_id,))
+        conn.commit()
+        from processes.threat_response_engine import reload_entity_cache
+        reload_entity_cache()
+        db_write_log(f"User suspension released id={suspension_id}", 0, "api_release_user", "")
+        return JSONResponse({"message": "User released"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_release_user failed: {e}", 0, "api_release_user", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Playbooks ────────────────────────────────────────────────────────────────
+
+@app.get("/api/threat-response/playbooks")
+async def api_get_playbooks():
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT playbook_id, playbook_name, description, trigger_type,
+                      trigger_threshold, trigger_regulation, response_type,
+                      response_params, cooldown_mins, is_active
+               FROM config.threat_response_playbooks
+               ORDER BY playbook_id"""
+        )
+        cols = [d[0] for d in cur.description]
+        return JSONResponse({"playbooks": [dict(zip(cols, r)) for r in cur.fetchall()]})
+    except Exception as e:
+        db_write_log(f"api_get_playbooks failed: {e}", 0, "api_get_playbooks", "")
+        return JSONResponse({"error": str(e), "playbooks": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.post("/api/threat-response/playbooks")
+async def api_create_playbook(request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        import json as _json
+        cur.execute(
+            """INSERT INTO config.threat_response_playbooks
+                (playbook_name, description, trigger_type, trigger_threshold,
+                 trigger_regulation, response_type, response_params, cooldown_mins)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING playbook_id""",
+            (
+                data["playbook_name"], data.get("description"),
+                data["trigger_type"], data.get("trigger_threshold", 70),
+                data.get("trigger_regulation"),
+                data["response_type"],
+                _json.dumps(data.get("response_params") or {}),
+                data.get("cooldown_mins", 60),
+            ),
+        )
+        pb_id = cur.fetchone()[0]
+        conn.commit()
+        db_write_log(f"Playbook created id={pb_id}", 0, "api_create_playbook", "")
+        return JSONResponse({"message": "Playbook created", "playbook_id": pb_id})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_create_playbook failed: {e}", 0, "api_create_playbook", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+@app.put("/api/threat-response/playbooks/{playbook_id}")
+async def api_update_playbook(playbook_id: int, request: Request):
+    data = await request.json()
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        import json as _json
+        sets, params = [], []
+        for key in ("playbook_name", "description", "trigger_type", "trigger_threshold",
+                    "trigger_regulation", "response_type", "cooldown_mins", "is_active"):
+            if key in data:
+                sets.append(f"{key}=%s"); params.append(data[key])
+        if "response_params" in data:
+            sets.append("response_params=%s")
+            params.append(_json.dumps(data["response_params"]))
+        if not sets:
+            return JSONResponse({"detail": "Nothing to update"}, status_code=400)
+        params.append(playbook_id)
+        cur.execute(f"UPDATE config.threat_response_playbooks SET {', '.join(sets)} WHERE playbook_id=%s", params)
+        conn.commit()
+        db_write_log(f"Playbook updated id={playbook_id}", 0, "api_update_playbook", "")
+        return JSONResponse({"message": "Playbook updated"})
+    except Exception as e:
+        conn.rollback()
+        db_write_log(f"api_update_playbook failed: {e}", 0, "api_update_playbook", "")
+        return JSONResponse({"detail": str(e)}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
+# ── Response Log ─────────────────────────────────────────────────────────────
+
+@app.get("/api/threat-response/response-log")
+async def api_get_response_log():
+    conn = psycopg2.connect(get_connection_string())
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT response_id, triggered_at, playbook_name, trigger_type,
+                      subject, response_type, response_detail, success, error_message
+               FROM log.threat_response_log
+               ORDER BY triggered_at DESC
+               LIMIT 200"""
+        )
+        cols = [d[0] for d in cur.description]
+        rows = []
+        for row in cur.fetchall():
+            d = dict(zip(cols, row))
+            if d.get("triggered_at"): d["triggered_at"] = d["triggered_at"].isoformat()
+            rows.append(d)
+        return JSONResponse({"rows": rows})
+    except Exception as e:
+        db_write_log(f"api_get_response_log failed: {e}", 0, "api_get_response_log", "")
+        return JSONResponse({"error": str(e), "rows": []}, status_code=500)
+    finally:
+        cur.close(); conn.close()
+
+
 # This is the key addition - run the server when the script is executed
 if __name__ == "__main__":
     _ip = get_public_or_ip ()

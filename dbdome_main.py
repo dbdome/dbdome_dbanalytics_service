@@ -71,6 +71,7 @@ def start_scheduler():
     )
     from analysis.analyse_user_risk import run_user_risk_scoring
     from processes.data_masking_engine import sync_masking_rules
+    from processes.threat_response_engine import run_threat_response
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
@@ -160,6 +161,12 @@ def start_scheduler():
         sync_masking_rules, 'interval', seconds=3600,
         id="sync_masking_rules", max_instances=1,
         coalesce=True, misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        run_threat_response, 'interval', seconds=60,
+        id="threat_response", max_instances=1,
+        coalesce=True, misfire_grace_time=30,
     )
 
     print("[scheduler] Started")

@@ -85,6 +85,7 @@ def get_function_by_name(name):
     )
     from analysis.analyse_user_risk import run_user_risk_scoring
     from processes.data_masking_engine import sync_masking_rules
+    from processes.threat_response_engine import run_threat_response
     from functools import partial
     mapping = {
         "collect_metrics_operation": collect_metrics_operation,
@@ -114,6 +115,7 @@ def get_function_by_name(name):
         "compliance_reports_weekly":     run_compliance_reports_weekly,
         "user_risk_scoring":             run_user_risk_scoring,
         "sync_masking_rules":            sync_masking_rules,
+        "run_threat_response":           run_threat_response,
     }
     return mapping.get(name)
 

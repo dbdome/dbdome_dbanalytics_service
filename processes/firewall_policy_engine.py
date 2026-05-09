@@ -175,6 +175,33 @@ def evaluate_query(
     if roles is None:
         roles = []
 
+    # ── Phase 6: check dynamic blocklist before evaluating policies ──────────
+    try:
+        from processes.threat_response_engine import get_blocked_ips, is_user_suspended
+        if client_ip and client_ip in get_blocked_ips():
+            write_audit_event(
+                server_name=server_name, vendor=vendor, db_user=db_user,
+                client_ip=client_ip, db_name=db_name, sql_statement=sql_statement,
+                action_taken="BLOCKED", policy_id=None,
+                regulation="internal", session_id=session_id, risk_score=100,
+            )
+            return {"action": "BLOCK", "policy_id": None,
+                    "policy_name": "dynamic:blocked_ip", "regulation": "internal",
+                    "severity": "CRITICAL", "risk_score": 100}
+        if db_user and server_name and is_user_suspended(server_name, db_user):
+            write_audit_event(
+                server_name=server_name, vendor=vendor, db_user=db_user,
+                client_ip=client_ip, db_name=db_name, sql_statement=sql_statement,
+                action_taken="BLOCKED", policy_id=None,
+                regulation="internal", session_id=session_id, risk_score=100,
+            )
+            return {"action": "BLOCK", "policy_id": None,
+                    "policy_name": "dynamic:suspended_user", "regulation": "internal",
+                    "severity": "CRITICAL", "risk_score": 100}
+    except Exception:
+        pass  # degrade gracefully if Phase 6 not yet migrated
+    # ─────────────────────────────────────────────────────────────────────────
+
     matched_policy = None
     action = "ALLOW"
     risk_score = 0
