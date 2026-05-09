@@ -64,6 +64,7 @@ def start_scheduler():
     from config.registered_processes.registered_processes import add_registered_processes
     from utils.log4dbexpert import db_write_log
     from job_operation_scheduler import get_function_by_name
+    from processes.grc_firewall_scanner import run_grc_firewall_scan
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
@@ -123,6 +124,12 @@ def start_scheduler():
         rotate_service_log, 'interval', seconds=3600,
         id="log_rotation", max_instances=1,
         coalesce=True,
+    )
+
+    scheduler.add_job(
+        run_grc_firewall_scan, 'interval', seconds=60,
+        id="grc_firewall_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=30,
     )
 
     print("[scheduler] Started")

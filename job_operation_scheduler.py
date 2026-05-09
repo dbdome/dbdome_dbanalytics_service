@@ -78,6 +78,7 @@ def get_function_by_name(name):
     from processes.category_definitions_export import export_category_definitions
     from processes.dashboard_data_export import export_dashboard_data
     from purgers.purge_metric_metadata import purge_general_metric_metadata
+    from processes.grc_firewall_scanner import run_grc_firewall_scan
     from functools import partial
     mapping = {
         "collect_metrics_operation": collect_metrics_operation,
@@ -102,6 +103,7 @@ def get_function_by_name(name):
         "detection_tree_postgresql": partial(execute_vendor_detection_tree, "postgresql"),
         "detection_tree_mysql": partial(execute_vendor_detection_tree, "mysql"),
         "purge_general_metric_metadata": purge_general_metric_metadata,
+        "grc_firewall_scan": run_grc_firewall_scan,
     }
     return mapping.get(name)
 
