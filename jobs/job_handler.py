@@ -1,5 +1,6 @@
 import asyncio
 #job_handler.py
+from processes.data_masking_engine import apply_masking
 import psycopg2
 from datetime import datetime
 from utils.utils_config_dotenv  import get_connection_string
@@ -245,32 +246,32 @@ def job_next_run():
             raw_conn.close()
 
 
-def   fetch_data_report_once (_conn , _query , report_name ,start_time , end_time):
+def   fetch_data_report_once (_conn , _query , report_name ,start_time , end_time, server_name="", db_user="", user_roles=None):
             try:
                 cur = _conn.cursor()
                 cur.execute(_query, (start_time, end_time))
                 rows = cur.fetchall()
                 columns = [desc[0] for desc in cur.description]
-
+                rows = apply_masking(rows, columns, server_name, db_user, user_roles=user_roles)
                 cur.close()
-                _conn.close()                
-            except Exception as e:                 
+                _conn.close()
+            except Exception as e:
                     db_write_log(f"fetch_data_report failed with error:{e}"   ,0,"fetch_data_report" , "fetch_data_report" )
             finally:
                 db_write_log(f"✅ fetch_data_report  complete."   ,0,"fetch_data_report" , "fetch_data_report" )
                 _conn.close()
                 return columns, rows
-         
-def   fetch_data_report (_conn , _query ):
+
+def   fetch_data_report (_conn , _query , server_name="", db_user="", user_roles=None):
             try:
                 cur = _conn.cursor()
                 cur.execute(_query)
                 rows = cur.fetchall()
                 columns = [desc[0] for desc in cur.description]
-
+                rows = apply_masking(rows, columns, server_name, db_user, user_roles=user_roles)
                 cur.close()
-                _conn.close()                
-            except Exception as e:                 
+                _conn.close()
+            except Exception as e:
                     db_write_log(f"fetch_data_report failed with error:{e}"   ,0,"fetch_data_report" , "fetch_data_report" )
             finally:
                 db_write_log(f"✅ fetch_data_report  complete."   ,0,"fetch_data_report" , "fetch_data_report" )

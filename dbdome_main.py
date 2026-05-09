@@ -70,6 +70,7 @@ def start_scheduler():
         run_compliance_reports_weekly,
     )
     from analysis.analyse_user_risk import run_user_risk_scoring
+    from processes.data_masking_engine import sync_masking_rules
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
@@ -153,6 +154,12 @@ def start_scheduler():
         run_user_risk_scoring, 'interval', seconds=300,
         id="user_risk_scoring", max_instances=1,
         coalesce=True, misfire_grace_time=60,
+    )
+
+    scheduler.add_job(
+        sync_masking_rules, 'interval', seconds=3600,
+        id="sync_masking_rules", max_instances=1,
+        coalesce=True, misfire_grace_time=300,
     )
 
     print("[scheduler] Started")
