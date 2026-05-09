@@ -69,6 +69,7 @@ def start_scheduler():
         run_compliance_reports_daily,
         run_compliance_reports_weekly,
     )
+    from analysis.analyse_user_risk import run_user_risk_scoring
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
@@ -146,6 +147,12 @@ def start_scheduler():
         run_compliance_reports_weekly, 'interval', seconds=604800,
         id="compliance_reports_weekly", max_instances=1,
         coalesce=True, misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        run_user_risk_scoring, 'interval', seconds=300,
+        id="user_risk_scoring", max_instances=1,
+        coalesce=True, misfire_grace_time=60,
     )
 
     print("[scheduler] Started")

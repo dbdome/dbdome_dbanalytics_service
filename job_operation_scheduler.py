@@ -83,6 +83,7 @@ def get_function_by_name(name):
         run_compliance_reports_daily,
         run_compliance_reports_weekly,
     )
+    from analysis.analyse_user_risk import run_user_risk_scoring
     from functools import partial
     mapping = {
         "collect_metrics_operation": collect_metrics_operation,
@@ -110,6 +111,7 @@ def get_function_by_name(name):
         "grc_firewall_scan":             run_grc_firewall_scan,
         "compliance_reports_daily":      run_compliance_reports_daily,
         "compliance_reports_weekly":     run_compliance_reports_weekly,
+        "user_risk_scoring":             run_user_risk_scoring,
     }
     return mapping.get(name)
 
