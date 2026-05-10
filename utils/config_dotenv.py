@@ -3,7 +3,8 @@ import os
 import sys
 
 def get_connection_string():
-    load_dotenv()        
+    env_path = os.path.join(os.path.dirname(sys.executable), ".env")
+    load_dotenv(env_path, override=True)
     pg_user = os.getenv("PG_USER","dbdome_adm")
     pg_password = os.getenv("PG_PASSWORD" , 'Yd2243796Anz!!')
     pg_host = os.getenv("PG_HOST","localhost")
