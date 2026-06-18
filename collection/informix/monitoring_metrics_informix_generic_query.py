@@ -4,7 +4,11 @@ from sqlalchemy import create_engine, text
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
 from email_utils.smtp_email_sender import send_mail_alert_no_attachment
+from siem.rapid.rapid_sender import siem_rapid_send
+from siem.crowdstrike.crowdstrike_sender import siem_crowdstrike_send
+from alerts.alert_dispatcher import dispatch          # background alert delivery
 from alerts.alert_helper import manage_diagnosys_alerts
+from collection.comparison import compute_calc_query
 import json
 from datetime import datetime
 
@@ -54,7 +58,7 @@ def _sanitize_json(text):
     return text.replace('\x00', '').replace('\\u0000', '')
 
 
-def _build_comparison(metric_metadata_json, expected_raw):
+def _build_comparison(metric_metadata_json, expected_raw, step_params=None):
     """
     Build a metric_metadata_vs_expected JSON comparing actual results to expected.
     """
@@ -72,6 +76,8 @@ def _build_comparison(metric_metadata_json, expected_raw):
         expected = expected_raw if isinstance(expected_raw, dict) else {}
 
     condition = expected.get("condition", "")
+    if condition and isinstance(step_params, dict) and step_params:
+        condition = _substitute_parameters(condition, step_params)
     matched = None
 
     if condition:
@@ -84,8 +90,13 @@ def _build_comparison(metric_metadata_json, expected_raw):
             elif op == "<=":  matched = row_count <= val
             elif op in ("=", "=="): matched = row_count == val
             elif op in ("!=", "<>"): matched = row_count != val
-    elif expected:
+        elif row_count == 0 and re.match(r"^\s*row_count\s*>", condition, re.IGNORECASE):
+            matched = False
+    else:
         matched = row_count > 0
+
+    if matched is None:
+        matched = False
 
     return json.dumps({
         "row_count": row_count,
@@ -123,8 +134,18 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
 
     try:
         # ========== 1. Create SQLAlchemy Engines ==========
-        pg_engine = create_engine(pg_conn_str, echo=True)
-        informix_engine = create_engine(informix_conn_str, echo=True)
+        pg_engine = create_engine(pg_conn_str)
+        import os as _os
+        from sqlalchemy import event as _event
+        _qt = int(_os.environ.get("DBEXPERT_QUERY_TIMEOUT", "30"))
+        informix_engine = create_engine(informix_conn_str, connect_args={"timeout": 15})  # pyodbc login timeout
+        if _qt > 0:
+            @_event.listens_for(informix_engine, "connect")
+            def _ix_query_timeout(dbapi_conn, _rec):
+                try:
+                    dbapi_conn.timeout = _qt   # pyodbc per-query timeout
+                except Exception:
+                    pass
 
         # ========== 2. Retrieve list of queries to run ==========
         with pg_engine.connect() as conn:
@@ -169,12 +190,24 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
             db_write_log("✅ No active metric queries found to process.", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
             return 1
 
+        queries_df['calc_query'] = queries_df.apply(
+            lambda r: compute_calc_query(r['query'], r.get('step_parameters'), r.get('expected')), axis=1
+        )
+
         # ========== 3. Collect all results ==========
         insert_payloads = []
         alert_queue = []
         current_issue_id = None
 
         for _, query_row in queries_df.iterrows():
+            # pd.read_sql_query turns SQL NULLs into float NaN. NaN is truthy,
+            # so downstream `query_row.get('x') or ''` does NOT replace it: the
+            # NaN leaks into alert_log, the email body (as the text "nan"), and
+            # into the mail-auth gate where psycopg2 renders it 'NaN'::float8 ->
+            # trim() resolves to the non-existent btrim(double precision). The
+            # domain join can also yield NULL here. Normalise NaN -> None up
+            # front so every `... or ''` behaves as intended.
+            query_row = query_row.where(pd.notna(query_row), None)
             metric_query = query_row['query']
             category_id = query_row['category_id']
             metric_name = query_row['metric_name']
@@ -202,7 +235,7 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
 
                 df = pd.read_sql_query(text(metric_query), con=informix_engine)
                 metric_metadata_json = _sanitize_json(df.to_json(orient='records'))
-                comparison = _sanitize_json(_build_comparison(metric_metadata_json, query_row.get('expected')))
+                comparison = _sanitize_json(_build_comparison(metric_metadata_json, query_row.get('expected'), step_params))
 
                 # If the metric returned no rows, replace the empty '[]' with
                 # a single all-null row showing the column shape.
@@ -214,7 +247,7 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
                     "server_id":server_id,
                     "category_id": category_id,
                     "metric_name": metric_name,
-                    "metric_config": _sanitize_json(json.dumps({"query": metric_query})),
+                    "metric_config": _sanitize_json(json.dumps({"query": metric_query, "calc_query": query_row.get('calc_query') or metric_query})),
                     "metric_metadata": metric_metadata_json,
                     "metric_metadata_vs_expected": (
                         (query_row.get('expected') if isinstance(query_row.get('expected'), str)
@@ -226,7 +259,7 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
                 })
 
                 # Queue alerts
-                manage_diagnosys_alerts(query_row.get('root_cause_id') or metric_name, metric_query, comparison, informix_server, metric_metadata_json, _server_id=server_id)
+                
                 comparison_data = json.loads(comparison)
                 if comparison_data.get("matched") is False:
                     alert_queue.append((metric_name, metric_query, query_row, comparison_data))
@@ -235,7 +268,6 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
 
             except Exception as metric_ex:
                 db_write_log(f"❌ Metric '{metric_name}' failed with error: {metric_ex}", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
-                manage_diagnosys_alerts(query_row.get('root_cause_id') or metric_name, metric_query, None, informix_server, [], status="failed", _server_id=server_id)
                 continue
 
         # ========== 4. Bulk insert remaining ==========
@@ -249,16 +281,28 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
             # ===== add to alerts.alert_log =====
             try:
                 with pg_engine.begin() as alog:
+                    # One alert per (server, root_cause_id) per hour: drop any earlier alert for
+                    # this server + root cause in the current hour, so only the latest survives.
                     alog.execute(
                         text("""
-                            INSERT INTO alerts.alert_log (server, root_cause_id, risk_level, metadata)
-                            VALUES (:server, :rc, :risk, CAST(:meta AS jsonb))
+                            DELETE FROM alerts.alert_log
+                            WHERE server = :server
+                              AND root_cause_id = :rc
+                              AND date_trunc('hour', entry_date) = date_trunc('hour', LOCALTIMESTAMP)
+                        """),
+                        {"server": server_key, "rc": query_row.get('root_cause_id') or metric_name}
+                    )
+                    alog.execute(
+                        text("""
+                            INSERT INTO alerts.alert_log (server, root_cause_id, risk_level, metadata, login_name)
+                            VALUES (:server, :rc, :risk, CAST(:meta AS jsonb), :login_name)
                         """),
                         {
                             "server": server_key,
                             "rc": query_row.get('root_cause_id') or metric_name,
                             "risk": _risk_level,
                             "meta": json.dumps(metric_metadata_json),
+                            "login_name": next((r.get('login_name') for r in metric_metadata_json if isinstance(r, dict)), None) if isinstance(metric_metadata_json, list) else metric_metadata_json.get('login_name') if isinstance(metric_metadata_json, dict) else None,
                         }
                     )
             except Exception as alog_ex:
@@ -268,30 +312,23 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
             alert_authorised = False
             try:
                 with pg_engine.connect() as pg_check:
-                    auth_row = pg_check.execute(
+                    mail_auth_row = pg_check.execute(
                         text("""
-                            SELECT w.recurrency_hours FROM config.webook_alerts w
-                            JOIN rootcause.domains d ON d.name = w.metric_type
-                            WHERE d.code = :domain_code
-                              AND w.risk_level = :risk_level
-                              AND w.send_mail_alert IS TRUE
+                            SELECT
+                                mal.entry_date > NOW() - (wba.recurrency_hours || ' hours')::interval AS in_recurrency_window
+                            FROM alerts.mail_alert_log mal
+                            JOIN rootcause.v_rootcauses rc ON rc.root_cause_id = mal.metric_name
+                            JOIN config.webook_alerts wba ON wba.metric_type = rc.domain_name
+                                AND rc.risk_level = wba.risk_level
+                            WHERE wba.send_mail_alert IS TRUE
+                              AND mal.metric_name = :metric_name
+                              AND mal.server = :server
+                            ORDER BY mal.entry_date DESC
                             LIMIT 1
                         """),
-                        {"domain_code": domain_filter or '', "risk_level": _risk_level}
+                        {"metric_name": metric_name, "server": server_key}
                     ).fetchone()
-                    if auth_row is not None:
-                        recurrency = auth_row[0] or '24 hours'
-                        already_sent = pg_check.execute(
-                            text(f"""
-                                SELECT 1 FROM alerts.mail_alert_log
-                                WHERE metric_name = :metric_name
-                                  AND server = :server
-                                  AND entry_date > NOW() - INTERVAL '{recurrency} hours'
-                                LIMIT 1
-                            """),
-                            {"metric_name": metric_name, "server": server_key}
-                        ).fetchone()
-                        alert_authorised = already_sent is None
+                    alert_authorised = mail_auth_row is None or not mail_auth_row[0]
             except Exception as auth_ex:
                 db_write_log(f"Alert auth check failed for '{metric_name}': {auth_ex}", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
 
@@ -299,7 +336,7 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
                 db_write_log(f"Alert skipped for '{metric_name}' - not authorised (domain={domain_filter}, risk={_risk_level})", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
             else:
                 try:
-                    send_mail_alert_no_attachment(
+                    dispatch(send_mail_alert_no_attachment, 
                         server=server_key,
                         domain_name=query_row.get('domain_name') or '',
                         area_name=query_row.get('area_name') or '',
@@ -322,6 +359,38 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
 
             try:
                 with pg_engine.connect() as pg_check:
+                    siem_row = pg_check.execute(
+                        text("""
+                            SELECT 1 FROM config.webook_alerts w
+                            JOIN rootcause.domains d ON d.name = w.metric_type
+                            WHERE d.code = :domain_code
+                              AND w.risk_level = :risk_level
+                              AND w.send_siem_alert IS TRUE
+                            LIMIT 1
+                        """),
+                        {"domain_code": domain_filter or '', "risk_level": _risk_level}
+                    ).fetchone()
+                    if siem_row is not None:
+                        _rc_id = query_row.get('root_cause_id') or metric_name
+                        _desc = (
+                            f"area:{query_row.get('area_name') or ''}, "
+                            f"domain:{query_row.get('domain_name') or ''}, "
+                            f"issue:{query_row.get('issue_name') or ''}, "
+                            f"root:{query_row.get('root_cause_name') or metric_name}"
+                        ).encode('utf-8', errors='ignore').decode('utf-8')
+                        dispatch(siem_rapid_send, _rc_id, _risk_level, server_key, _desc)
+                        dispatch(siem_crowdstrike_send, 
+                            event_type=_rc_id,
+                            severity=_risk_level,
+                            server=server_key,
+                            root_cause_id=_rc_id,
+                            description=_desc,
+                        )
+            except Exception as siem_ex:
+                db_write_log(f"SIEM alert failed for '{metric_name}': {siem_ex}", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
+
+            try:
+                with pg_engine.connect() as pg_check:
                     diag_row = pg_check.execute(
                         text("""
                             SELECT 1 FROM config.webook_alerts w
@@ -333,8 +402,6 @@ def collect_all_metrics_informix_queries(informix_server, informix_database, inf
                         """),
                         {"domain_code": domain_filter or '', "risk_level": _risk_level}
                     ).fetchone()
-                    if diag_row is not None:
-                        manage_diagnosys_alerts(query_row.get('root_cause_id') or metric_name, metric_query, comparison, informix_server, metric_metadata_json, _server_id=server_id)
             except Exception as diag_ex:
                 db_write_log(f"Diagnosis evidence check failed for '{metric_name}': {diag_ex}", 0, "collect_all_metrics_informix_queries", informix_server, port=informix_port)
 
