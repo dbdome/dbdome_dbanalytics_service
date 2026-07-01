@@ -8,7 +8,7 @@ from utils.log4dbexpert import db_write_log
 _NAME_PATTERNS = {
     'EMAIL':         re.compile(r'email|e_mail|mail_addr', re.I),
     'CREDIT_CARD':   re.compile(r'cc_num|card_num|credit_card|pan|card_no|ccnumber', re.I),
-    'SSN':           re.compile(r'\bssn\b|\bbvn\b|bank_verif|social_sec|tax_id|national_id', re.I),
+    'SSN':           re.compile(r'\bssn\b|bvn|bank_verif|social_sec|tax_id|national_id', re.I),
     'PHONE':         re.compile(r'phone|mobile|cell|tel_no|telephone', re.I),
     'NAME':          re.compile(r'first_name|last_name|full_name|surname|given_name', re.I),
     'ADDRESS':       re.compile(r'\baddress\b|street|city|\bzip\b|postal', re.I),
