@@ -19,12 +19,22 @@ block_cipher = None
 # submodules, and tzdata files atomically, removing single-file failure modes.
 PYTZ_DATAS, PYTZ_BINARIES, PYTZ_HIDDENIMPORTS = collect_all('pytz')
 
+def _meta(*names):
+    # Bundle metadata for whichever distribution name is actually installed
+    # (e.g. psycopg2 vs psycopg2-binary); skip cleanly if none is present.
+    for n in names:
+        try:
+            return copy_metadata(n)
+        except Exception:
+            continue
+    return []
+
 META_DATAS = (
-    copy_metadata('numpy')
-    + copy_metadata('python-dateutil')
-    + copy_metadata('sqlalchemy')
-    + copy_metadata('psycopg2')
-    + copy_metadata('pymysql')
+    _meta('numpy')
+    + _meta('python-dateutil')
+    + _meta('sqlalchemy', 'SQLAlchemy')
+    + _meta('psycopg2', 'psycopg2-binary')
+    + _meta('pymysql', 'PyMySQL')
 )
 
 # pywin32 ships win32timezone in site-packages\win32\lib and exposes it via a
@@ -43,6 +53,17 @@ _PYWIN32_SYS32_SRC = os.path.join(sys.prefix, 'Lib', 'site-packages', 'pywin32_s
 PYWIN32_SYS32_BINS = [
     (_dll, 'pywin32_system32')
     for _dll in _glob.glob(os.path.join(_PYWIN32_SYS32_SRC, '*.dll'))
+]
+
+# psycopg2-binary (delvewheel-packaged) places its native DLLs (libpq, libssl,
+# libcrypto) in a sibling folder psycopg2_binary.libs/ and adds it via
+# os.add_dll_directory() in psycopg2/__init__.py. PyInstaller never copies that
+# folder, so _psycopg.pyd fails with "DLL load failed" at runtime. Bundle the
+# DLLs into the same relative path the delvewheel patch expects.
+_PSYCOPG2_LIBS_SRC = os.path.join(sys.prefix, 'Lib', 'site-packages', 'psycopg2_binary.libs')
+PSYCOPG2_BINS = [
+    (_dll, 'psycopg2_binary.libs')
+    for _dll in _glob.glob(os.path.join(_PSYCOPG2_LIBS_SRC, '*.dll'))
 ]
 
 # Force-include every submodule of the project's own packages. APScheduler /
@@ -72,9 +93,15 @@ PROJECT_PACKAGES = [
     'synch',
     'ReportGenerator',
 ]
+# Dead modules that import heavy, unused ML libs (torch / sentence-transformers).
+# They are not referenced at runtime, so we drop them from the bundle and exclude
+# their libraries to keep the build small/fast.
+_SKIP_MODULES = {'ai.Autoencoder_v1', 'analysis.analyse_threats'}
+EXCLUDES = ['torch', 'sentence_transformers', 'transformers']
+
 PROJECT_HIDDEN = []
 for _pkg in PROJECT_PACKAGES:
-    PROJECT_HIDDEN += collect_submodules(_pkg)
+    PROJECT_HIDDEN += [m for m in collect_submodules(_pkg) if m not in _SKIP_MODULES]
 
 a = Analysis(
     ['dbdome_main.py'],
@@ -84,6 +111,8 @@ a = Analysis(
         ('templates', 'templates'),
         ('static', 'static'),
         ('icons', 'icons'),
+        ('sql_scripts', 'sql_scripts'),
+        ('scripts/oracle_verification_queries.json', 'scripts'),
         ('.env', '.'),
     ] + META_DATAS + PYTZ_DATAS,
     hiddenimports=[
@@ -121,7 +150,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=EXCLUDES,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -158,6 +187,8 @@ a_svc = Analysis(
         ('templates', 'templates'),
         ('static', 'static'),
         ('icons', 'icons'),
+        ('sql_scripts', 'sql_scripts'),
+        ('scripts/oracle_verification_queries.json', 'scripts'),
         ('.env', '.'),
     ] + META_DATAS + PYTZ_DATAS,
     hiddenimports=[
@@ -194,7 +225,7 @@ a_svc = Analysis(
         'pywintypes',
     ] + PROJECT_HIDDEN + PYTZ_HIDDENIMPORTS,
     hookspath=[],
-    excludes=[],
+    excludes=EXCLUDES,
     cipher=block_cipher,
     noarchive=False,
 )

@@ -1,0 +1,160 @@
+{
+  "generated_by": "dbdome verification setup",
+  "vendor": "oracle",
+  "description": "On-site DBDOME verification queries, run by oracle_rootcause_tester --queries-file against every oracle server. 'action' entries generate the security event; 'capture' entries are the audit-free detection queries (row_count>0 => detected/alert). Entries with a 'requires' field need DB auditing enabled on the target Oracle (audit_trail is currently NONE, so those return 0).",
+  "sensitive_tables": [
+    "FSDH_CUSTOMER_BVN",
+    "STTM_CUSTOMER",
+    "STTM_CUST_ACCOUNT",
+    "STTM_PERSONAL",
+    "STTM_CORPORATE",
+    "ACVW_ALL_AC_ENTRIES",
+    "ACTB_HISTORY"
+  ],
+  "count": 19,
+  "queries": [
+    {
+      "root_cause_id": "ITEM01-successful-auth",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-021-RC01",
+      "query": "SELECT TO_CHAR(logon_time,'YYYY-MM-DD HH24:MI:SS') AS event_time, username AS login_name, machine AS host_name, osuser AS os_user, 'PROGRAM='||program||'; SID='||sid||','||serial# AS auth_info, 'Successful DB authentication: '||username||' from '||machine||' (OS '||osuser||')' AS statement FROM v$session WHERE type='USER' AND username IS NOT NULL ORDER BY logon_time DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "low"
+      }
+    },
+    {
+      "root_cause_id": "ITEM02-failed-login",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-022-RC01",
+      "requires": "DB auditing (unified ORA_LOGON_FAILURES or AUDIT SESSION). Currently audit_trail=NONE -> returns 0.",
+      "query": "SELECT TO_CHAR(event_timestamp,'YYYY-MM-DD HH24:MI:SS') AS event_time, dbusername AS login_name, userhost AS host_name, os_username AS os_user, 'RETURN_CODE='||return_code AS auth_info, 'Failed login attempt for '||dbusername||' from '||userhost AS statement FROM unified_audit_trail WHERE action_name='LOGON' AND return_code<>0 AND event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY ORDER BY event_timestamp DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM03a-action-grant-excessive",
+      "kind": "action",
+      "query": "GRANT DBA TO BAYDUN"
+    },
+    {
+      "root_cause_id": "ITEM03b-dba-activity-elevated-grants",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-026-RC01",
+      "query": "SELECT TO_CHAR(SYSTIMESTAMP,'YYYY-MM-DD HH24:MI:SS') AS event_time, grantee AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, 'ROLE '||granted_role AS auth_info, grantee||' holds elevated role '||granted_role AS statement FROM dba_role_privs WHERE granted_role IN ('DBA','PDB_DBA','IMP_FULL_DATABASE','EXP_FULL_DATABASE') AND grantee IN (SELECT username FROM dba_users WHERE oracle_maintained='N') ORDER BY grantee FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "high"
+      }
+    },
+    {
+      "root_cause_id": "ITEM04a-action-select-sensitive",
+      "kind": "action",
+      "query": "SELECT customer_no, customer_name, bvn, first_name, last_name FROM FCJLIVE.FSDH_CUSTOMER_BVN"
+    },
+    {
+      "root_cause_id": "ITEM04b-action-select-customer",
+      "kind": "action",
+      "query": "SELECT customer_no, customer_name1, address_line1 FROM FCJLIVE.STTM_CUSTOMER WHERE customer_no='040045'"
+    },
+    {
+      "root_cause_id": "ITEM04c-sensitive-read-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-024-RC01",
+      "query": "SELECT TO_CHAR(last_active_time,'YYYY-MM-DD HH24:MI:SS') AS event_time, parsing_schema_name AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, 'SELECT on sensitive table (cmd='||command_type||')' AS auth_info, SUBSTR(sql_text,1,4000) AS statement FROM v$sql WHERE command_type IN (3) AND UPPER(sql_text) NOT LIKE '%V$SQL%' AND (UPPER(sql_text) LIKE '%FSDH_CUSTOMER_BVN%' OR UPPER(sql_text) LIKE '%STTM_CUSTOMER%' OR UPPER(sql_text) LIKE '%STTM_CUST_ACCOUNT%' OR UPPER(sql_text) LIKE '%STTM_PERSONAL%' OR UPPER(sql_text) LIKE '%STTM_CORPORATE%' OR UPPER(sql_text) LIKE '%ACVW_ALL_AC_ENTRIES%' OR UPPER(sql_text) LIKE '%ACTB_HISTORY%') ORDER BY last_active_time DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM05a-action-update-customer",
+      "kind": "action",
+      "query": "UPDATE FCJLIVE.STTM_CUSTOMER SET address_line1='VERIFY DATA CHANGE' WHERE customer_no='040045'"
+    },
+    {
+      "root_cause_id": "ITEM05b-action-update-account",
+      "kind": "action",
+      "query": "UPDATE FCJLIVE.STTM_CUST_ACCOUNT SET ac_desc='VERIFY DATA CHANGE' WHERE ROWNUM=1"
+    },
+    {
+      "root_cause_id": "ITEM06-action-update-history",
+      "kind": "action",
+      "query": "UPDATE FCJLIVE.ACTB_HISTORY SET drcr_ind=drcr_ind WHERE ROWNUM=1"
+    },
+    {
+      "root_cause_id": "ITEM05c-sensitive-change-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-025-RC01",
+      "query": "SELECT TO_CHAR(last_active_time,'YYYY-MM-DD HH24:MI:SS') AS event_time, parsing_schema_name AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, 'UPDATE/INSERT on sensitive table (cmd='||command_type||')' AS auth_info, SUBSTR(sql_text,1,4000) AS statement FROM v$sql WHERE command_type IN (6,2) AND UPPER(sql_text) NOT LIKE '%V$SQL%' AND (UPPER(sql_text) LIKE '%FSDH_CUSTOMER_BVN%' OR UPPER(sql_text) LIKE '%STTM_CUSTOMER%' OR UPPER(sql_text) LIKE '%STTM_CUST_ACCOUNT%' OR UPPER(sql_text) LIKE '%STTM_PERSONAL%' OR UPPER(sql_text) LIKE '%STTM_CORPORATE%' OR UPPER(sql_text) LIKE '%ACVW_ALL_AC_ENTRIES%' OR UPPER(sql_text) LIKE '%ACTB_HISTORY%') ORDER BY last_active_time DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM07a-action-delete-history",
+      "kind": "action",
+      "query": "DELETE FROM FCJLIVE.ACTB_HISTORY WHERE ac_entry_sr_no=1"
+    },
+    {
+      "root_cause_id": "ITEM07b-delete-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-025-RC01",
+      "query": "SELECT TO_CHAR(last_active_time,'YYYY-MM-DD HH24:MI:SS') AS event_time, parsing_schema_name AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, 'DELETE on sensitive table (cmd='||command_type||')' AS auth_info, SUBSTR(sql_text,1,4000) AS statement FROM v$sql WHERE command_type IN (7) AND UPPER(sql_text) NOT LIKE '%V$SQL%' AND (UPPER(sql_text) LIKE '%FSDH_CUSTOMER_BVN%' OR UPPER(sql_text) LIKE '%STTM_CUSTOMER%' OR UPPER(sql_text) LIKE '%STTM_CUST_ACCOUNT%' OR UPPER(sql_text) LIKE '%STTM_PERSONAL%' OR UPPER(sql_text) LIKE '%STTM_CORPORATE%' OR UPPER(sql_text) LIKE '%ACVW_ALL_AC_ENTRIES%' OR UPPER(sql_text) LIKE '%ACTB_HISTORY%') ORDER BY last_active_time DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM09a-action-create-user",
+      "kind": "action",
+      "query": "CREATE USER VERIF_ACCT IDENTIFIED BY \"TestPass123\""
+    },
+    {
+      "root_cause_id": "ITEM09b-action-grant-privs",
+      "kind": "action",
+      "query": "GRANT CREATE SESSION, CONNECT, RESOURCE TO VERIF_ACCT"
+    },
+    {
+      "root_cause_id": "ITEM09c-new-account-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-023",
+      "query": "SELECT TO_CHAR(created,'YYYY-MM-DD HH24:MI:SS') AS event_time, username AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, account_status AS auth_info, 'New database account created: '||username AS statement FROM dba_users WHERE oracle_maintained='N' AND created > SYSDATE - 1 ORDER BY created DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM10a-action-drop-user",
+      "kind": "action",
+      "query": "DROP USER VERIF_ACCT CASCADE"
+    },
+    {
+      "root_cause_id": "ITEM10b-account-removal-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-023",
+      "requires": "DB auditing (DROP USER is DDL, not retained in V$SQL and not in DBA_USERS once gone). audit_trail=NONE -> returns 0.",
+      "query": "SELECT TO_CHAR(event_timestamp,'YYYY-MM-DD HH24:MI:SS') AS event_time, dbusername AS login_name, userhost AS host_name, os_username AS os_user, action_name AS auth_info, sql_text AS statement FROM unified_audit_trail WHERE action_name='DROP USER' AND event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY ORDER BY event_timestamp DESC FETCH FIRST 200 ROWS ONLY",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "medium"
+      }
+    },
+    {
+      "root_cause_id": "ITEM11-brute-force-detect",
+      "kind": "capture",
+      "maps_to": "SEC-SQL-AUD-022 (brute force)",
+      "requires": "DB auditing. Groups failed LOGONs per user/host; >=5 in 10 min = brute force. audit_trail=NONE -> returns 0.",
+      "query": "SELECT TO_CHAR(MAX(event_timestamp),'YYYY-MM-DD HH24:MI:SS') AS event_time, dbusername AS login_name, userhost AS host_name, MAX(os_username) AS os_user, 'FAILED_COUNT='||COUNT(*) AS auth_info, 'Repeated failed logins (possible brute force): '||COUNT(*)||' for '||dbusername AS statement FROM unified_audit_trail WHERE action_name='LOGON' AND return_code<>0 AND event_timestamp > SYSTIMESTAMP - INTERVAL '10' MINUTE GROUP BY dbusername, userhost HAVING COUNT(*) >= 5 ORDER BY COUNT(*) DESC",
+      "expected": {
+        "condition": "row_count > 0",
+        "severity": "high"
+      }
+    }
+  ]
+}
