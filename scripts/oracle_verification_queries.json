@@ -11,7 +11,7 @@
     "ACVW_ALL_AC_ENTRIES",
     "ACTB_HISTORY"
   ],
-  "count": 19,
+  "count": 21,
   "queries": [
     {
       "root_cause_id": "ITEM01-successful-auth",
@@ -95,12 +95,24 @@
       }
     },
     {
-      "root_cause_id": "ITEM07a-action-delete-history",
+      "root_cause_id": "ITEM07a-action-insert-history",
       "kind": "action",
-      "query": "DELETE FROM FCJLIVE.ACTB_HISTORY WHERE ac_entry_sr_no=1"
+      "comment": "create the record first (idempotent: sr_no 9001 is a dedicated verification row)",
+      "query": "INSERT INTO FCJLIVE.ACTB_HISTORY (AC_ENTRY_SR_NO,TRN_REF_NO,AC_NO,AC_CCY,DRCR_IND,LCY_AMOUNT,FCY_AMOUNT,TRN_DT,VALUE_DT) VALUES (9001,'TRNVERIFY9001','01VERIFY001','NGN','D',1000,1000,SYSDATE,SYSDATE)"
     },
     {
-      "root_cause_id": "ITEM07b-delete-detect",
+      "root_cause_id": "ITEM07b-action-delete-history",
+      "kind": "action",
+      "comment": "then drop (delete) the record just created",
+      "query": "DELETE FROM FCJLIVE.ACTB_HISTORY WHERE ac_entry_sr_no=9001"
+    },
+    {
+      "root_cause_id": "ITEM07c-action-commit",
+      "kind": "action",
+      "query": "COMMIT"
+    },
+    {
+      "root_cause_id": "ITEM07d-delete-detect",
       "kind": "capture",
       "maps_to": "SEC-SQL-AUD-025-RC01",
       "query": "SELECT TO_CHAR(last_active_time,'YYYY-MM-DD HH24:MI:SS') AS event_time, parsing_schema_name AS login_name, SYS_CONTEXT('USERENV','DB_NAME') AS host_name, CAST(NULL AS VARCHAR2(30)) AS os_user, 'DELETE on sensitive table (cmd='||command_type||')' AS auth_info, SUBSTR(sql_text,1,4000) AS statement FROM v$sql WHERE command_type IN (7) AND UPPER(sql_text) NOT LIKE '%V$SQL%' AND (UPPER(sql_text) LIKE '%FSDH_CUSTOMER_BVN%' OR UPPER(sql_text) LIKE '%STTM_CUSTOMER%' OR UPPER(sql_text) LIKE '%STTM_CUST_ACCOUNT%' OR UPPER(sql_text) LIKE '%STTM_PERSONAL%' OR UPPER(sql_text) LIKE '%STTM_CORPORATE%' OR UPPER(sql_text) LIKE '%ACVW_ALL_AC_ENTRIES%' OR UPPER(sql_text) LIKE '%ACTB_HISTORY%') ORDER BY last_active_time DESC FETCH FIRST 200 ROWS ONLY",
