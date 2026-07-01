@@ -696,8 +696,9 @@ def main():
                          "(params already substituted) and exit; optional path "
                          "(default: oracle_rootcause_queries.json)")
     ap.add_argument("--queries-file", metavar="FILE",
-                    help="run the queries loaded from this JSON file (produced by --export-queries) "
-                         "instead of reading them from the catalog")
+                    help="run the queries loaded from this JSON file. This is the ONLY execution "
+                         "source (the live-catalog run path was removed). Defaults to "
+                         "oracle_verification_queries.json next to the executable / in the cwd.")
     ap.add_argument("--simulate", action="store_true",
                     help="do NOT connect to Oracle; fabricate a result per rule and exercise the "
                          "collector's comparison + (dry-run) alert decision. SAFE drives the outcome.")
@@ -834,16 +835,25 @@ def main():
         pg.close()
         return 0
 
-    # Query source: a previously exported queries file, or the live catalog.
-    if args.queries_file:
-        rcs = load_queries_file(args.queries_file)
-        source = os.path.abspath(args.queries_file)
-        print(f"loaded {len(rcs)} oracle queries from file: {source}")
-    else:
-        rcs = load_oracle_rootcauses(pg, args.rc, args.limit)
-        source = "catalog:rootcause.v_rootcauses"
-        print(f"oracle root-cause queries to fire: {len(rcs)}"
-              + (f"  (filter: {args.rc})" if args.rc else ""))
+    # Query source: this tester runs ONLY from a queries file. If --queries-file is
+    # not given, default to the standard verification file next to the executable or
+    # in the current directory. The live-catalog execution path has been removed so a
+    # run can never fire the whole catalog against the monitored servers.
+    if not args.queries_file:
+        for cand in (os.path.join(os.getcwd(), "oracle_verification_queries.json"),
+                     os.path.join(os.path.dirname(os.path.abspath(sys.executable)),
+                                  "oracle_verification_queries.json")):
+            if os.path.exists(cand):
+                args.queries_file = cand
+                break
+    if not args.queries_file:
+        print(_c("ERROR: this tester runs only from a queries file. Provide "
+                 "--queries-file <FILE> (e.g. oracle_verification_queries.json).", 31))
+        pg.close()
+        return 2
+    rcs = load_queries_file(args.queries_file)
+    source = os.path.abspath(args.queries_file)
+    print(f"loaded {len(rcs)} oracle queries from file: {source}")
     pg.close()
     if not rcs:
         print("  (no oracle root-cause queries to run)")
