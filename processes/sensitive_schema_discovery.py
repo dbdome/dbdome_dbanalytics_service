@@ -14,7 +14,7 @@ from utils.log4dbexpert import db_write_log
 
 # PII column name patterns (regex alternation for PostgreSQL ~ operator)
 PII_PATTERNS = (
-    '(ssn|social_sec|national_id|tax_id|id_number|id_card|identity|passport|'
+    '(ssn|bvn|bank_verification|social_sec|national_id|tax_id|id_number|id_card|identity|passport|'
     'credit_card|card_num|card_number|cvv|ccv|'
     'email|e_mail|mail_address|'
     'phone|mobile|cell|fax|telephone|'
