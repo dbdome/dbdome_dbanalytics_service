@@ -37,7 +37,7 @@ def collect_metric_mssql_sensitive_data_activity(mssql_server, mssql_servername,
         odbc_str = f"""
                 DRIVER={{{driver}}};
                 SERVER={server_with_port};
-                DATABASE={mssql_database};
+                DATABASE={mssql_database or 'master'};
                 Trusted_Connection=yes;
                 Encrypt=yes;
                 TrustServerCertificate=yes;
@@ -46,7 +46,7 @@ def collect_metric_mssql_sensitive_data_activity(mssql_server, mssql_servername,
         odbc_str = f"""
             DRIVER={{{driver}}};
             SERVER={server_with_port};
-            DATABASE={mssql_database};
+            DATABASE={mssql_database or 'master'};
             UID={mssql_username};
             PWD={mssql_password};
             Encrypt=yes;
@@ -64,8 +64,8 @@ def collect_metric_mssql_sensitive_data_activity(mssql_server, mssql_servername,
 
     try:
         # ========== 1. Create SQLAlchemy Engines ==========
-        pg_home_server_engine = create_engine(pg_home_connection_string, echo=True)
-        mssql_engine = create_engine(connection_string, echo=True)
+        pg_home_server_engine = create_engine(pg_home_connection_string)
+        mssql_engine = create_engine(connection_string)
 
         # ========== 2. Get list of databases ==========
         db_query = """
@@ -76,6 +76,40 @@ def collect_metric_mssql_sensitive_data_activity(mssql_server, mssql_servername,
         """
 
         db_list = pd.read_sql_query(db_query, con=mssql_engine)
+
+        # ========== Sensitive column-name match list ==========
+        # Driven by the operator-curated metrics.sensitive_columns(column_name).
+        # Falls back to a built-in comprehensive PII list when that table is empty.
+        _builtin_patterns = [
+            'password','pass','secret','token','key','credit','card','ssn','email','phone',
+            'address','dob','birth','salary','pwd','passwd','credential','otp','pin',
+            'passport','national_id','nationalid','natid','tax_id','taxid','nino','license',
+            'licence','driver','teudat','identity','identification','id_number','idnumber',
+            'id_no','aadhaar','nric','voter','cvv','cvc','iban','swift','account','acct',
+            'routing','sort_code','bank','income','compensation','mobile','fax','zip',
+            'postal','postcode','gender','marital','nationality','maiden','medical',
+            'diagnosis','patient','prescription','insurance','disability','blood',
+            'biometric','fingerprint','retina',
+        ]
+        try:
+            with pg_home_server_engine.connect() as _scc:
+                _curated = [r[0] for r in _scc.execute(text(
+                    "SELECT DISTINCT lower(column_name) FROM metrics.sensitive_columns "
+                    "WHERE column_name IS NOT NULL AND btrim(column_name) <> ''"
+                )).fetchall()]
+        except Exception:
+            _curated = []
+        _patterns = _curated if _curated else _builtin_patterns
+
+        def _esc_like(_p):
+            # escape T-SQL LIKE specials so curated names match literally
+            return (_p.replace("'", "''").replace('[', '[[]')
+                       .replace('%', '[%]').replace('_', '[_]'))
+        where_clause = " OR ".join(
+            "LOWER(COLUMN_NAME) LIKE '%" + _esc_like(_p) + "%'" for _p in _patterns
+        ) or "1=0"
+        print(f"🔐 sensitive patterns: {len(_patterns)} "
+              f"({'curated' if _curated else 'built-in'})")
 
         # ========== 3. Loop through each database ==========
         all_results = []
@@ -93,21 +127,8 @@ def collect_metric_mssql_sensitive_data_activity(mssql_server, mssql_servername,
                 DATA_TYPE
             FROM [{db}].INFORMATION_SCHEMA.COLUMNS
             WHERE 
-                LOWER(COLUMN_NAME) LIKE '%password%' 
-                OR LOWER(COLUMN_NAME) LIKE '%pass%' 
-                OR LOWER(COLUMN_NAME) LIKE '%secret%' 
-                OR LOWER(COLUMN_NAME) LIKE '%token%' 
-                OR LOWER(COLUMN_NAME) LIKE '%key%' 
-                OR LOWER(COLUMN_NAME) LIKE '%credit%' 
-                OR LOWER(COLUMN_NAME) LIKE '%card%' 
-                OR LOWER(COLUMN_NAME) LIKE '%ssn%' 
-                OR LOWER(COLUMN_NAME) LIKE '%email%' 
-                OR LOWER(COLUMN_NAME) LIKE '%phone%' 
-                OR LOWER(COLUMN_NAME) LIKE '%address%' 
-                OR LOWER(COLUMN_NAME) LIKE '%dob%' 
-                OR LOWER(COLUMN_NAME) LIKE '%birth%' 
-                OR LOWER(COLUMN_NAME) LIKE '%salary%'
-            ORDER BY 
+                {where_clause}
+            ORDER BY
                 TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME;
             """
             df = pd.read_sql_query(p_sql_cmd, con=mssql_engine)

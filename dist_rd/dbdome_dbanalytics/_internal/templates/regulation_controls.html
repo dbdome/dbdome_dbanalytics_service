@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Regulation Controls - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18; --purple:#9933cc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .tabs{background:var(--bg-primary);display:flex;border-bottom:1px solid var(--border);padding:0 16px;}
+  .tab{padding:12px 18px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab:hover{color:var(--text-primary);}
+  .tab-content{display:none;padding:12px 16px;}
+  .tab-content.active{display:block;}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .stats-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .stat-panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:14px 20px;flex:1;min-width:110px;text-align:center;}
+  .stat-value{font-size:24px;font-weight:500;line-height:1.2;}
+  .stat-label{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-covered{background:#0a1f0a;color:var(--green-text);}
+  .badge-gap{background:#3a0010;color:var(--red-text);}
+  .badge-partial{background:#2a2000;color:var(--yellow);}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .filter-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center;}
+  .filter-bar select{background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);padding:5px 10px;border-radius:4px;font-size:12px;font-family:inherit;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Regulation Control Traceability</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('traceability')">Control Coverage</div>
+  <div class="tab" onclick="switchTab('gaps')">Gap Analysis</div>
+</div>
+
+<div class="tab-content active" id="tab-traceability">
+  <div class="stats-row" id="ctrl-stats"></div>
+  <div class="filter-bar">
+    <select id="f-reg" onchange="loadControls()">
+      <option value="">All Regulations</option>
+      <option>PCI-DSS</option><option>HIPAA</option><option>GDPR</option>
+      <option>SOC2</option><option>ISO-27001</option><option>NIST</option>
+    </select>
+    <select id="f-status" onchange="loadControls()">
+      <option value="">All Status</option>
+      <option>COVERED</option><option>GAP</option>
+    </select>
+    <button class="btn-sm" onclick="loadControls()">Refresh</button>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span>Control Traceability</span></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Regulation</th><th>Clause</th><th>Control Name</th>
+          <th>Control Type</th><th>Policies</th><th>Features</th><th>Coverage</th>
+        </tr></thead>
+        <tbody id="controls-body"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-gaps">
+  <div class="panel">
+    <div class="panel-header"><span>Control Gaps (no linked policies or features)</span>
+      <button class="btn-sm" onclick="loadGaps()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Regulation</th><th>Clause</th><th>Control Name</th><th>Control Type</th>
+        </tr></thead>
+        <tbody id="gaps-body"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['traceability','gaps'][i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='traceability') loadControls();
+  if(name==='gaps') loadGaps();
+}
+
+async function loadControls(){
+  const reg=document.getElementById('f-reg').value;
+  const status=document.getElementById('f-status').value;
+  const params=new URLSearchParams();
+  if(reg) params.set('regulation',reg);
+  if(status) params.set('status',status);
+  const res=await fetch('/api/regulation-controls?'+params);
+  const data=await res.json();
+  const rows=data.rows||[];
+  const covered=rows.filter(r=>r.coverage_status==='COVERED').length;
+  const gaps=rows.filter(r=>r.coverage_status==='GAP').length;
+  document.getElementById('ctrl-stats').innerHTML=`
+    <div class="stat-panel"><div class="stat-value">${rows.length}</div><div class="stat-label">Total Controls</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--green-text)">${covered}</div><div class="stat-label">Covered</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--red-text)">${gaps}</div><div class="stat-label">Gaps</div></div>
+    <div class="stat-panel"><div class="stat-value">${rows.length?Math.round(covered/rows.length*100):0}%</div><div class="stat-label">Coverage</div></div>
+  `;
+  document.getElementById('controls-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-weight:500;font-size:11px">${r.regulation||''}</td>
+    <td style="font-family:monospace;font-size:11px">${r.clause_number||''}</td>
+    <td style="font-size:11px">${r.control_name||''}</td>
+    <td style="font-size:11px;color:var(--text-secondary)">${r.control_type||''}</td>
+    <td style="text-align:center;font-size:11px">${(r.policy_ids||[]).length}</td>
+    <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.feature_refs||[]).join(', ')}</td>
+    <td><span class="badge badge-${(r.coverage_status||'gap').toLowerCase()}">${r.coverage_status||'GAP'}</span></td>
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">No controls found</td></tr>';
+}
+
+async function loadGaps(){
+  const res=await fetch('/api/regulation-controls?status=GAP');
+  const data=await res.json();
+  const rows=data.rows||[];
+  document.getElementById('gaps-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-weight:500;font-size:11px">${r.regulation||''}</td>
+    <td style="font-family:monospace;font-size:11px">${r.clause_number||''}</td>
+    <td style="font-size:11px">${r.control_name||''}</td>
+    <td style="font-size:11px;color:var(--text-secondary)">${r.control_type||''}</td>
+  </tr>`).join(''):'<tr><td colspan="4" class="empty">No gaps — all controls covered</td></tr>';
+}
+
+loadControls();
+</script>
+</body>
+</html>

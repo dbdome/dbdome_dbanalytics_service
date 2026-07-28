@@ -35,7 +35,7 @@ from datetime import datetime
 # ================================================================
 
 PG_HOST = "localhost"
-PG_PORT = 5444
+PG_PORT = 5432
 PG_USER = "dbdome_mon_usr"
 PG_PASS = "Yd2243796Anz!!"
 

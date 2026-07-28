@@ -1,0 +1,21 @@
+{
+  "_note": "STUB — area_code 'AIX' is a placeholder; confirm against AI_EXFILTRATION_DETECTION.md / the *_detection.json knowledge file, then fill root_causes and set detect[vendor] SQL.",
+  "module": "ai_exfiltration",
+  "area_code": "AIX",
+  "vendors": ["postgresql", "sqlserver", "oracle", "mysql"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-AIX-001-RC01",
+      "issue": "SEC-SQL-AIX-001",
+      "name": "TODO: first root cause for ai_exfiltration",
+      "slug": "ai_exfiltration-todo-rc01",
+      "description": "TODO: copy from the module's detection knowledge.",
+      "topics": ["ai_exfiltration"],
+      "risk_level": "high",
+      "resolution": "TODO: remediation guidance.",
+      "expected": {"condition": "row_count > 0", "description": "TODO"},
+      "columns": [],
+      "detect": {"postgresql": null, "sqlserver": null, "oracle": null, "mysql": null}
+    }
+  ]
+}

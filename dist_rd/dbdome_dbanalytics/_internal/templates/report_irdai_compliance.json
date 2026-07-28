@@ -1,0 +1,57 @@
+{
+  "report": {
+    "title": "IRDAI Information & Cyber Security - Database Controls Report",
+    "author": "DBDOME Security Team (dbexpert.ai)",
+    "date": "auto"
+  },
+  "database": { "database": "dbanalytics" },
+  "sections": [
+    { "type": "header", "level": 1, "text": "IRDAI Cyber Security - Database Activity Monitoring Report" },
+    { "type": "text", "content": "Compliance evidence aligned to IRDAI's Information and Cyber Security Guidelines for insurers, generated automatically by the DBDOME platform. Focus areas: least-privilege enforcement, protection of policyholder personal data, access monitoring, control over critical/destructive operations, and audit-trail integrity." },
+
+    { "type": "header", "level": 2, "text": "1. Least Privilege & Access Governance" },
+    { "type": "header", "level": 3, "text": "1.1 Segregation-of-Duties Violations" },
+    { "type": "table",
+      "query": "SELECT rule_name, action_type, attempted_by, resource_id, resource_owner, violation_reason, detected_at FROM log.sod_violations WHERE detected_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY detected_at DESC LIMIT 25",
+      "headers": ["rule_name", "action_type", "attempted_by", "resource_id", "resource_owner", "violation_reason", "detected_at"] },
+    { "type": "header", "level": 3, "text": "1.2 Privileged-Account & Privilege-Escalation Findings" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, COALESCE(rc.name, gm.metric_name) AS control, (gm.metric_metadata_vs_expected::jsonb->>'row_count')::int AS accounts, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','high') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = gm.metric_name WHERE (gm.metric_name LIKE 'SEC-SQL-AUD-026%%' OR gm.metric_name LIKE 'SEC-SQL-AZ%%' OR gm.metric_name LIKE 'SEC-SQL-AUTHZ%%') AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "control", "accounts", "severity", "detected_at"] },
+
+    { "type": "header", "level": 2, "text": "2. Policyholder Personal-Data Protection" },
+    { "type": "header", "level": 3, "text": "2.1 Sensitive-Data Discovery (PII / financial)" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, COALESCE(rc.name, gm.metric_name) AS control, (gm.metric_metadata_vs_expected::jsonb->>'row_count')::int AS items_found, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','medium') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = gm.metric_name WHERE gm.metric_name LIKE 'SEC-SQL-PRI%%' AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "control", "items_found", "severity", "detected_at"] },
+    { "type": "header", "level": 3, "text": "2.2 Sensitive-Data Access Events (30-day trend)" },
+    { "type": "chart", "chart_type": "line",
+      "query": "SELECT DATE_TRUNC('day', gm.entry_date) AS day, COUNT(*) AS pii_access_events FROM monitoring.general_metric_metadata_results gm WHERE gm.metric_name LIKE 'SEC-SQL-ACC-010-RC05%%' AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY day ORDER BY day",
+      "x_column": "day", "y_column": "pii_access_events",
+      "title": "Sensitive-Data Access Events (30-Day Trend)", "x_label": "Date", "y_label": "Events",
+      "caption": "Detections of access to sensitive/personal data over the last 30 days" },
+
+    { "type": "header", "level": 2, "text": "3. Access & Authentication Monitoring" },
+    { "type": "chart", "chart_type": "bar",
+      "query": "SELECT gm.server, COUNT(*) AS auth_findings FROM monitoring.general_metric_metadata_results gm WHERE (gm.metric_name LIKE 'SEC-SQL-AU%%' OR gm.metric_name LIKE 'SEC-SQL-ACC-010-RC01%%' OR gm.metric_name LIKE 'SEC-SQL-ACC-010-RC07%%') AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY gm.server ORDER BY auth_findings DESC LIMIT 10",
+      "x_column": "server", "y_column": "auth_findings",
+      "title": "Authentication / Access Findings by Database (7 days)", "x_label": "Database", "y_label": "Findings",
+      "caption": "Failed-login, unknown-login and off-hours access findings by database" },
+
+    { "type": "header", "level": 2, "text": "4. Control Over Critical / Destructive Operations" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, (gm.metric_metadata_vs_expected::jsonb->>'row_count')::int AS events, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','high') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm WHERE (gm.metric_name LIKE 'SEC-SQL-AUD-027%%' OR gm.metric_name LIKE 'SEC-SQL-ACC-010-RC13%%' OR gm.metric_name LIKE 'SEC-SQL-ACC-010-RC09%%') AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "events", "severity", "detected_at"] },
+
+    { "type": "header", "level": 2, "text": "5. Control Attestation Status (IRDAI)" },
+    { "type": "table",
+      "query": "SELECT period_name, regulation, total_controls, attested, exceptions, pending, completion_pct, due_date FROM log.v_attestation_summary WHERE regulation ILIKE '%%IRDAI%%' ORDER BY due_date DESC NULLS LAST LIMIT 10",
+      "headers": ["period_name", "regulation", "total_controls", "attested", "exceptions", "pending", "completion_pct", "due_date"] },
+
+    { "type": "header", "level": 2, "text": "6. Audit-Trail Integrity (tamper-evident)" },
+    { "type": "table",
+      "query": "SELECT table_name, rows_hashed, verified_at, CASE WHEN is_valid THEN 'INTACT' ELSE 'BROKEN' END AS chain_status FROM log.hash_chain_checkpoints ORDER BY verified_at DESC NULLS LAST LIMIT 20",
+      "headers": ["table_name", "rows_hashed", "verified_at", "chain_status"] }
+  ],
+  "output": { "pdf": "report_irdai_compliance", "html": "report_irdai_compliance" }
+}

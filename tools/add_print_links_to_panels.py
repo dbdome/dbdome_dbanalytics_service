@@ -49,6 +49,10 @@ def _build_link_url(base_url, dashboard_uid, panel_id, variable_names):
     parts = [
         f"{base_url}?dashboard={dashboard_uid}",
         f"panel={panel_id}",
+        # carry the dashboard's current time range so the print/email PDF
+        # matches what's on screen ($__from/$__to are epoch-ms globals).
+        "from=${__from}",
+        "to=${__to}",
     ]
     for v in variable_names:
         parts.append(f"{v}=${{{v}}}")

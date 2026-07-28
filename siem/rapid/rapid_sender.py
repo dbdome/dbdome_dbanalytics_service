@@ -1,3 +1,4 @@
+import os
 import socket
 import psycopg2
 import json
@@ -47,7 +48,7 @@ def message_format(event_type, status, server, description, timestamp):
 
 def siem_rapid_send(event_type, status, server, description):
 
-    _TIMEOUT = 5
+    _TIMEOUT = float(os.getenv("SIEM_TIMEOUT", "2"))
     sock = None
 
     config = load_siem_config("ip", "rapid_7")

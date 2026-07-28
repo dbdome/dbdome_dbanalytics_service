@@ -7,6 +7,11 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.dialects.postgresql import insert
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
+try:
+    from analysis.self_activity_filter import filter_excluded_logins as _dbdome_filter_excluded_logins
+except Exception:
+    def _dbdome_filter_excluded_logins(df, *a, **k):
+        return df
 from urllib.parse import quote_plus  # <-- this is required
 import urllib.parse
 import pyodbc
@@ -43,7 +48,7 @@ def collect_metric_active_transactions(mssql_server,mssql_servername  , mssql_da
         odbc_str = f"""
                 DRIVER={{{driver}}};
                 SERVER={server_with_port};
-                DATABASE={database};
+                DATABASE={database or 'master'};
                 Trusted_Connection=yes;
                 Encrypt=yes;
                 TrustServerCertificate=yes;
@@ -52,7 +57,7 @@ def collect_metric_active_transactions(mssql_server,mssql_servername  , mssql_da
         odbc_str = f"""
             DRIVER={{{driver}}};
             SERVER={server_with_port};
-            DATABASE={database};
+            DATABASE={database or 'master'};
             UID={username};
             PWD={password};
             Encrypt=yes;
@@ -100,7 +105,7 @@ def collect_metric_active_transactions(mssql_server,mssql_servername  , mssql_da
 
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
-    sql_server_engine = create_engine(connection_string , echo=True)
+    sql_server_engine = create_engine(connection_string )
     # PostgreSQL (target)
     postgres_engine = create_engine(pg_connection_string )
     metadata = MetaData(schema="monitoring")
@@ -142,6 +147,7 @@ def collect_metric_active_transactions(mssql_server,mssql_servername  , mssql_da
             vraw_conn = sql_server_engine.raw_connection()
             try:
                 df = pd.read_sql_query(p_sql_cmd, con=vraw_conn)
+                df = _dbdome_filter_excluded_logins(df)
                 # ========== 4. Bulk UPSERT into PostgreSQL ==========                
                 with postgres_engine.begin() as conn:                                                                      
                     conn.execute(
@@ -161,7 +167,7 @@ def collect_metric_active_transactions(mssql_server,mssql_servername  , mssql_da
     finally:
             db_write_log(f"collect_metric_active_transactions success"   ,0,"login_failure"  , servername, port=mssql_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 
 

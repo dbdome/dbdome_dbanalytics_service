@@ -1,0 +1,130 @@
+{
+  "module": "destructive_ddl_audit",
+  "vendors": [
+    "sqlserver",
+    "oracle"
+  ],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-AUD-020-RC01",
+      "issue": "SEC-SQL-AUD-020",
+      "name": "Database or schema dropped (audit trail)",
+      "slug": "audit-drop-database",
+      "description": "A DROP DATABASE / DROP SCHEMA (SQL Server) or DROP PLUGGABLE DATABASE / DROP TABLESPACE (Oracle) was recorded in the audit trail within the last 24 hours.",
+      "topics": [
+        "audit",
+        "ddl",
+        "drop-database",
+        "data-loss"
+      ],
+      "risk_level": "critical",
+      "resolution": "Confirm the drop was authorised (change ticket). If not, isolate the principal, revoke its privileges, and restore the database/schema from backup. Verify the audit policy still captures DDL.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "A database/schema drop is present in the audit trail (last 24h)."
+      },
+      "columns": [
+        "event_time",
+        "login_name",
+        "database_name",
+        "object_name",
+        "statement"
+      ],
+      "detect": {
+        "sqlserver": "SELECT TOP 500 CAST(GETDATE() AS DATETIME) AS event_time, s.login_name AS login_name,\n       DB_NAME(r.database_id) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(qt.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_requests AS r WITH (NOLOCK)\nJOIN sys.dm_exec_sessions AS s WITH (NOLOCK) ON s.session_id = r.session_id\nOUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt\nWHERE s.session_id <> @@SPID AND ISNULL(s.login_name,'') NOT LIKE '%dbdome%'\n  AND qt.text IS NOT NULL AND (qt.text LIKE '%DROP%DATABASE%' OR qt.text LIKE '%DROP%SCHEMA%')\nUNION ALL\nSELECT TOP 500 qs.last_execution_time AS event_time, CAST(NULL AS NVARCHAR(128)) AS login_name,\n       DB_NAME(st.dbid) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(st.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_query_stats AS qs WITH (NOLOCK)\nOUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) AS st\nWHERE qs.last_execution_time >= DATEADD(DAY,-1, GETDATE())\n  AND st.text IS NOT NULL AND st.text NOT LIKE '%dm_exec_query_stats%'\n  AND (st.text LIKE '%DROP%DATABASE%' OR st.text LIKE '%DROP%SCHEMA%')",
+        "oracle": "SELECT event_timestamp AS event_time, dbusername AS login_name, object_schema AS database_name, object_name, sql_text AS statement\nFROM unified_audit_trail\nWHERE event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY\n  AND (action_name IN ('DROP PLUGGABLE DATABASE','DROP TABLESPACE') OR UPPER(sql_text) LIKE '%DROP DATABASE%')\nORDER BY event_timestamp DESC FETCH FIRST 500 ROWS ONLY"
+      }
+    },
+    {
+      "rc": "SEC-SQL-AUD-020-RC02",
+      "issue": "SEC-SQL-AUD-020",
+      "name": "Table dropped (audit trail)",
+      "slug": "audit-drop-table",
+      "description": "A DROP TABLE statement was recorded in the audit trail within the last 24 hours, on any table.",
+      "topics": [
+        "audit",
+        "ddl",
+        "drop-table",
+        "data-loss"
+      ],
+      "risk_level": "high",
+      "resolution": "Confirm the table drop was authorised. If not, restore the table from backup or a recycle-bin/flashback, identify the principal, and review its DDL privileges.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "A DROP TABLE is present in the audit trail (last 24h)."
+      },
+      "columns": [
+        "event_time",
+        "login_name",
+        "database_name",
+        "object_name",
+        "statement"
+      ],
+      "detect": {
+        "sqlserver": "SELECT TOP 500 CAST(GETDATE() AS DATETIME) AS event_time, s.login_name AS login_name,\n       DB_NAME(r.database_id) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(qt.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_requests AS r WITH (NOLOCK)\nJOIN sys.dm_exec_sessions AS s WITH (NOLOCK) ON s.session_id = r.session_id\nOUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt\nWHERE s.session_id <> @@SPID AND ISNULL(s.login_name,'') NOT LIKE '%dbdome%'\n  AND qt.text IS NOT NULL AND (qt.text LIKE '%DROP%TABLE%')\nUNION ALL\nSELECT TOP 500 qs.last_execution_time AS event_time, CAST(NULL AS NVARCHAR(128)) AS login_name,\n       DB_NAME(st.dbid) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(st.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_query_stats AS qs WITH (NOLOCK)\nOUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) AS st\nWHERE qs.last_execution_time >= DATEADD(DAY,-1, GETDATE())\n  AND st.text IS NOT NULL AND st.text NOT LIKE '%dm_exec_query_stats%'\n  AND (st.text LIKE '%DROP%TABLE%')",
+        "oracle": "SELECT event_timestamp AS event_time, dbusername AS login_name, object_schema AS database_name, object_name, sql_text AS statement\nFROM unified_audit_trail\nWHERE event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY\n  AND (action_name = 'DROP TABLE')\nORDER BY event_timestamp DESC FETCH FIRST 500 ROWS ONLY"
+      }
+    },
+    {
+      "rc": "SEC-SQL-AUD-020-RC03",
+      "issue": "SEC-SQL-AUD-020",
+      "name": "User, login or role dropped (audit trail)",
+      "slug": "audit-drop-user",
+      "description": "A DROP USER / DROP LOGIN / DROP ROLE statement was recorded in the audit trail within the last 24 hours.",
+      "topics": [
+        "audit",
+        "ddl",
+        "drop-user",
+        "access-control"
+      ],
+      "risk_level": "critical",
+      "resolution": "Confirm the account/role drop was authorised (de-provisioning ticket). If not, recreate the principal and its grants from your IAM baseline, and investigate the actor.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "A user/login/role drop is present in the audit trail (last 24h)."
+      },
+      "columns": [
+        "event_time",
+        "login_name",
+        "database_name",
+        "object_name",
+        "statement"
+      ],
+      "detect": {
+        "sqlserver": "SELECT TOP 500 CAST(GETDATE() AS DATETIME) AS event_time, s.login_name AS login_name,\n       DB_NAME(r.database_id) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(qt.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_requests AS r WITH (NOLOCK)\nJOIN sys.dm_exec_sessions AS s WITH (NOLOCK) ON s.session_id = r.session_id\nOUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt\nWHERE s.session_id <> @@SPID AND ISNULL(s.login_name,'') NOT LIKE '%dbdome%'\n  AND qt.text IS NOT NULL AND (qt.text LIKE '%DROP%LOGIN%' OR qt.text LIKE '%DROP%USER%' OR qt.text LIKE '%DROP%ROLE%')\nUNION ALL\nSELECT TOP 500 qs.last_execution_time AS event_time, CAST(NULL AS NVARCHAR(128)) AS login_name,\n       DB_NAME(st.dbid) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(st.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_query_stats AS qs WITH (NOLOCK)\nOUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) AS st\nWHERE qs.last_execution_time >= DATEADD(DAY,-1, GETDATE())\n  AND st.text IS NOT NULL AND st.text NOT LIKE '%dm_exec_query_stats%'\n  AND (st.text LIKE '%DROP%LOGIN%' OR st.text LIKE '%DROP%USER%' OR st.text LIKE '%DROP%ROLE%')",
+        "oracle": "SELECT event_timestamp AS event_time, dbusername AS login_name, object_schema AS database_name, object_name, sql_text AS statement\nFROM unified_audit_trail\nWHERE event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY\n  AND (action_name IN ('DROP USER','DROP ROLE'))\nORDER BY event_timestamp DESC FETCH FIRST 500 ROWS ONLY"
+      }
+    },
+    {
+      "rc": "SEC-SQL-AUD-020-RC04",
+      "issue": "SEC-SQL-AUD-020",
+      "name": "Data deleted from a table (audit trail)",
+      "slug": "audit-delete-data",
+      "description": "A DELETE or TRUNCATE TABLE statement was recorded in the audit trail within the last 24 hours, on any table.",
+      "topics": [
+        "audit",
+        "dml",
+        "delete",
+        "truncate",
+        "data-loss"
+      ],
+      "risk_level": "high",
+      "resolution": "Confirm the deletion was authorised. If not, restore affected rows from backup / flashback / point-in-time, identify the principal, and review DML privileges and WHERE-clause controls.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "A DELETE/TRUNCATE is present in the audit trail (last 24h)."
+      },
+      "columns": [
+        "event_time",
+        "login_name",
+        "database_name",
+        "object_name",
+        "statement"
+      ],
+      "detect": {
+        "sqlserver": "SELECT TOP 500 CAST(GETDATE() AS DATETIME) AS event_time, s.login_name AS login_name,\n       DB_NAME(r.database_id) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(qt.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_requests AS r WITH (NOLOCK)\nJOIN sys.dm_exec_sessions AS s WITH (NOLOCK) ON s.session_id = r.session_id\nOUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt\nWHERE s.session_id <> @@SPID AND ISNULL(s.login_name,'') NOT LIKE '%dbdome%'\n  AND qt.text IS NOT NULL AND (qt.text LIKE '%DELETE%' OR qt.text LIKE '%TRUNCATE%TABLE%')\nUNION ALL\nSELECT TOP 500 qs.last_execution_time AS event_time, CAST(NULL AS NVARCHAR(128)) AS login_name,\n       DB_NAME(st.dbid) AS database_name, CAST(NULL AS NVARCHAR(128)) AS object_name,\n       CAST(st.text AS NVARCHAR(MAX)) AS statement\nFROM sys.dm_exec_query_stats AS qs WITH (NOLOCK)\nOUTER APPLY sys.dm_exec_sql_text(qs.sql_handle) AS st\nWHERE qs.last_execution_time >= DATEADD(DAY,-1, GETDATE())\n  AND st.text IS NOT NULL AND st.text NOT LIKE '%dm_exec_query_stats%'\n  AND (st.text LIKE '%DELETE%' OR st.text LIKE '%TRUNCATE%TABLE%')",
+        "oracle": "SELECT event_timestamp AS event_time, dbusername AS login_name, object_schema AS database_name, object_name, sql_text AS statement\nFROM unified_audit_trail\nWHERE event_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY\n  AND (action_name IN ('DELETE','TRUNCATE TABLE'))\nORDER BY event_timestamp DESC FETCH FIRST 500 ROWS ONLY"
+      }
+    }
+  ]
+}

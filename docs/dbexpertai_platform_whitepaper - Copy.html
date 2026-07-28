@@ -1,0 +1,396 @@
+<style>
+  :root{
+    --bg:#f4f7fa; --surface:#ffffff; --surface-2:#eef3f8; --surface-3:#e6edf4;
+    --text:#131c26; --muted:#54677a; --faint:#7c8da5; --line:#d8e1ea;
+    --accent:#0d9384; --accent-2:#0a7a6d; --accent-soft:rgba(13,147,132,.10);
+    --amber:#b9781a; --good:#1f9d55; --crit:#cf3f36;
+    --shadow:0 1px 2px rgba(16,32,48,.05),0 8px 30px rgba(16,32,48,.06);
+    --font-sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"Cascadia Code","Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+    --maxw:1120px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0a0f16; --surface:#111a24; --surface-2:#0e1620; --surface-3:#16212d;
+      --text:#e8eff6; --muted:#93a6b8; --faint:#63788b; --line:#223140;
+      --accent:#37d4c0; --accent-2:#54e0cd; --accent-soft:rgba(55,212,192,.12);
+      --amber:#d6a038; --good:#3fb950; --crit:#f2544a;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f7fa; --surface:#ffffff; --surface-2:#eef3f8; --surface-3:#e6edf4;
+    --text:#131c26; --muted:#54677a; --faint:#7c8da5; --line:#d8e1ea;
+    --accent:#0d9384; --accent-2:#0a7a6d; --accent-soft:rgba(13,147,132,.10);
+    --amber:#b9781a; --good:#1f9d55; --crit:#cf3f36;
+    --shadow:0 1px 2px rgba(16,32,48,.05),0 8px 30px rgba(16,32,48,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a0f16; --surface:#111a24; --surface-2:#0e1620; --surface-3:#16212d;
+    --text:#e8eff6; --muted:#93a6b8; --faint:#63788b; --line:#223140;
+    --accent:#37d4c0; --accent-2:#54e0cd; --accent-soft:rgba(55,212,192,.12);
+    --amber:#d6a038; --good:#3fb950; --crit:#f2544a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);
+    line-height:1.65;-webkit-font-smoothing:antialiased;font-size:16.5px}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  a{color:var(--accent-2);text-decoration:none}a:hover{text-decoration:underline}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  h1,h2,h3,h4{text-wrap:balance;line-height:1.14;margin:0}
+  .eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent-2);font-weight:600}
+  code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-3);color:var(--text);
+    padding:.08em .38em;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+
+  header.hero{border-bottom:1px solid var(--line);
+    background:radial-gradient(130% 100% at 88% -20%,var(--accent-soft),transparent 55%),
+      linear-gradient(180deg,var(--surface-2),var(--bg))}
+  .brandbar{display:flex;align-items:center;justify-content:space-between;padding:22px 24px;max-width:var(--maxw);margin:0 auto}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700}
+  .glyph{width:30px;height:30px;flex:none}
+  .kicker{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .hero-inner{max-width:var(--maxw);margin:0 auto;padding:40px 24px 44px}
+  .hero h1{font-size:clamp(2.1rem,5.2vw,3.5rem);font-weight:800;letter-spacing:-.02em;max-width:18ch}
+  .hero h1 .hl{color:var(--accent-2)}
+  .lede{font-size:clamp(1.05rem,2.1vw,1.28rem);color:var(--muted);max-width:64ch;margin-top:20px}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+  .tag{font-family:var(--font-mono);font-size:.73rem;border:1px solid var(--line);background:var(--surface);
+    color:var(--muted);padding:6px 11px;border-radius:999px}
+  .tag b{color:var(--accent-2);font-weight:600}
+
+  /* stats */
+  .stats{max-width:var(--maxw);margin:0 auto;padding:0 24px 40px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .stat{background:var(--surface);padding:20px 18px}
+  .stat .v{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat .l{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+
+  section{padding:56px 0;border-bottom:1px solid var(--line)}
+  .sec-head{max-width:66ch;margin-bottom:30px}
+  .sec-head h2{font-size:clamp(1.5rem,3.2vw,2.15rem);font-weight:750;letter-spacing:-.01em;margin-top:10px}
+  .sec-head p{color:var(--muted);margin:14px 0 0;font-size:1.06rem}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:18px 16px;position:relative}
+  .stage .n{font-family:var(--font-mono);font-size:.7rem;color:var(--accent-2);font-weight:600}
+  .stage h4{font-size:1rem;margin:6px 0 6px;font-weight:700}
+  .stage p{margin:0;font-size:.85rem;color:var(--muted)}
+  .stage:not(:last-child)::after{content:"›";position:absolute;right:-11px;top:50%;transform:translateY(-50%);
+    color:var(--faint);font-size:1.3rem;z-index:2}
+
+  /* DAM highlight */
+  .dam{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;align-items:start}
+  .dam-main p{color:var(--muted);margin:0 0 14px}
+  .dam-main p strong{color:var(--text);font-weight:650}
+  .scorecard{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .scorecard .top{padding:18px 20px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+  .scorecard .top .lab{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2)}
+  .scorecard .top .big{font-size:2.1rem;font-weight:800;color:var(--accent-2);font-variant-numeric:tabular-nums}
+  .scorecard ul{margin:0;padding:14px 20px 16px;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+  .scorecard li{font-size:.8rem;color:var(--muted);position:relative;padding-left:15px}
+  .scorecard li::before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  .regs{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .reg{font-family:var(--font-mono);font-size:.7rem;color:var(--text);background:var(--surface-3);border:1px solid var(--line);padding:4px 9px;border-radius:6px}
+
+  /* capability grid */
+  .capgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .capc{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);padding:22px 22px 20px}
+  .capc .ce{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .capc .ce .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+  .capc h3{font-size:1.12rem;font-weight:700;margin-bottom:8px}
+  .capc p{margin:0 0 12px;color:var(--muted);font-size:.94rem}
+  .capc p b{color:var(--text);font-weight:640}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);background:var(--surface-3);
+    border:1px solid var(--line);padding:4px 8px;border-radius:6px;white-space:nowrap}
+
+  /* diagnostic depth */
+  .depth{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .depthcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+  .tree{font-family:var(--font-mono);font-size:.82rem;line-height:1.9;color:var(--text)}
+  .tree .lvl{color:var(--faint)}
+  .tree .hit{color:var(--accent-2);font-weight:600}
+  .tree .fix{color:var(--good);font-weight:600}
+
+  /* deploy */
+  .deploy{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+  .dcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .dcard .i{font-family:var(--font-mono);color:var(--accent-2);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .dcard h4{margin:9px 0 7px;font-size:1.04rem;font-weight:680}
+  .dcard p{margin:0;color:var(--muted);font-size:.9rem}
+
+  footer{padding:38px 0 60px;color:var(--muted);font-size:.85rem}
+  footer .wrap{display:flex;flex-direction:column;gap:10px}
+  .rule{height:1px;background:var(--line);border:none;margin:0}
+
+  @media (max-width:820px){
+    .pipe{grid-template-columns:1fr 1fr}
+    .stage:not(:last-child)::after{content:none}
+    .dam{grid-template-columns:1fr}
+    .capgrid{grid-template-columns:1fr}
+    .depth{grid-template-columns:1fr}
+    .scorecard ul{grid-template-columns:1fr}
+  }
+</style>
+
+<header class="hero">
+  <div class="brandbar">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2.5 4 7.2v8.1c0 7 5 11.6 12 14.2 7-2.6 12-7.2 12-14.2V7.2L16 2.5Z"
+          fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+        <path d="M10 16.5h3l2-4 2.5 7 2-3H22" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>dbexpert.ai</span>
+    </div>
+    <span class="kicker">Platform White Paper · v1.0</span>
+  </div>
+  <div class="hero-inner">
+    <span class="eyebrow">The database security &amp; diagnostics platform</span>
+    <h1>From live activity to <span class="hl">root cause</span> to enforcement.</h1>
+    <p class="lede">dbexpert.ai watches every database session, walks a curated taxonomy of thousands of root causes to explain <em>why</em> a problem is happening, and then enforces the fix inside the database itself — Activity Monitoring, detection, compliance, firewall, masking and response in one air-gap-capable appliance across SQL Server, PostgreSQL, Oracle, MySQL, MariaDB, ClickHouse and Informix.</p>
+    <div class="hero-tags">
+      <span class="tag"><b>DAM</b> first</span>
+      <span class="tag"><b>Agentless</b> collection</span>
+      <span class="tag"><b>Diagnostic depth</b></span>
+      <span class="tag"><b>In-database</b> enforcement</span>
+      <span class="tag"><b>Air-gap</b> appliance</span>
+      <span class="tag">PCI · HIPAA · SOX · GDPR · SOC 2</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">7</div><div class="l">DB engines</div></div>
+    <div class="stat"><div class="v">593</div><div class="l">Issues</div></div>
+    <div class="stat"><div class="v">7,100<span style="color:var(--accent-2)">+</span></div><div class="l">Root causes</div></div>
+    <div class="stat"><div class="v">15k<span style="color:var(--accent-2)">+</span></div><div class="l">Detection steps</div></div>
+    <div class="stat"><div class="v">3</div><div class="l">Domains: perf · sec · health</div></div>
+    <div class="stat"><div class="v">1</div><div class="l">Self-contained appliance</div></div>
+  </div>
+</header>
+
+<main>
+  <!-- pipeline -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">How it works</span>
+        <h2>One pipeline, five stages.</h2>
+        <p>Every metric flows the same route — collected per-engine, analyzed for anomalies and threats, resolved against the taxonomy, surfaced as issues and incidents, then delivered as dashboards, reports, alerts, SIEM events and enforcement.</p>
+      </div>
+      <div class="pipe">
+        <div class="stage"><div class="n">01</div><h4>Collect</h4><p>Vendor-aware collectors pull metrics, plans, config, audit &amp; security signals on per-metric schedules.</p></div>
+        <div class="stage"><div class="n">02</div><h4>Analyze</h4><p>Anomaly detection (incl. ML autoencoders), threat &amp; SQL-injection detection; each step records matched vs expected.</p></div>
+        <div class="stage"><div class="n">03</div><h4>Root-cause</h4><p>Matched steps roll up the taxonomy: steps → root causes → issues → areas → domains.</p></div>
+        <div class="stage"><div class="n">04</div><h4>Surface</h4><p>Issues (vertical decision trees) and Incidents (cross-cutting statistical + named-threat signatures).</p></div>
+        <div class="stage"><div class="n">05</div><h4>Deliver</h4><p>Dashboards, PDF/XLSX reports, email, SIEM forwarding, AI chat — and in-database enforcement.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DAM headline -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">The headline capability</span>
+        <h2>Database Activity Monitoring, scored for compliance.</h2>
+        <p>DAM is the platform's spine: continuous capture and analysis of live sessions, transactions and audit activity — privileged access, authentication, DDL, sensitive-data reads — rolled up into a weighted, per-regulation compliance score you can hand an auditor.</p>
+      </div>
+      <div class="dam">
+        <div class="dam-main">
+          <p><strong>Continuous capture &amp; analysis.</strong> Active-transaction and active-session analyzers, sensitive-column access tracking, and an audit feed land in <code>monitoring.general_metric_metadata_results</code> and the alert store — with excluded service logins filtered out at the source so alerts stay signal, not noise.</p>
+          <p><strong>A DAM compliance score, not just a log.</strong> <code>v_dam_compliance_scorecard</code> computes ten risk-weighted control areas 0–100 over a trailing 30-day window; <code>v_dam_regulation_score</code> rolls them into a per-framework score plus an overall posture band.</p>
+          <p><strong>One-click evidence.</strong> The DAM Compliance Report renders on demand — <code>/dam_report</code> → Print PDF (<code>/api/print-dam</code>) or Send by mail (<code>/api/email-dam</code>) — or on a weekly schedule, mapping every control to its PCI-DSS / HIPAA / SOX / GDPR / SOC 2 clause.</p>
+          <div class="regs">
+            <span class="reg">PCI-DSS v4.0</span><span class="reg">HIPAA</span><span class="reg">SOX / COBIT</span><span class="reg">GDPR</span><span class="reg">SOC 2</span>
+          </div>
+        </div>
+        <aside class="scorecard">
+          <div class="top">
+            <div class="lab">Overall DAM compliance</div>
+            <div class="big">0–100</div>
+            <div style="font-size:.8rem;color:var(--muted);font-family:var(--font-mono)">Compliant · Substantially · Partially · At Risk</div>
+          </div>
+          <ul>
+            <li>Monitoring coverage</li>
+            <li>Sensitive-data protection</li>
+            <li>Privileged access</li>
+            <li>Authentication</li>
+            <li>Audit-trail completeness</li>
+            <li>Change control (DDL)</li>
+            <li>Separation of duties</li>
+            <li>Violation response</li>
+            <li>Active threat prevention</li>
+            <li>Incident MTTR</li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- capability grid -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">The rest of the platform</span>
+        <h2>Eleven more capability areas, one appliance.</h2>
+        <p>Detection, response, data protection, GRC, firewall and integrations — each backed by a real engine and audited to its own store.</p>
+      </div>
+      <div class="capgrid">
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Detection catalog</span></div>
+          <h3>Root-cause taxonomy engine</h3>
+          <p>A curated <b>Performance / Security / Health</b> taxonomy — thousands of vendor-specific root causes rendered as per-RC SQL views and executed by a decision-tree engine that branches on match / no-match to reach the specific upstream cause.</p>
+          <div class="chips"><span class="chip">rootcause schema</span><span class="chip">detection_tree_executor</span><span class="chip">SEC · PERF · HLTH</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Alerting</span></div>
+          <h3>Alert &amp; incident lifecycle</h3>
+          <p>Findings become alerts, then <b>open→resolved incidents</b> with per-severity timeouts and auto-resolution. Excluded-login suppression is enforced centrally so noise never reaches an incident.</p>
+          <div class="chips"><span class="chip">alerts.v_alert_incidents</span><span class="chip">alert_auto_resolve</span><span class="chip">/api/alerts/*</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Active response</span></div>
+          <h3>Blocking &amp; threat-response playbooks</h3>
+          <p>Kill the offending session behind a root cause (gated by per-rule + global dry-run), or run a <b>playbook</b>: NOTIFY / BLOCK_IP / SUSPEND_USER / ESCALATE / WEBHOOK with cooldown de-duplication.</p>
+          <div class="chips"><span class="chip">blocker.py</span><span class="chip">threat_response_engine</span><span class="chip">blocker_log</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Targeted guards</span></div>
+          <h3>Ransomware &amp; app-login guards</h3>
+          <p>Detect mass in-place encryption and modification-velocity spikes (<b>ransomware</b>), and alert+kill when a watched applicative login is used from a watched program (<b>app-login guard</b>).</p>
+          <div class="chips"><span class="chip">ransomware_guard</span><span class="chip">app_login_guard</span><span class="chip">SEC-SQL-AUD-031</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Data protection</span></div>
+          <h3>Discovery, masking &amp; encryption</h3>
+          <p>PII discovery (name + sampled-value regex, confidence-scored), then <b>dynamic / static masking, tokenization, anonymization and column encryption</b> applied with the database's own controls — audited and reversible.</p>
+          <div class="chips"><span class="chip">continuous_data_discovery</span><span class="chip">data_protection.py</span><span class="chip">metrics.dp_log</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Access governance</span></div>
+          <h3>RBAC, privileged access &amp; SoD</h3>
+          <p>One-click least-privilege <b>role provisioning</b> (backup-first), privilege-change tracking, separation-of-duties violations, and per-user 0–100 <b>risk scoring</b> with an EMA baseline.</p>
+          <div class="chips"><span class="chip">rbac_provisioning</span><span class="chip">sod_scanner</span><span class="chip">user_risk_profiles</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">GRC</span></div>
+          <h3>Compliance, attestation &amp; evidence</h3>
+          <p>Multi-framework compliance reports, access-review recertification, DDL change-control audit, tamper-evident <b>hash-chained audit trail</b>, and signed <b>evidence packages</b> (PDF+CSV+SHA-256).</p>
+          <div class="chips"><span class="chip">compliance_report_generator</span><span class="chip">hash_chain_writer</span><span class="chip">evidence_package</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Prevention</span></div>
+          <h3>Database firewall &amp; policy</h3>
+          <p>Evaluate queries and sessions against ordered policies (pattern, user, role, IP/CIDR, table, time-range) → ALLOW / BLOCK + risk score, with policy exceptions and <b>cross-border transfer</b> checks for data residency.</p>
+          <div class="chips"><span class="chip">firewall_policy_engine</span><span class="chip">log.firewall_audit_log</span><span class="chip">cross_border_scanner</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Hardening</span></div>
+          <h3>TLS, vulnerability &amp; retention</h3>
+          <p><b>TLS enforcement</b> scanning with appliance cert management, a <b>CVE watchlist</b> vulnerability assessment, and retention enforcement with a minimum-retain floor and disk-space alerting.</p>
+          <div class="chips"><span class="chip">tls_enforcement_scanner</span><span class="chip">vulnerability_scanner</span><span class="chip">retention_engine</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Integration</span></div>
+          <h3>SIEM &amp; IPS ingestion</h3>
+          <p>Ship events to <b>RAPID7, CrowdStrike Falcon, Wazuh</b> or any target via a config-driven generic sender (CEF / LEEF / RFC5424 / RFC3164 / JSON), and ingest <b>FortiAnalyzer IPS</b> events for correlation.</p>
+          <div class="chips"><span class="chip">siem/ senders</span><span class="chip">config.siem</span><span class="chip">fortianalyzer_ips</span></div>
+        </article>
+
+        <article class="capc">
+          <div class="ce"><span class="dot"></span><span class="eyebrow">Intelligence</span></div>
+          <h3>Anomaly, plan &amp; LLM analysis</h3>
+          <p>Z-score and <b>ML-autoencoder</b> anomaly detection, execution-plan analysis with missing-index recs, and <b>LLM agents</b> that write plain-English remediation and propose false-alarm suppression — plus appliance self-monitoring.</p>
+          <div class="chips"><span class="chip">anomaly_agent</span><span class="chip">execution_plan_agent</span><span class="chip">rootcause_explainer</span></div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- diagnostic depth -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">The differentiator</span>
+        <h2>Diagnostic depth: symptom → cause → resolution.</h2>
+        <p>Most tools stop at "here's an anomaly." dbexpert.ai walks authored decision trees over a curated taxonomy to take an operator from a symptom to the <em>specific</em> upstream root cause and the steps to fix it.</p>
+      </div>
+      <div class="depth">
+        <div class="depthcard">
+          <div class="tree">
+<span class="lvl">DOMAIN</span> Performance<br>
+&nbsp;&nbsp;<span class="lvl">└ ISSUE</span> Query latency spike<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="lvl">├ step</span> waits = ASYNC_NETWORK_IO? ✗<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="lvl">├ step</span> plan regressed? ✓<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="lvl">└</span> <span class="hit">ROOT CAUSE · parameter-sniffing plan flip</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fix">→ RESOLUTION · recompile / plan guide</span>
+          </div>
+          <p style="color:var(--muted);font-size:.9rem;margin:16px 0 0">Detection steps carry matched-vs-expected; branching (<code>on_match_action</code> / <code>on_no_match_action</code>) routes to the next probe until a leaf root cause is reached, then a parallel resolution path is attached.</p>
+        </div>
+        <div class="depthcard">
+          <h4 style="font-size:1.08rem;margin-bottom:10px">A knowledge core, not just rules</h4>
+          <p style="color:var(--muted);font-size:.95rem;margin:0 0 12px">The taxonomy lives in a governed PostgreSQL schema — <code>domains → areas → issues → root_causes → detection_paths → detection_steps</code>, with parallel resolution paths and a customer-extensible signature layer for named threats (ransomware, worms, exfiltration, insider).</p>
+          <div class="chips">
+            <span class="chip">593 issues</span><span class="chip">7,100+ root causes</span><span class="chip">15,000+ steps</span>
+            <span class="chip">11 decision trees</span><span class="chip">signed offline updates</span><span class="chip">Ed25519-verified</span>
+          </div>
+          <p style="color:var(--muted);font-size:.9rem;margin:14px 0 0">Emergent <b>incidents</b> catch what no single rule sees — statistical co-firing of unrelated signals — while <b>signature</b> playbooks encode known attack patterns end to end.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- deployment -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Deployment</span>
+        <h2>One appliance. Yours, even offline.</h2>
+        <p>The same product ships as hosted SaaS or a fully self-contained on-prem appliance — scheduler, web UI, reporting and email in a single binary, installable with nothing to phone home.</p>
+      </div>
+      <div class="deploy">
+        <div class="dcard"><div class="i">Self-contained</div><h4>Single binary</h4><p>Scheduler + FastAPI web UI + reporting + email in one PyInstaller build; bundles PostgreSQL and the SQL Server ODBC driver.</p></div>
+        <div class="dcard"><div class="i">Any OS</div><h4>Windows · Linux · macOS</h4><p>Windows ISO, Linux x86_64 and macOS arm64 packages; registered as an auto-restarting service (NSSM / pywin32 / systemd).</p></div>
+        <div class="dcard"><div class="i">Air-gapped</div><h4>No internet required</h4><p>Seed taxonomy restored at install; <b>Ed25519-signed</b> offline update bundles; a bootstrap token exchanged once for a local ingest token.</p></div>
+        <div class="dcard"><div class="i">Agentless</div><h4>Nothing on the DB host</h4><p>Out-of-band collection over unified, encrypted vendor connections — no agent to install on the monitored databases.</p></div>
+        <div class="dcard"><div class="i">Self-watching</div><h4>Monitors itself</h4><p>Appliance disk / CPU / memory / service checks raise the same alerts as the databases it protects.</p></div>
+        <div class="dcard"><div class="i">Delivered</div><h4>Dashboards → boardroom</h4><p>Web dashboard &amp; mobile PWA, executive Fleet-Health PDF, per-row Findings XLSX, ranked Triage Worklist, SIEM forwarding, and (SaaS) RAG-grounded AI chat.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- close -->
+  <section style="border-bottom:none">
+    <div class="wrap">
+      <div class="sec-head" style="max-width:70ch">
+        <span class="eyebrow">The bottom line</span>
+        <h2>Monitor, explain, prove, and enforce — without stitching six tools together.</h2>
+        <p>dbexpert.ai unifies Database Activity Monitoring, a deep diagnostic taxonomy, compliance scoring and evidence, a database firewall, data protection and active threat response into one agentless, air-gap-capable appliance — enforcing inside the database, not in a proxy in front of it. Discover the problem, understand its cause, act on it, and hand the auditor the score.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <hr class="rule"/>
+    <div><strong>dbexpert.ai</strong> — Platform white paper. Capabilities, object names, processes and endpoints reflect the implementation of the dbexpert.ai / DBDOME platform (the <code>dbexpertai_dbanalytics_service</code> analytics service and the <code>dbdiagnostics</code> on-prem appliance).</div>
+    <div>Taxonomy figures are authoring/repository snapshots and grow over time. Confidential — for evaluation.</div>
+  </div>
+</footer>

@@ -61,6 +61,6 @@ ORDER BY
     finally:
             print("✅ collect_metric_mssql_sql_injection=>Data sync complete")    
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

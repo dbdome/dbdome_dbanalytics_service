@@ -74,4 +74,4 @@ def metrics_analysis_populate_threats():
     finally:            
             db_write_log(f"metrics_analysis_populate_threats sucess"   ,0,"metrics_active_transactions_analysis",server )
             raw_conn.close()
-            return  1
+    return  1

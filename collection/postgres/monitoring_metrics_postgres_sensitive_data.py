@@ -20,11 +20,40 @@ def collect_metric_postgres_sensitive_data_activity(pg_server,pg_servername  ,pg
     try:
         # ========== 2. Create SQLAlchemy Engines ==========
         # SQL Server (source)
-        pg_home_server_engine = create_engine(pg_home_connection_string , echo=True)
+        pg_home_server_engine = create_engine(pg_home_connection_string )
         # PostgreSQL (target)
-        pg_monitored_engine = create_engine(pg_monitored_connection_string , echo=True)
+        pg_monitored_engine = create_engine(pg_monitored_connection_string )
         metadata = MetaData(schema="monitoring")  
  
+        # ========== Sensitive column-name match list ==========
+        # Driven by the operator-curated metrics.sensitive_columns(column_name).
+        # Falls back to a built-in comprehensive PII list when that table is empty.
+        _builtin_patterns = [
+            'password','pass','secret','token','key','credit','card','ssn','email','phone',
+            'address','dob','birth','salary','pwd','passwd','credential','otp','pin',
+            'passport','national_id','nationalid','natid','tax_id','taxid','nino','license',
+            'licence','driver','teudat','identity','identification','id_number','idnumber',
+            'id_no','aadhaar','nric','voter','cvv','cvc','iban','swift','account','acct',
+            'routing','sort_code','bank','income','compensation','mobile','fax','zip',
+            'postal','postcode','gender','marital','nationality','maiden','medical',
+            'diagnosis','patient','prescription','insurance','disability','blood',
+            'biometric','fingerprint','retina',
+        ]
+        try:
+            with pg_home_server_engine.connect() as _scc:
+                _curated = [r[0] for r in _scc.execute(text(
+                    "SELECT DISTINCT lower(column_name) FROM metrics.sensitive_columns "
+                    "WHERE column_name IS NOT NULL AND btrim(column_name) <> ''"
+                )).fetchall()]
+        except Exception:
+            _curated = []
+        _patterns = _curated if _curated else _builtin_patterns
+        where_array = "ARRAY[" + ", ".join(
+            "'%" + _p.replace("'", "''") + "%'" for _p in _patterns
+        ) + "]"
+        print(f"🔐 sensitive patterns: {len(_patterns)} "
+              f"({'curated' if _curated else 'built-in'})")
+
         raw_conn = pg_monitored_engine.raw_connection()    
         p_sql_cmd = f"""              
                      select 
@@ -37,11 +66,7 @@ def collect_metric_postgres_sensitive_data_activity(pg_server,pg_servername  ,pg
                             FROM 
                                 information_schema.columns
                             WHERE 
-                                column_name ILIKE ANY (ARRAY[
-                                    '%password%', '%pass%', '%secret%', '%token%', '%key%', 
-                                    '%credit%', '%card%', '%ssn%', '%email%', '%phone%', 
-                                    '%address%', '%dob%', '%birth%', '%salary%'
-                                ])
+                                column_name ILIKE ANY ({where_array})
                             ORDER BY 
                                 table_catalog, table_schema, table_name;
                         """           
@@ -76,6 +101,6 @@ def collect_metric_postgres_sensitive_data_activity(pg_server,pg_servername  ,pg
     finally:
             db_write_log(f"✅collect_metric_postgres_sensitive_data_activity success"   ,0,"collect_metric_postgres_sensitive_data_activity" , pg_server , port=pg_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

@@ -19,7 +19,7 @@ def collect_metric_postgres_missing_indexes(pg_server,pg_servername  ,pg_port, p
    
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
-    pg_monitored_server_engine = create_engine(monitored_connection_string , echo=True)
+    pg_monitored_server_engine = create_engine(monitored_connection_string )
     # PostgreSQL (target)
     pg_postgres_home_engine = create_engine(pg_home_connection_string )
     metadata = MetaData(schema="monitoring")  
@@ -72,6 +72,6 @@ def collect_metric_postgres_missing_indexes(pg_server,pg_servername  ,pg_port, p
     finally:
             db_write_log(f"✅ collect_metric_postgres_missing_indexes success"   ,0,"collect_metric_mssql_active_sessions" , pg_server , port=pg_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

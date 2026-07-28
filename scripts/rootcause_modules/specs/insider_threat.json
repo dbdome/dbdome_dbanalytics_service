@@ -1,0 +1,115 @@
+{
+  "module": "insider_threat",
+  "area_code": "INS",
+  "vendors": ["postgresql", "sqlserver", "oracle", "mysql"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-INS-001-RC01",
+      "issue": "SEC-SQL-INS-001",
+      "name": "Admin granting privileges to themselves (self-grant)",
+      "slug": "insider-self-grant",
+      "description": "A role was granted membership/privileges by itself (grantor = member). Self-granted privileges are a hallmark of privilege abuse by an insider who already holds elevated rights.",
+      "topics": ["insider", "privilege abuse", "self-grant", "least-privilege", "pci-dss"],
+      "risk_level": "high",
+      "resolution": "Review the self-granted role membership. Revoke privileges that were not approved through change control, and require all grants to go through a separate approver (separation of duties).",
+      "expected": {"condition": "row_count > 0", "description": "Role membership rows where the grantor is also the member"},
+      "columns": ["grantor", "member", "granted_role"],
+      "detect": {
+        "postgresql": "SELECT g.rolname AS grantor, m.rolname AS member, r.rolname AS granted_role FROM pg_auth_members am JOIN pg_roles g ON g.oid = am.grantor JOIN pg_roles m ON m.oid = am.member JOIN pg_roles r ON r.oid = am.roleid WHERE am.grantor = am.member ORDER BY m.rolname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INS-003-RC01",
+      "issue": "SEC-SQL-INS-003",
+      "name": "Excessive number of superusers",
+      "slug": "insider-excessive-superusers",
+      "description": "More principals hold superuser/sysadmin than a least-privilege posture warrants. A large superuser population widens the insider-abuse blast radius and is hard to monitor.",
+      "topics": ["insider", "superuser", "least-privilege", "attack surface"],
+      "risk_level": "medium",
+      "resolution": "Review every superuser. Remove standing superuser from accounts that don't need it; prefer time-boxed elevation (break-glass) with auditing. Tune the acceptable count per environment.",
+      "expected": {"condition": "row_count > 3", "description": "Superuser roles (alert when more than the per-customer threshold)"},
+      "columns": ["rolname", "rolcanlogin"],
+      "detect": {
+        "postgresql": "SELECT rolname, rolcanlogin FROM pg_roles WHERE rolsuper ORDER BY rolname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INS-012-RC01",
+      "issue": "SEC-SQL-INS-012",
+      "name": "Off-hours privileged sessions",
+      "slug": "insider-off-hours-admin",
+      "description": "Superuser/admin sessions started outside business hours (before 07:00 or at/after 19:00 server time). Off-hours admin activity is a common insider-abuse indicator and should be paired with another signal before alerting.",
+      "topics": ["insider", "off-hours", "privileged session", "ueba"],
+      "risk_level": "medium",
+      "resolution": "Correlate off-hours superuser sessions with change tickets / on-call schedules. Investigate any session with no corresponding approved activity. Tune the business-hours window per customer.",
+      "expected": {"condition": "row_count > 0", "description": "Superuser sessions opened outside business hours"},
+      "columns": ["usename", "client_addr", "backend_start", "state"],
+      "detect": {
+        "postgresql": "SELECT sa.usename, host(sa.client_addr) AS client_addr, sa.backend_start, sa.state FROM pg_stat_activity sa JOIN pg_roles r ON r.rolname = sa.usename WHERE r.rolsuper AND sa.backend_start IS NOT NULL AND (extract(hour FROM sa.backend_start) < 7 OR extract(hour FROM sa.backend_start) >= 19) ORDER BY sa.backend_start DESC",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INS-004-RC01",
+      "issue": "SEC-SQL-INS-004",
+      "name": "Separation-of-duties violation",
+      "slug": "insider-sod-violation",
+      "description": "A principal holds both sides of an operator-defined conflict pair (e.g., can both create payments and approve them). Requires the customer's SoD conflict matrix as an operator-supplied feed.",
+      "topics": ["insider", "separation of duties", "sod", "compliance"],
+      "risk_level": "high",
+      "resolution": "Remove one side of each conflicting privilege pair, or introduce a compensating control (independent approval). Maintain the SoD conflict matrix per customer.",
+      "expected": {"condition": "row_count > 0", "description": "Principals holding a conflicting privilege pair"},
+      "columns": ["principal", "conflict_pair"],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INS-010-RC01",
+      "issue": "SEC-SQL-INS-010",
+      "name": "Privileged access to objects outside role baseline",
+      "slug": "insider-object-access-outside-baseline",
+      "description": "A DBA/privileged user read objects outside their per-principal expected-object baseline. Requires an audit trail (pgAudit / SQL Server Audit / Oracle Unified Audit) plus the per-principal baseline as operator feeds.",
+      "topics": ["insider", "audit", "object access", "baseline", "ueba"],
+      "risk_level": "high",
+      "resolution": "Investigate access to objects outside the principal's baseline. Tighten object permissions; enable per-object auditing for sensitive tables. Warm the baseline before alerting.",
+      "expected": {"condition": "row_count > 0", "description": "Audited object reads outside the principal baseline"},
+      "columns": ["principal", "object_name", "access_time"],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INS-015-RC01",
+      "issue": "SEC-SQL-INS-015",
+      "name": "Pre-departure mass extraction",
+      "slug": "insider-pre-departure-extraction",
+      "description": "Rows-read by a user spiked versus their personal baseline while they appear in the offboarding feed (resignation/notice). Requires per-user access stats + an HR/IDP offboarding feed as operator inputs.",
+      "topics": ["insider", "data exfiltration", "offboarding", "pre-departure", "baseline"],
+      "risk_level": "high",
+      "resolution": "Freeze or closely monitor accounts in the offboarding window. Investigate the extraction (which tables, volume, destination). Tune the spike multiplier and baseline window per customer.",
+      "expected": {"condition": "row_count > 0", "description": "Departing users whose read volume exceeds their baseline"},
+      "columns": ["principal", "rows_read", "baseline", "departure_date"],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

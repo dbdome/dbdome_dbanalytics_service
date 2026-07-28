@@ -50,4 +50,4 @@ def execute_synch_aggregations():
  
     finally:
             db_write_log(f"metrics_actexecute_synch_aggregations success"   ,0,aggregation_procedure_name,"" )              
-            return  1
+    return  1

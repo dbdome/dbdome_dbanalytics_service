@@ -6,11 +6,25 @@ populate them with data from PostgreSQL queries.
 """
 
 import json
+import os
+import sys
+import tempfile
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import matplotlib.pyplot as plt
 from datetime import datetime
-from report_generator import ReportGenerator
+from ReportGenerator.report_generator import ReportGenerator
+
+
+def _reports_dir():
+    """Return an absolute directory where generated report files are saved."""
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base, "reports")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 class JSONReportGenerator:
@@ -81,73 +95,100 @@ class JSONReportGenerator:
         """Process a table section from the config."""
         query = section['query']
         results = self.execute_query(query)
-        
+
         if not results:
             self.report.add_text("No data available.")
             return
-        
-        # Get headers
-        headers = section.get('headers', list(results[0].keys()))
-        
-        # Convert results to table format
+
+        col_keys = list(results[0].keys())
+        headers = section.get('headers', col_keys)
+        if len(headers) != len(col_keys):
+            headers = col_keys
+
         table_data = []
         format_config = section.get('format', {})
-        
+
         for row in results:
             formatted_row = []
-            for i, header in enumerate(headers):
-                key = list(row.keys())[i]
+            for i, key in enumerate(col_keys):
                 value = row[key]
-                
-                # Apply formatting if specified
-                if header in format_config:
-                    value = self.format_value(value, format_config[header])
-                
-                formatted_row.append(str(value))
+                if headers[i] in format_config:
+                    value = self.format_value(value, format_config[headers[i]])
+                formatted_row.append(str(value) if value is not None else '')
             table_data.append(formatted_row)
-        
+
         self.report.add_table(table_data, headers=headers)
     
     def process_chart(self, section):
-        """Process a chart section from the config."""
+        """Process a chart section from the config.
+
+        Column detection is automatic — no x_column/y_column needed:
+          - 2-column result  → col[0] = labels/x, col[1] = values/y
+          - 3-column line    → col[0] = x-axis, col[1] = series category,
+                               col[2] = value  (pivoted into multi-series)
+        """
         query = section['query']
         results = self.execute_query(query)
-        
+
         if not results:
             self.report.add_text("No data available for chart.")
             return
-        
-        # Extract data for chart
-        x_col = section['x_column']
-        y_col = section['y_column']
-        
-        x_data = [row[x_col] for row in results]
-        y_data = [float(row[y_col]) for row in results]
-        
-        # Create chart
-        fig, ax = plt.subplots(figsize=(8, 5))
-        
+
         chart_type = section.get('chart_type', 'bar')
-        
-        if chart_type == 'bar':
-            ax.bar(x_data, y_data, color='#2c5aa0')
+        caption = section.get('chart_text', section.get('caption', ''))
+        cols = list(results[0].keys())
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+
+        if chart_type == 'pie':
+            labels = [str(row[cols[0]]) for row in results]
+            values = [float(row[cols[1]] or 0) for row in results]
+            ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=140)
+
+        elif chart_type == 'line' and len(cols) == 3:
+            # Pivot: col[0]=x, col[1]=series, col[2]=value
+            from collections import defaultdict
+            series_data = defaultdict(dict)
+            x_vals = []
+            for row in results:
+                x = str(row[cols[0]])
+                series = str(row[cols[1]])
+                val = float(row[cols[2]] or 0)
+                series_data[series][x] = val
+                if x not in x_vals:
+                    x_vals.append(x)
+
+            colors = {'critical': '#d32f2f', 'high': '#f57c00',
+                      'medium': '#fbc02d', 'low': '#388e3c', 'info': '#1976d2'}
+            for series, xy in series_data.items():
+                y_vals = [xy.get(x, 0) for x in x_vals]
+                ax.plot(x_vals, y_vals, marker='o', linewidth=2,
+                        label=series, color=colors.get(series))
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45, ha='right')
+
         elif chart_type == 'line':
+            x_data = [str(row[cols[0]]) for row in results]
+            y_data = [float(row[cols[1]] or 0) for row in results]
             ax.plot(x_data, y_data, marker='o', linewidth=2, color='#2c5aa0')
             ax.grid(True, alpha=0.3)
-        elif chart_type == 'pie':
-            ax.pie(y_data, labels=x_data, autopct='%1.1f%%')
-        
-        # Set labels and title
-        if 'title' in section:
-            ax.set_title(section['title'])
+            plt.xticks(rotation=45, ha='right')
+
+        elif chart_type == 'bar':
+            x_data = [str(row[cols[0]]) for row in results]
+            y_data = [float(row[cols[1]] or 0) for row in results]
+            ax.bar(x_data, y_data, color='#2c5aa0')
+            plt.xticks(rotation=45, ha='right')
+
+        if caption:
+            ax.set_title(caption)
         if 'x_label' in section and chart_type != 'pie':
             ax.set_xlabel(section['x_label'])
         if 'y_label' in section and chart_type != 'pie':
             ax.set_ylabel(section['y_label'])
-        
+
         plt.tight_layout()
-        
-        caption = section.get('caption', '')
         self.report.add_chart(fig, caption=caption)
         plt.close(fig)
     
@@ -191,8 +232,14 @@ class JSONReportGenerator:
             section_type = section['type']
             
             if section_type == 'header':
+                # ReportGenerator.add_header() doesn't support level parameter
+                # Level 1 headers are added as headers, level 2 as bold text
                 level = section.get('level', 1)
-                self.report.add_header(section['text'], level=level)
+                if level == 1:
+                    self.report.add_header(section['text'])
+                else:
+                    # For level 2, add as bold text with spacing
+                    self.report.add_text(f"\n**{section['text']}**\n")
             
             elif section_type == 'text':
                 self.process_text(section)
@@ -205,19 +252,25 @@ class JSONReportGenerator:
         
         # Generate output files
         output_config = self.config.get('output', {})
-        
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        out_dir = _reports_dir()
+        pdf_filename = None
+        html_filename = None
+
         if 'pdf' in output_config:
-            self.report.generate_pdf(output_config['pdf'])
-            print(f"✓ PDF generated: {output_config['pdf']}")
-        
+            pdf_filename = os.path.join(out_dir, f"{output_config['pdf']}_{timestamp}.pdf")
+            self.report.generate_pdf(pdf_filename)
+            print(f"✓ PDF generated: {pdf_filename}")
+
         if 'html' in output_config:
-            self.report.generate_html(output_config['html'])
-            print(f"✓ HTML generated: {output_config['html']}")
-        
+            html_filename = os.path.join(out_dir, f"{output_config['html']}_{timestamp}.html")
+            self.report.generate_html(html_filename)
+            print(f"✓ HTML generated: {html_filename}")
+
         # Close database connection
         if self.conn:
             self.conn.close()
-
+        return pdf_filename, html_filename
 
 def main():
     """Example usage of JSON-based report generator."""

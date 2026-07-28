@@ -80,15 +80,16 @@ def extract_sql_features(sql: str):
 
 
 def metrics_analyse_threats():
+    result = 1
     try:
         #query_Analysis_nlp();
         metrics_analyse_identify_suspicous_queries();
-    except Exception as e:                 
-        db_write_log(f"metrics_analyse_threats failed with error:{e}"   , result ,"metrics_custom_metrics_analysis" ,"")
+    except Exception as e:
         result = 0
+        db_write_log(f"metrics_analyse_threats failed with error:{e}"   , result ,"metrics_custom_metrics_analysis" ,"")
     finally:
-        db_write_log(f"metrics_analyse_threats succeeded", result ,"metrics_sql_unification" ,"")          
-        return 1;
+        db_write_log(f"metrics_analyse_threats succeeded", result ,"metrics_sql_unification" ,"")
+    return 1
 
 def metrics_analyse_identify_suspicous_queries():    
     i =0;
@@ -196,6 +197,7 @@ def metrics_analyse_identify_suspicous_queries():
 
 def query_Analysis_nlp():
     i =0;
+    df_query = None
     # PostgreSQL connection
     pg_connection_string = get_connection_string()
     postgres_engine = create_engine(pg_connection_string)
@@ -393,29 +395,29 @@ def query_Analysis_nlp():
         with postgres_engine.begin() as conn:
             conn.execute(
                                     text("""
-                                        delete from monitoring.sql_feature_predictions  where update_status = 2;                                    
-                                        delete from monitoring.sql_predictions  where update_status = 2;                                    
+                                        delete from monitoring.sql_feature_predictions  where update_status = 2;
+                                        delete from monitoring.sql_predictions  where update_status = 2;
                                     """),
                                     {
                                         "query_id": int(query_id)
                                     }
-                                )           
-            conn.commit();                                                   
-        return df_query
+                                )
+            conn.commit();
+    return df_query
 def get_known_threats ():
         pg_connection_string = get_connection_string()
         postgres_engine = create_engine(pg_connection_string)
         metadata = MetaData(schema="monitoring")
         raw_conn = postgres_engine.raw_connection()
         p_sql_cmd = """
-            select query from monitoring.v_suspiscous 
+            select query from monitoring.v_suspiscous
     """
+        df_known_threats = None
         try:
-            df_known_threats = pd.read_sql_query(p_sql_cmd, con=raw_conn)                               
-        except Exception as e: 
-            return null;    
-        finally:
-            return df_known_threats
+            df_known_threats = pd.read_sql_query(p_sql_cmd, con=raw_conn)
+        except Exception as e:
+            db_write_log(f"get_known_threats failed with error: {e}", 0, "get_known_threats", "")
+        return df_known_threats
 
 def get_safe_queries ():
         pg_connection_string = get_connection_string()
@@ -423,11 +425,11 @@ def get_safe_queries ():
         metadata = MetaData(schema="monitoring")
         raw_conn = postgres_engine.raw_connection()
         p_sql_cmd = """
-            select query from monitoring.v_safe_queries 
+            select query from monitoring.v_safe_queries
     """
+        df_safe_queries = None
         try:
-            df_safe_queries = pd.read_sql_query(p_sql_cmd, con=raw_conn)                               
-        except Exception as e: 
-            return null;    
-        finally:
-            return df_safe_queries        
+            df_safe_queries = pd.read_sql_query(p_sql_cmd, con=raw_conn)
+        except Exception as e:
+            db_write_log(f"get_safe_queries failed with error: {e}", 0, "get_safe_queries", "")
+        return df_safe_queries

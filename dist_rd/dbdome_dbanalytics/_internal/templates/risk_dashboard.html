@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>User Risk Dashboard - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18; --purple:#9933cc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);display:flex;align-items:center;gap:8px;}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .toolbar{background:var(--bg-primary);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+  .toolbar label{font-size:12px;color:var(--text-secondary);margin-bottom:2px;display:block;}
+  .toolbar select,.toolbar input{background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .toolbar select:focus,.toolbar input:focus{border-color:var(--blue);outline:none;}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;} .btn-primary:hover{filter:brightness(1.15);}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .stats-row{display:flex;gap:8px;padding:8px 16px;flex-wrap:wrap;}
+  .stat-panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:14px 20px;flex:1;min-width:120px;text-align:center;}
+  .stat-value{font-size:26px;font-weight:500;line-height:1.2;}
+  .stat-label{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin:8px 16px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .risk-bar-wrap{display:flex;align-items:center;gap:8px;}
+  .risk-bar{height:8px;border-radius:4px;min-width:4px;max-width:160px;}
+  .risk-high{color:var(--red-text);}
+  .risk-med{color:var(--yellow);}
+  .risk-low{color:var(--green-text);}
+  .risk-bar-high{background:var(--red-text);}
+  .risk-bar-med{background:var(--yellow);}
+  .risk-bar-low{background:var(--green-text);}
+  .factor-tags{display:flex;flex-wrap:wrap;gap:4px;}
+  .factor-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;background:var(--bg-secondary);border:1px solid var(--border);color:var(--text-secondary);}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .filter-group{display:flex;flex-direction:column;}
+  .detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;align-items:center;justify-content:center;}
+  .detail-modal.open{display:flex;}
+  .detail-box{background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;padding:20px;max-width:560px;width:90%;max-height:80vh;overflow:auto;}
+  .detail-box h3{font-size:15px;margin-bottom:12px;color:var(--text-emphasis);}
+  .detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .detail-row:last-child{border:none;}
+  .detail-key{color:var(--text-secondary);}
+  .event-list{margin-top:12px;}
+  .event-item{background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-bottom:6px;font-size:12px;}
+  .event-item-header{display:flex;justify-content:space-between;margin-bottom:4px;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">User Risk Dashboard</div>
+</div>
+
+<div class="toolbar">
+  <div class="filter-group">
+    <label>Min Risk Score</label>
+    <select id="filter-min-risk" onchange="load()">
+      <option value="0">All</option>
+      <option value="40">40+ (Medium)</option>
+      <option value="70">70+ (High)</option>
+      <option value="90">90+ (Critical)</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Server</label>
+    <input type="text" id="filter-server" placeholder="filter server" style="width:160px" onchange="load()">
+  </div>
+  <div class="filter-group">
+    <label>User</label>
+    <input type="text" id="filter-user" placeholder="filter user" style="width:140px" onchange="load()">
+  </div>
+  <button class="btn btn-primary" style="margin-top:18px" onclick="load()">Refresh</button>
+</div>
+
+<div class="stats-row" id="stats-row"></div>
+
+<div class="panel">
+  <div class="panel-header">
+    <span>User Risk Profiles</span>
+    <span id="user-count" style="font-size:12px;color:var(--text-secondary)"></span>
+  </div>
+  <div class="panel-body">
+    <table>
+      <thead>
+        <tr>
+          <th>Server</th>
+          <th>Login</th>
+          <th>Risk Score</th>
+          <th>Consecutive High Risk</th>
+          <th>Avg Queries/hr</th>
+          <th>Typical Hours</th>
+          <th>Last Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="risk-table-body">
+        <tr><td colspan="8" class="empty">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="detail-modal" id="detail-modal" onclick="closeDetail(event)">
+  <div class="detail-box" id="detail-box">
+    <h3 id="detail-title">User Detail</h3>
+    <div id="detail-content"></div>
+    <button class="btn btn-sm" style="margin-top:12px" onclick="document.getElementById('detail-modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<script>
+let users = [];
+
+function riskClass(s){ return s>=70?'risk-high':s>=40?'risk-med':'risk-low'; }
+function riskBarClass(s){ return s>=70?'risk-bar-high':s>=40?'risk-bar-med':'risk-bar-low'; }
+
+async function load(){
+  const minRisk = parseInt(document.getElementById('filter-min-risk').value)||0;
+  const server  = document.getElementById('filter-server').value;
+  const user    = document.getElementById('filter-user').value;
+  const params  = new URLSearchParams({min_risk_score: minRisk});
+  if(server) params.set('server_name', server);
+  if(user)   params.set('login_name', user);
+
+  const res  = await fetch('/api/risk-scores?' + params);
+  const data = await res.json();
+  users = data.users || [];
+
+  const high = users.filter(u => u.risk_score >= 70).length;
+  const med  = users.filter(u => u.risk_score >= 40 && u.risk_score < 70).length;
+  const low  = users.filter(u => u.risk_score < 40).length;
+  const avg  = users.length ? Math.round(users.reduce((s,u)=>s+u.risk_score,0)/users.length) : 0;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-panel"><div class="stat-value risk-high">${high}</div><div class="stat-label">High Risk (&ge;70)</div></div>
+    <div class="stat-panel"><div class="stat-value risk-med">${med}</div><div class="stat-label">Medium Risk (40-69)</div></div>
+    <div class="stat-panel"><div class="stat-value risk-low">${low}</div><div class="stat-label">Low Risk (&lt;40)</div></div>
+    <div class="stat-panel"><div class="stat-value">${avg}</div><div class="stat-label">Avg Score</div></div>
+    <div class="stat-panel"><div class="stat-value">${users.length}</div><div class="stat-label">Monitored Users</div></div>
+  `;
+  document.getElementById('user-count').textContent = `${users.length} users`;
+
+  const tbody = document.getElementById('risk-table-body');
+  if(!users.length){
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No users found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map((u,i) => {
+    const barW = Math.round(u.risk_score * 1.6);
+    return `
+    <tr>
+      <td>${u.server_name}</td>
+      <td style="font-weight:500">${u.login_name}</td>
+      <td>
+        <div class="risk-bar-wrap">
+          <span class="${riskClass(u.risk_score)}" style="font-weight:600;min-width:32px">${u.risk_score}</span>
+          <div class="risk-bar ${riskBarClass(u.risk_score)}" style="width:${barW}px"></div>
+        </div>
+      </td>
+      <td style="text-align:center">${u.consecutive_high_risk||0}</td>
+      <td style="text-align:center">${u.avg_queries_per_hour!=null?u.avg_queries_per_hour.toFixed(1):'—'}</td>
+      <td>${u.typical_hour_start!=null?`${u.typical_hour_start}:00–${u.typical_hour_end}:00`:'—'}</td>
+      <td style="font-size:11px">${(u.last_updated||'').replace('T',' ').substring(0,19)}</td>
+      <td><button class="btn btn-sm" onclick="showDetail(${i})">Detail</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function showDetail(idx){
+  const u = users[idx];
+  if(!u) return;
+  document.getElementById('detail-title').textContent = `${u.login_name} @ ${u.server_name}`;
+
+  const res  = await fetch(`/api/risk-scores/${encodeURIComponent(u.server_name)}/${encodeURIComponent(u.login_name)}/events`);
+  const data = await res.json();
+  const events = data.events || [];
+
+  let html = `
+    <div class="detail-row"><span class="detail-key">Risk Score</span><span class="${riskClass(u.risk_score)}" style="font-weight:600">${u.risk_score}</span></div>
+    <div class="detail-row"><span class="detail-key">Consecutive High Risk</span><span>${u.consecutive_high_risk||0}</span></div>
+    <div class="detail-row"><span class="detail-key">Avg Queries/hr</span><span>${u.avg_queries_per_hour!=null?u.avg_queries_per_hour.toFixed(2):'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Avg Duration (s)</span><span>${u.avg_duration_secs!=null?u.avg_duration_secs.toFixed(2):'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Typical Tables</span><span>${(u.typical_tables||[]).join(', ')||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Typical Hours</span><span>${u.typical_hour_start!=null?`${u.typical_hour_start}:00–${u.typical_hour_end}:00`:'—'}</span></div>
+  `;
+  if(events.length){
+    html += '<div class="event-list"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Recent Risk Events</div>';
+    html += events.slice(0,10).map(e => {
+      const factors = e.risk_factors || {};
+      const tags = Object.entries(factors).filter(([k,v])=>v).map(([k])=>`<span class="factor-tag">${k}</span>`).join('');
+      return `
+        <div class="event-item">
+          <div class="event-item-header">
+            <span style="font-weight:500">${(e.event_time||'').replace('T',' ').substring(0,19)}</span>
+            <span class="${riskClass(e.risk_score)}" style="font-weight:600">${e.risk_score}</span>
+          </div>
+          <div class="factor-tags">${tags||'<span class="factor-tag">no factors</span>'}</div>
+        </div>`;
+    }).join('');
+    html += '</div>';
+  }
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetail(e){
+  if(e.target === document.getElementById('detail-modal'))
+    document.getElementById('detail-modal').classList.remove('open');
+}
+
+load();
+</script>
+</body>
+</html>

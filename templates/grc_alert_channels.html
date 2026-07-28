@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GRC Alert Channels - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18; --purple:#9933cc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .tabs{background:var(--bg-primary);display:flex;border-bottom:1px solid var(--border);padding:0 16px;}
+  .tab{padding:12px 18px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab:hover{color:var(--text-primary);}
+  .tab-content{display:none;padding:12px 16px;}
+  .tab-content.active{display:block;}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;}
+  .btn-danger{background:var(--red);color:#fff;}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .btn-del{color:var(--red-text);border-color:var(--red-text);}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  .form-panel-body{padding:16px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-email{background:#0a1f3a;color:var(--blue);}
+  .badge-syslog{background:#1a0a2a;color:var(--purple);}
+  .badge-webhook{background:#1a1a0a;color:var(--yellow);}
+  .badge-active{background:#0a1f0a;color:var(--green-text);}
+  .badge-inactive{background:#2a2a2a;color:var(--text-secondary);}
+  .badge-critical{background:#3a0010;color:#ff3a6e;}
+  .badge-high{background:#3a1a00;color:var(--orange);}
+  .badge-medium{background:#2a2000;color:var(--yellow);}
+  .badge-low{background:#0a1f0a;color:var(--green-text);}
+  .badge-ok{background:#0a1f0a;color:var(--green-text);}
+  .badge-fail{background:#3a0010;color:var(--red-text);}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .layout-2col{display:flex;gap:12px;align-items:flex-start;}
+  .col-form{width:360px;flex-shrink:0;}
+  .col-table{flex:1;min-width:0;}
+  .form-group{margin-bottom:12px;}
+  .form-group label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .form-row{display:flex;gap:8px;}
+  .form-row .form-group{flex:1;}
+  .form-hint{font-size:11px;color:var(--text-secondary);margin-top:3px;}
+  .actions-cell{display:flex;gap:4px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1f6b33;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;display:none;z-index:9999;}
+  .toast.err{background:#7a0a25;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">GRC Alert Channels</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('channels')">Channels</div>
+  <div class="tab" onclick="switchTab('log')">Delivery Log</div>
+</div>
+
+<div class="tab-content active" id="tab-channels">
+  <div class="layout-2col">
+    <div class="col-form">
+      <div class="panel">
+        <div class="panel-header"><span id="ch-form-title">New Channel</span>
+          <button class="btn-sm" onclick="resetForm()">Reset</button></div>
+        <div class="form-panel-body">
+          <input type="hidden" id="ch-id">
+          <div class="form-group"><label>Channel Type</label>
+            <select id="ch-type" onchange="updateFields()">
+              <option value="EMAIL">EMAIL</option>
+              <option value="SYSLOG_CEF">SYSLOG_CEF</option>
+              <option value="WEBHOOK">WEBHOOK</option>
+            </select></div>
+          <div class="form-group"><label>Channel Name *</label><input id="ch-name"></div>
+          <div id="email-fields">
+            <div class="form-group"><label>Recipients (comma-separated)</label>
+              <input id="ch-recipients" placeholder="security@company.com, ciso@company.com"></div>
+          </div>
+          <div id="syslog-fields" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label>Syslog Host</label><input id="ch-host" placeholder="siem.company.com"></div>
+              <div class="form-group"><label>Port</label><input type="number" id="ch-port" value="514"></div>
+            </div>
+            <div class="form-group"><label>Protocol</label>
+              <select id="ch-proto"><option>UDP</option><option>TCP</option></select></div>
+          </div>
+          <div id="webhook-fields" style="display:none">
+            <div class="form-group"><label>Webhook URL</label><input id="ch-url" placeholder="https://hooks.company.com/..."></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Min Severity</label>
+              <select id="ch-severity">
+                <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+              </select></div>
+          </div>
+          <div class="form-group"><label>Regulations (comma-separated, blank=all)</label>
+            <input id="ch-regs" placeholder="PCI-DSS,HIPAA"></div>
+          <button class="btn btn-primary" onclick="saveChannel()" style="width:100%">Save Channel</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-table">
+      <div class="panel">
+        <div class="panel-header"><span>Alert Channels</span></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Name</th><th>Type</th><th>Min Severity</th><th>Regulations</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="channels-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-log">
+  <div class="panel">
+    <div class="panel-header"><span>Alert Delivery Log (last 200)</span>
+      <button class="btn-sm" onclick="loadLog()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Time</th><th>Channel</th><th>Source</th><th>Severity</th>
+          <th>Server</th><th>Summary</th><th>Result</th>
+        </tr></thead>
+        <tbody id="log-body"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let channels=[];
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['channels','log'][i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='channels') loadChannels();
+  if(name==='log') loadLog();
+}
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');t.style.display='block';setTimeout(()=>t.style.display='none',3500);
+}
+function fmtTs(ts){ return (ts||'').replace('T',' ').substring(0,19); }
+
+function updateFields(){
+  const t=document.getElementById('ch-type').value;
+  document.getElementById('email-fields').style.display=t==='EMAIL'?'':'none';
+  document.getElementById('syslog-fields').style.display=t==='SYSLOG_CEF'?'':'none';
+  document.getElementById('webhook-fields').style.display=t==='WEBHOOK'?'':'none';
+}
+
+async function loadChannels(){
+  const res=await fetch('/api/grc-alerts/channels');
+  const data=await res.json();
+  channels=data.channels||[];
+  document.getElementById('channels-body').innerHTML=channels.length?channels.map(c=>`<tr>
+    <td style="font-weight:500">${c.channel_name||c.channel_id}</td>
+    <td><span class="badge badge-${(c.channel_type||'').toLowerCase()}">${c.channel_type||''}</span></td>
+    <td><span class="badge badge-${(c.min_severity||'').toLowerCase()}">${c.min_severity||''}</span></td>
+    <td style="font-size:11px">${(c.regulations||[]).join(', ')||'ALL'}</td>
+    <td>${c.is_active?'<span class="badge badge-active">Active</span>':'<span class="badge badge-inactive">Inactive</span>'}</td>
+    <td>
+      <div class="actions-cell">
+        <button class="btn btn-sm" onclick="editChannel(${c.channel_id})">Edit</button>
+        <button class="btn btn-sm btn-del" onclick="deleteChannel(${c.channel_id})">Del</button>
+      </div>
+    </td>
+  </tr>`).join(''):'<tr><td colspan="6" class="empty">No channels configured</td></tr>';
+}
+
+function resetForm(){
+  document.getElementById('ch-form-title').textContent='New Channel';
+  document.getElementById('ch-id').value='';
+  ['ch-name','ch-recipients','ch-host','ch-url','ch-regs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ch-port').value='514';
+  document.getElementById('ch-type').value='EMAIL';
+  document.getElementById('ch-severity').value='MEDIUM';
+  document.getElementById('ch-proto').value='UDP';
+  updateFields();
+}
+
+function editChannel(id){
+  const c=channels.find(x=>x.channel_id===id); if(!c) return;
+  document.getElementById('ch-form-title').textContent='Edit Channel';
+  document.getElementById('ch-id').value=id;
+  document.getElementById('ch-name').value=c.channel_name||'';
+  document.getElementById('ch-type').value=c.channel_type||'EMAIL';
+  document.getElementById('ch-severity').value=c.min_severity||'MEDIUM';
+  document.getElementById('ch-regs').value=(c.regulations||[]).join(',');
+  const cfg=c.config||{};
+  document.getElementById('ch-recipients').value=(cfg.recipients||[]).join(',');
+  document.getElementById('ch-host').value=cfg.host||'';
+  document.getElementById('ch-port').value=cfg.port||514;
+  document.getElementById('ch-proto').value=cfg.protocol||'UDP';
+  document.getElementById('ch-url').value=cfg.url||'';
+  updateFields();
+}
+
+async function saveChannel(){
+  const id=document.getElementById('ch-id').value;
+  const type=document.getElementById('ch-type').value;
+  const cfg={};
+  if(type==='EMAIL') cfg.recipients=document.getElementById('ch-recipients').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(type==='SYSLOG_CEF'){cfg.host=document.getElementById('ch-host').value;cfg.port=parseInt(document.getElementById('ch-port').value)||514;cfg.protocol=document.getElementById('ch-proto').value;}
+  if(type==='WEBHOOK') cfg.url=document.getElementById('ch-url').value;
+  const body={
+    channel_name:document.getElementById('ch-name').value.trim(),
+    channel_type:type,
+    min_severity:document.getElementById('ch-severity').value,
+    regulations:document.getElementById('ch-regs').value.split(',').map(s=>s.trim()).filter(Boolean),
+    config:cfg,
+  };
+  if(!body.channel_name){showToast('Name required',true);return;}
+  const url=id?`/api/grc-alerts/channels/${id}`:'/api/grc-alerts/channels';
+  const res=await fetch(url,{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast(id?'Channel updated':'Channel created'); resetForm(); loadChannels();
+}
+
+async function deleteChannel(id){
+  if(!confirm('Delete this channel?')) return;
+  const res=await fetch(`/api/grc-alerts/channels/${id}`,{method:'DELETE'});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('Channel deleted'); loadChannels();
+}
+
+async function loadLog(){
+  const res=await fetch('/api/grc-alerts/delivery-log');
+  const data=await res.json();
+  const rows=data.rows||[];
+  document.getElementById('log-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-size:11px;white-space:nowrap">${fmtTs(r.sent_at)}</td>
+    <td style="font-size:11px">${r.channel_type||''}</td>
+    <td style="font-size:11px">${r.source_feature||''}</td>
+    <td><span class="badge badge-${(r.severity||'').toLowerCase()}">${r.severity||''}</span></td>
+    <td style="font-size:11px">${r.server_name||''}</td>
+    <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.event_summary||''}</td>
+    <td><span class="badge badge-${r.success?'ok':'fail'}">${r.success?'OK':'FAIL'}</span></td>
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">No delivery records</td></tr>';
+}
+
+loadChannels();
+</script>
+</body>
+</html>

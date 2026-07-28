@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Form</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/metric_enable_style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">dbdome</div>
+    </header>
+    
+    <main class="container">
+        <form class="confirm-form" id="confirmForm" >
+            <h1>Please Confirm</h1>
+            
+            <div class="form-group">
+                <label for="action-select">Do you want to...</label>
+                <select id="action-select" name="action" required>
+                    <option value="" disabled selected></option>
+                    <option value="enable">Enable</option>
+                    <option value="disable">Disable</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="confirm-btn">Confirm</button>
+        </form>
+        
+        <div class="success-message" id="successMessage">
+            The form was submitted successfully
+        </div>
+        
+        <canvas id="confettiCanvas"></canvas>
+    </main>
+    
+    <script src="../static/js/metric_enable_script.js"></script>
+</body>
+</html>
+

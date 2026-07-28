@@ -1,0 +1,21 @@
+{
+  "_note": "STUB — area_code 'DOS' is a placeholder; confirm against DOS_RESOURCE_DETECTION.md / the *_detection.json knowledge file, then fill root_causes and set detect[vendor] SQL.",
+  "module": "dos_resource",
+  "area_code": "DOS",
+  "vendors": ["postgresql", "sqlserver", "oracle", "mysql"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-DOS-001-RC01",
+      "issue": "SEC-SQL-DOS-001",
+      "name": "TODO: first root cause for dos_resource",
+      "slug": "dos_resource-todo-rc01",
+      "description": "TODO: copy from the module's detection knowledge.",
+      "topics": ["dos_resource"],
+      "risk_level": "high",
+      "resolution": "TODO: remediation guidance.",
+      "expected": {"condition": "row_count > 0", "description": "TODO"},
+      "columns": [],
+      "detect": {"postgresql": null, "sqlserver": null, "oracle": null, "mysql": null}
+    }
+  ]
+}

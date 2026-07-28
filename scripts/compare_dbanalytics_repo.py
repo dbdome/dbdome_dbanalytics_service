@@ -461,7 +461,7 @@ def main():
         description="Compare two PG dbs (live vs canonical-repo) for schema and "
                     "non-runtime data drift.")
     p.add_argument('--host',     default='localhost')
-    p.add_argument('--port',     default=5444, type=int)
+    p.add_argument('--port',     default=5432, type=int)
     p.add_argument('--user',     default='dbdome_adm')
     p.add_argument('--src-db',   default='dbanalytics')
     p.add_argument('--dst-db',   default='dbanalytics_repo')

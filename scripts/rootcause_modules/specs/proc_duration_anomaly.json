@@ -1,0 +1,23 @@
+{
+  "_note": "SEC-SQL-QE-001-RC01 — stored procedure slower than its own historical average. Generate with: python gen_rootcause_module.py specs/proc_duration_anomaly.json",
+  "module": "proc_duration_anomaly",
+  "area_code": "QE",
+  "vendors": ["sqlserver"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-QE-001-RC01",
+      "issue": "SEC-SQL-QE-001",
+      "name": "Stored procedure slower than its historical average",
+      "slug": "stored-procedure-slower-than-average",
+      "description": "A user stored procedure is executing slower than that procedure's own historical average duration. System ('sys') procedures and system databases are excluded. Sustained or repeated regressions can indicate parameter sniffing, stale statistics, plan changes, blocking/resource contention, or anomalous/abusive use.",
+      "topics": ["stored procedure", "execution duration", "performance regression", "anomaly"],
+      "risk_level": "medium",
+      "resolution": "Identify the procedure and compare the slow execution to its Query Store / cached-plan baseline. Check for parameter sniffing (test OPTION(RECOMPILE)), update statistics, look for blocking or resource contention during the slow run, and review recent plan changes. If the slowdown correlates with unusual callers or data volumes, investigate for anomalous or abusive use.",
+      "expected": {"condition": "row_count > 0", "description": "A user stored procedure executed slower than its own historical average duration"},
+      "columns": ["procedure_name", "database_name", "login_name", "avg_duration_ms", "actual_duration_ms"],
+      "detect": {
+        "sqlserver": "SELECT @@SERVERNAME AS server, DB_NAME(r.database_id) AS database_name, OBJECT_SCHEMA_NAME(st.objectid, r.database_id) + '.' + OBJECT_NAME(st.objectid, r.database_id) AS procedure_name, s.login_name AS login_name, ps.total_elapsed_time / NULLIF(ps.execution_count, 0) / 1000.0 AS avg_duration_ms, r.total_elapsed_time / 1000.0 AS actual_duration_ms FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) st JOIN sys.dm_exec_procedure_stats ps ON ps.object_id = st.objectid AND ps.database_id = r.database_id WHERE s.is_user_process = 1 AND st.objectid IS NOT NULL AND OBJECT_SCHEMA_NAME(st.objectid, r.database_id) <> 'sys' AND DB_NAME(r.database_id) NOT IN ('master','model','msdb','tempdb') AND (r.total_elapsed_time * 1000.0) > (ps.total_elapsed_time / NULLIF(ps.execution_count, 0)) ORDER BY actual_duration_ms DESC"
+      }
+    }
+  ]
+}

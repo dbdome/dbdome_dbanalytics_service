@@ -1,0 +1,66 @@
+pyinstaller --onefile --name dbdome_http_server main.py  --icon=C:\dev\dbanalytics\icons\dbdome.ico
+pyinstaller --onefile --name dbdome_dbanalytics job_operation_scheduler.py  --icon=C:\dev\dbanalytics\icons\dbdome.ico
+pyinstaller --onefile --name dbdome_dbanalytics job_operation_scheduler.py --hidden-import=pyodbc --hidden-import=bcrypt --hidden-import=_cffi_backend --icon=dbdome.ico
+pyinstaller --onefile --onefile --name dbdome_http_server main.py  --icon=dbdome.ico --hidden-import=bcrypt --hidden-import=_cffi_backend --hidden-import=jwt
+pyinstaller --onefile --onefile --name setup setup.py  --icon=dbdome.ico --hidden-import=bcrypt --hidden-import=_cffi_backend --hidden-import=jwt
+
+pip install zeep requests requests_ntlm
+
+
+pip install sqlalchemy
+pip install dotenv
+pip install psycopg2
+pip install nicegui
+pip install logging
+pip install sqlparse
+pip install sentence_transformers
+pip install sqlglot
+pip install fastai
+pip install scikit-learn
+pip install torch
+pip install zeep
+pip install requests
+pip install requests_ntlm 
+pip install pandas 
+pip install psycopg2-binary
+pip install bcrypt
+pip install jwt
+pip install pyodbc
+pip install reportlab
+pip install apscheduler
+pip install reportlab
+pip install oracledb
+pip install matplotlib
+
+#backup
+pg_dump -U dbdome_adm -p5444 -d dbanalytics_install -F p -f C:\installs\dbdome_setup\dbdome\postgres\install\dbanalytics_install.backup
+
+pg_dump -U postgres -d dbanalytics \
+  --schema-only \
+  --no-owner \
+  --no-privileges \
+  -f C:\installs\dbdome_setup\dbdome\postgres\install\dbanalytics_schema_install.backup
+
+pg_dump -U postgres -d dbanalytics \
+  --data-only \
+  -f C:\installs\dbdome_setup\dbdome\postgres\install\dbanalytics_data_install.backup
+#Restore
+psql -U dbdome_adm -p5444 -d dbanalytics -f C:\installs\dbdome_setup\dbdome\postgres\install\dbanalytics_20260127.backup
+
+
+pg_dump -U dbdome_adm -p5444 -d dbanalytics -F p -f C:\installs\dbdome_setup\dbdome\postgres\install\dbanalytics.backup
+pg_dump -U postgres -d mydb --schema-only -t table1 -t table2 -f my_tables_schema.sql
+pg_dump -U postgres -d dbanalytics --data-only -n monitoring -f monitoring_data.sql
+ Install and start:
+  # Scheduler service
+  python dbdome_service.py --service scheduler install
+  python dbdome_service.py --service scheduler start
+
+  # Web service
+  python dbdome_service.py --service web install
+  python dbdome_service.py --service web start
+
+  What was changed:
+  - All shared logic moved to DBDOMEServiceBase
+  - _run_kwargs_ class attribute controls what gets passed to run()
+  - Three service classes now exist:

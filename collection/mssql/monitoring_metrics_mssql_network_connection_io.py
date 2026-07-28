@@ -8,6 +8,11 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.dialects.postgresql import insert
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
+try:
+    from analysis.self_activity_filter import filter_excluded_logins as _dbdome_filter_excluded_logins
+except Exception:
+    def _dbdome_filter_excluded_logins(df, *a, **k):
+        return df
 import pyodbc
 pyodbc.paramstyle = 'qmark'  # pyodbc uses '?' placeholders
 from urllib.parse import quote_plus  # <-- this is required
@@ -47,7 +52,7 @@ def collect_metric_mssql_network_connection_io(mssql_server,mssql_servername  , 
         odbc_str = f"""
                 DRIVER={{{driver}}};
                 SERVER={server_with_port};
-                DATABASE={database};
+                DATABASE={database or 'master'};
                 Trusted_Connection=yes;
                 Encrypt=yes;
                 TrustServerCertificate=yes;
@@ -56,7 +61,7 @@ def collect_metric_mssql_network_connection_io(mssql_server,mssql_servername  , 
         odbc_str = f"""
             DRIVER={{{driver}}};
             SERVER={server_with_port};
-            DATABASE={database};
+            DATABASE={database or 'master'};
             UID={username};
             PWD={password};
             Encrypt=yes;
@@ -76,7 +81,7 @@ def collect_metric_mssql_network_connection_io(mssql_server,mssql_servername  , 
    
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
-    sql_server_engine = create_engine(connection_string , echo=True)
+    sql_server_engine = create_engine(connection_string )
     # PostgreSQL (target)
     postgres_engine = create_engine(pg_connection_string )
     metadata = MetaData(schema="monitoring")  
@@ -89,6 +94,7 @@ def collect_metric_mssql_network_connection_io(mssql_server,mssql_servername  , 
             """            
     try:
             df = pd.read_sql_query(p_sql_cmd, con=raw_conn)    
+            df = _dbdome_filter_excluded_logins(df)
             raw_conn.close()
             # ========== 4. Bulk UPSERT into PostgreSQL ==========
             with postgres_engine.begin() as conn:                                                  
@@ -129,6 +135,6 @@ def collect_metric_mssql_network_connection_io(mssql_server,mssql_servername  , 
     finally:
             db_write_log(f"collect_metric_mssql_network_connection_io success"   ,0,"collect_metric_mssql_network_connection_io",servername, port=mssql_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

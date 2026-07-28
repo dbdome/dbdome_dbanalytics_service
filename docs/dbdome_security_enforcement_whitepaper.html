@@ -1,0 +1,504 @@
+<style>
+  :root{
+    --bg:#f4f7fa; --surface:#ffffff; --surface-2:#eef3f8; --surface-3:#e6edf4;
+    --text:#131c26; --muted:#54677a; --faint:#7c8da5; --line:#d8e1ea;
+    --accent:#0d9384; --accent-2:#0a7a6d; --accent-soft:rgba(13,147,132,.10);
+    --rival:#7b8a99; --rival-soft:rgba(123,138,153,.10);
+    --good:#1f9d55; --warn:#b9781a; --crit:#cf3f36;
+    --shadow:0 1px 2px rgba(16,32,48,.05),0 8px 30px rgba(16,32,48,.06);
+    --font-sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"Cascadia Code","Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0a0f16; --surface:#111a24; --surface-2:#0e1620; --surface-3:#16212d;
+      --text:#e8eff6; --muted:#93a6b8; --faint:#63788b; --line:#223140;
+      --accent:#37d4c0; --accent-2:#54e0cd; --accent-soft:rgba(55,212,192,.12);
+      --rival:#71818f; --rival-soft:rgba(113,129,143,.12);
+      --good:#3fb950; --warn:#d6a038; --crit:#f2544a;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f7fa; --surface:#ffffff; --surface-2:#eef3f8; --surface-3:#e6edf4;
+    --text:#131c26; --muted:#54677a; --line:#d8e1ea;
+    --accent:#0d9384; --accent-2:#0a7a6d; --accent-soft:rgba(13,147,132,.10);
+    --rival:#7b8a99; --rival-soft:rgba(123,138,153,.10);
+    --good:#1f9d55; --warn:#b9781a; --crit:#cf3f36;
+    --shadow:0 1px 2px rgba(16,32,48,.05),0 8px 30px rgba(16,32,48,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a0f16; --surface:#111a24; --surface-2:#0e1620; --surface-3:#16212d;
+    --text:#e8eff6; --muted:#93a6b8; --faint:#63788b; --line:#223140;
+    --accent:#37d4c0; --accent-2:#54e0cd; --accent-soft:rgba(55,212,192,.12);
+    --rival:#71818f; --rival-soft:rgba(113,129,143,.12);
+    --good:#3fb950; --warn:#d6a038; --crit:#f2544a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);
+    line-height:1.65;-webkit-font-smoothing:antialiased;font-size:16.5px}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  a{color:var(--accent-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  h1,h2,h3{text-wrap:balance;line-height:1.15;margin:0}
+  .mono{font-family:var(--font-mono)}
+  .eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent-2);font-weight:600}
+  code,.obj{font-family:var(--font-mono);font-size:.86em;background:var(--surface-3);
+    color:var(--text);padding:.08em .38em;border-radius:5px;border:1px solid var(--line);
+    white-space:nowrap}
+
+  /* ---- header / hero ---- */
+  header.hero{border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(120% 90% at 85% -10%,var(--accent-soft),transparent 60%),
+      linear-gradient(180deg,var(--surface-2),var(--bg));position:relative;overflow:hidden}
+  .brandbar{display:flex;align-items:center;justify-content:space-between;
+    padding:22px 24px;max-width:var(--maxw);margin:0 auto}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.02em}
+  .glyph{width:30px;height:30px;flex:none}
+  .kicker{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted)}
+  .hero-inner{max-width:var(--maxw);margin:0 auto;padding:38px 24px 58px}
+  .hero h1{font-size:clamp(2.1rem,5.4vw,3.5rem);font-weight:800;letter-spacing:-.02em;max-width:16ch}
+  .hero h1 .hl{color:var(--accent-2)}
+  .lede{font-size:clamp(1.05rem,2.2vw,1.3rem);color:var(--muted);max-width:60ch;margin-top:20px}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+  .tag{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.04em;
+    border:1px solid var(--line);background:var(--surface);color:var(--muted);
+    padding:6px 11px;border-radius:999px}
+  .tag b{color:var(--accent-2);font-weight:600}
+
+  /* ---- section scaffolding ---- */
+  section{padding:60px 0;border-bottom:1px solid var(--line)}
+  .sec-head{max-width:64ch;margin-bottom:34px}
+  .sec-head h2{font-size:clamp(1.5rem,3.2vw,2.15rem);font-weight:750;letter-spacing:-.01em;margin-top:10px}
+  .sec-head p{color:var(--muted);margin:14px 0 0;font-size:1.06rem}
+
+  /* ---- capability cards ---- */
+  .caps{display:grid;gap:18px}
+  .cap{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:1.55fr 1fr}
+  .cap-main{padding:26px 26px 24px;border-right:1px solid var(--line)}
+  .cap-side{padding:24px 26px;background:var(--surface-2);display:flex;flex-direction:column;gap:16px}
+  .cap-num{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .cap-num .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;
+    box-shadow:0 0 0 4px var(--accent-soft)}
+  .cap h3{font-size:1.28rem;font-weight:720;margin:6px 0 10px}
+  .cap p{margin:0 0 12px;color:var(--muted)}
+  .cap p strong{color:var(--text);font-weight:650}
+  .props{display:flex;flex-direction:column;gap:9px}
+  .prop{display:flex;align-items:flex-start;gap:9px;font-size:.9rem;color:var(--text)}
+  .prop svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--accent)}
+  .prop .k{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted);display:block}
+  .dash{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);
+    font-size:.78rem;color:var(--accent-2);background:var(--accent-soft);
+    border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    padding:7px 12px;border-radius:9px;margin-top:4px;word-break:break-all;line-height:1.3}
+  .dash svg{width:14px;height:14px;flex:none}
+
+  /* ---- architecture thesis ---- */
+  .arch{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  .archcard{border-radius:16px;border:1px solid var(--line);padding:26px;background:var(--surface)}
+  .archcard.rival{background:var(--surface-2)}
+  .archcard.win{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));
+    background:linear-gradient(180deg,var(--accent-soft),var(--surface))}
+  .archcard h3{font-size:1.16rem;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+  .archcard .who{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted)}
+  .flow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:16px 0 14px;
+    font-family:var(--font-mono);font-size:.76rem;color:var(--text)}
+  .node{border:1px solid var(--line);background:var(--surface-3);padding:6px 10px;border-radius:7px}
+  .node.hot{border-color:var(--accent);color:var(--accent-2);background:var(--accent-soft)}
+  .node.mid{border-color:var(--rival);color:var(--rival)}
+  .arrow{color:var(--faint)}
+  .archcard ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+  .archcard li{position:relative;padding-left:24px;font-size:.94rem;color:var(--muted)}
+  .archcard li::before{content:"";position:absolute;left:2px;top:8px;width:10px;height:10px;border-radius:3px}
+  .win li::before{background:var(--accent)}
+  .rival li::before{background:var(--rival)}
+  .archcard li b{color:var(--text);font-weight:640}
+
+  /* ---- comparison matrix ---- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:720px;font-size:.94rem}
+  thead th{text-align:left;padding:18px 20px;font-weight:640;vertical-align:bottom;
+    border-bottom:1px solid var(--line);background:var(--surface-2)}
+  thead th.c-db{background:var(--accent-soft);color:var(--accent-2);
+    border-bottom:2px solid var(--accent)}
+  thead th.c-rv{color:var(--rival)}
+  th.rowlbl{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);width:20%}
+  tbody th{text-align:left;padding:15px 20px;font-weight:640;vertical-align:top;
+    border-bottom:1px solid var(--line);color:var(--text)}
+  tbody td{padding:15px 20px;vertical-align:top;border-bottom:1px solid var(--line);color:var(--muted)}
+  td.c-db{background:var(--accent-soft);color:var(--text)}
+  td.c-db .mk{color:var(--accent-2)}
+  tr:last-child th,tr:last-child td{border-bottom:none}
+  .mk{font-weight:700;margin-right:6px}
+  .yes{color:var(--good)} .part{color:var(--warn)} .no{color:var(--crit)}
+  .cap-note{font-size:.82rem;display:block;color:var(--muted);margin-top:3px}
+
+  /* ---- verdict / closing ---- */
+  .verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+  .vcard{border:1px solid var(--line);border-radius:14px;padding:22px;background:var(--surface)}
+  .vcard .n{font-family:var(--font-mono);color:var(--accent-2);font-size:.9rem;font-weight:600}
+  .vcard h4{margin:8px 0 6px;font-size:1.05rem;font-weight:680}
+  .vcard p{margin:0;color:var(--muted);font-size:.92rem}
+  .fair{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin-top:26px}
+  .fair h4{margin:0 0 8px;font-size:1rem;font-weight:680}
+  .fair p{margin:0;color:var(--muted);font-size:.94rem}
+
+  footer{padding:40px 0 60px;color:var(--muted);font-size:.85rem}
+  footer .wrap{display:flex;flex-direction:column;gap:10px}
+  footer a{color:var(--muted);text-decoration:underline}
+  .rule{height:1px;background:var(--line);border:none;margin:0}
+
+  @media (max-width:780px){
+    .cap{grid-template-columns:1fr}
+    .cap-main{border-right:none;border-bottom:1px solid var(--line)}
+    .arch{grid-template-columns:1fr}
+  }
+</style>
+
+<header class="hero">
+  <div class="brandbar">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2.5 4 7.2v8.1c0 7 5 11.6 12 14.2 7-2.6 12-7.2 12-14.2V7.2L16 2.5Z"
+          fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+        <rect x="11.4" y="14.6" width="9.2" height="7.2" rx="1.4" stroke="var(--accent)" stroke-width="1.6"/>
+        <path d="M13.3 14.6v-2.1a2.7 2.7 0 0 1 5.4 0v2.1" stroke="var(--accent)" stroke-width="1.6"/>
+      </svg>
+      <span>DBDOME</span>
+    </div>
+    <span class="kicker">Technical White Paper · v1.0</span>
+  </div>
+  <div class="hero-inner">
+    <span class="eyebrow">Security Enforcement</span>
+    <h1>Protection that lives <span class="hl">inside the database</span> — not in front of it.</h1>
+    <p class="lede">DBDOME discovers sensitive data, then enforces it with the database's own controls: native masking, roles, and an encrypted token vault. No inline proxy, no query-path latency, no bypass surface — every action discovered, applied, audited, and scored from one on-prem appliance.</p>
+    <div class="hero-tags">
+      <span class="tag"><b>Agentless</b> collection</span>
+      <span class="tag"><b>In-database</b> enforcement</span>
+      <span class="tag"><b>Grafana-native</b> dashboards</span>
+      <span class="tag"><b>Audited</b> &amp; reversible</span>
+      <span class="tag">PCI-DSS · HIPAA · GDPR</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ OVERVIEW ============ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">The model</span>
+        <h2>One pipeline: discover, classify, enforce, prove.</h2>
+        <p>Most tools bolt masking onto a network proxy that every query must traverse. DBDOME takes the opposite stance — it watches the estate out-of-band, finds the sensitive columns, and then reaches into the database to apply the control the situation needs, using mechanisms the engine already enforces on its own. What follows is exactly how each of the six enforcement capabilities is implemented, and how that architecture compares to a proxy-based platform such as DataSunrise.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CAPABILITIES ============ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Six capabilities</span>
+        <h2>Security enforcement, end to end.</h2>
+        <p>Each capability is a live DBDOME dashboard action, backed by a real process and audited to a dedicated log.</p>
+      </div>
+
+      <div class="caps">
+
+        <!-- 1 Sensitive Columns Explorer -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Discover &amp; classify</span></div>
+            <h3>Sensitive Columns Explorer</h3>
+            <p>Two discovery engines find PII without a single manual mapping. <strong>Name-based</strong> scanning matches ~40 tokens (SSN, IBAN, card, email, DOB, medical…) across the catalog; <strong>value-based</strong> discovery samples freshly-collected data and confirms with format regexes — a match on <em>both</em> name and value scores 100% confidence.</p>
+            <p>Findings land in <code>log.discovery_candidates</code> and <code>monitoring.sensitive_schema</code>, tagged by PII category and confidence. Columns pending review &gt;24h raise a GDPR alert automatically.</p>
+            <a class="dash" href="/d/adpiicol/sensitive-columns-explorer">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/adpiicol/sensitive-columns-explorer</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Method</span>name + sampled-value regex, confidence-scored</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Grain</span>per-column, PII-category tagged</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Views</span><code>v_sec_sql_pri_001_rc12/13</code></span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2 RBAC -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Access control</span></div>
+            <h3>Role-Based Access Control (RBAC)</h3>
+            <p>One click provisions a complete least-privilege model: <strong>a pre-change database backup first</strong> (the restore point), then four schema-scoped roles — <code>db_readonly</code>, <code>db_dataentry</code>, <code>db_manager</code>, <code>db_report_viewer</code> — plus a server role <code>srv_dba</code>, each with a mapped, policy-checked login.</p>
+            <p>Provisioning is idempotent (roles created only if missing, grants re-applied harmlessly) and every step is written to <code>metrics.rbac_log</code>. The same recorded backup is the estate's global revert path.</p>
+            <a class="dash" href="/d/secact-rbac/rbac-role-based-access-control">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/secact-rbac/rbac-role-based-access-control</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Enforced by</span>native SQL Server roles &amp; grants</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Safety</span>backup taken before any change</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Reversible</span><code>restore_database()</code></span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3 Anonymization -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Anonymize</span></div>
+            <h3>Anonymization</h3>
+            <p>For non-production copies: <strong>suppress, substitute, generalize, shuffle, hash</strong>, or <strong>format-preserving “realistic”</strong> replacement that keeps length, case and separators (cards stay card-shaped, emails stay email-shaped) while destroying the link to the real subject.</p>
+            <p>It runs as a safe, staged workflow — <code>anonymize_pre</code> operates on a timestamped copy (original untouched) and mirrors it to Postgres for review; <code>anonymize_actual</code> swaps it live; <code>anonymize_confirm</code> archives the original. Every action → <code>metrics.dp_log</code>.</p>
+            <a class="dash" href="/d/secact-anon/anonymization">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/secact-anon/anonymization</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Techniques</span>6, incl. format-preserving</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Workflow</span>copy → switch → archive</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Preview</span>read-only before commit</span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4 Static -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Mask · static</span></div>
+            <h3>Static Data Masking</h3>
+            <p>Permanently overwrites the stored values in a lower environment — <code>null</code>, <code>default</code>, <code>fixed:&lt;value&gt;</code>, <code>shuffle</code>, or <code>partial(p,"pad",s)</code> — and reports the affected row count. The column is resolved and bracket-validated to keep the operation injection-safe.</p>
+            <p>Destructive by design and clearly separated from the live-data controls; recorded to <code>metrics.dp_log</code> and revertible from the pre-change backup via <code>restore_database()</code>.</p>
+            <a class="dash" href="/d/secact-static/static-data-masking">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/secact-static/static-data-masking</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Scope</span>non-production copies</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Functions</span>null · fixed · shuffle · partial</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Audited</span>row count + <code>metrics.dp_log</code></span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5 Dynamic -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Mask · dynamic</span></div>
+            <h3>Dynamic Data Masking</h3>
+            <p>Non-destructive protection for <strong>production</strong>: the real value stays in the table and is masked on display for any principal without <code>UNMASK</code>. DBDOME applies the database's native <code>ALTER COLUMN … ADD MASKED WITH (…)</code>, validating the function against an allow-list (<code>default()</code>, <code>email()</code>, <code>random()</code>, <code>partial()</code>). It is <strong>idempotent</strong> (drops an existing mask before re-adding) and <strong>live — no restart</strong>.</p>
+            <p>An auto-mask engine can apply it straight from PII detection (gated by a <code>masking_dry_run</code> switch), and the Explorer offers authorized one-click masking with real-vs-masked previews. Reverse instantly with <code>revert_dynamic_mask()</code> — plaintext is never touched.</p>
+            <a class="dash" href="/d/secact-ddm/dynamic-data-masking">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/secact-ddm/dynamic-data-masking</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Enforced by</span>the database engine itself</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Change</span>live · idempotent · no restart</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Reversible</span>plaintext untouched · <code>DROP MASKED</code></span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6 Tokenization -->
+        <article class="cap">
+          <div class="cap-main">
+            <div class="cap-num"><span class="dot"></span><span class="eyebrow">Tokenize / vault</span></div>
+            <h3>Tokenization</h3>
+            <p>Replaces a column with a random 32-char surrogate and stores the true value <strong>encrypted in a separate vault database</strong>, <code>TokenVault.dbo.Tokens</code> — so the source database holds neither the plaintext nor the key. Encryption is passphrase or AES-256; a <code>usp_Detokenize</code> proc is granted only to the payment-processor role.</p>
+            <p>Staged like anonymization (<code>tokenize_pre</code> → <code>tokenize_actual</code>) and <strong>reversible by design</strong>: <code>revert_tokenize()</code> joins tokens back to their decrypted values. Result-set tokens are stable surrogates keyed by hash in <code>config.masking_tokens</code>. All audited to <code>metrics.dp_log</code>.</p>
+            <a class="dash" href="/d/secact-token/tokenization">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              /d/secact-token/tokenization</a>
+          </div>
+          <div class="cap-side">
+            <div class="props">
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Vault</span>separate encrypted DB, no key at source</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Crypto</span>passphrase or AES-256</span></div>
+              <div class="prop"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="k">Reversible</span>de-tokenize from vault</span></div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE THESIS ============ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">The architectural difference</span>
+        <h2>Enforced by the database — or intercepted by a proxy.</h2>
+        <p>This is the choice that shapes everything else: latency, availability, the bypass surface, and what happens the day your security tool is offline.</p>
+      </div>
+      <div class="arch">
+        <div class="archcard win">
+          <span class="who">DBDOME · in-database</span>
+          <h3>Controls live where the data lives</h3>
+          <div class="flow">
+            <span class="node">app</span><span class="arrow">→</span>
+            <span class="node hot">database <small>(mask · role · vault)</small></span>
+            <span class="arrow">⇠</span><span class="node">DBDOME <small>out-of-band</small></span>
+          </div>
+          <ul>
+            <li><b>Zero query-path latency.</b> Nothing sits between the app and the database; DBDOME observes and applies, it does not relay traffic.</li>
+            <li><b>No bypass surface.</b> Masking, roles and tokens are enforced by the engine for <b>every</b> session — direct connections included.</li>
+            <li><b>Survives downtime.</b> If the DBDOME service stops, the controls remain in force — they are part of the database, not a gateway in front of it.</li>
+            <li><b>Nothing to re-route.</b> No connection strings to repoint, no proxy cluster to size and keep highly-available.</li>
+          </ul>
+        </div>
+        <div class="archcard rival">
+          <span class="who">Proxy platform · e.g. DataSunrise</span>
+          <h3>Controls live in a gateway on the wire</h3>
+          <div class="flow">
+            <span class="node">app</span><span class="arrow">→</span>
+            <span class="node mid">proxy <small>(intercept · rewrite)</small></span>
+            <span class="arrow">→</span><span class="node">database</span>
+          </div>
+          <ul>
+            <li><b>Every query is relayed</b> through the proxy, which adds a network hop and a component to scale and keep available.</li>
+            <li><b>Dynamic masking is applied in transit</b> — it protects traffic that goes <b>through</b> the proxy; the proxy firewall must also close off direct paths.</li>
+            <li><b>The gateway is the enforcement point.</b> If it is bypassed or down, in-transit masking is not applied.</li>
+            <li><b>Clients must be pointed at the proxy</b>, and it becomes a tier to secure and operate in its own right.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMPARISON MATRIX ============ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Head to head</span>
+        <h2>DBDOME vs DataSunrise, feature by feature.</h2>
+        <p>Both platforms cover the same capability names. The difference is <em>where</em> and <em>how</em> each control is enforced — and what comes bundled around it.</p>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="rowlbl">Capability</th>
+              <th class="c-db">DBDOME</th>
+              <th class="c-rv">DataSunrise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Sensitive-data discovery</th>
+              <td class="c-db"><span class="mk yes">✔</span>Name + sampled-value regex, confidence-scored to <code>log.discovery_candidates</code>; auto-raises GDPR review alerts<span class="cap-note">continuous, in-appliance</span></td>
+              <td><span class="mk yes">✔</span>Data discovery to seed masking rules</td>
+            </tr>
+            <tr>
+              <th>RBAC</th>
+              <td class="c-db"><span class="mk yes">✔</span><b>Provisions</b> native roles + logins + a server role, with a backup taken first and every step audited<span class="cap-note">creates the model, not just aligns to it</span></td>
+              <td><span class="mk part">◑</span>Masking aligned to your existing user/role/group context</td>
+            </tr>
+            <tr>
+              <th>Static masking</th>
+              <td class="c-db"><span class="mk yes">✔</span>null · fixed · shuffle · partial; row-count reported, backup-revertible</td>
+              <td><span class="mk yes">✔</span>Static masking of lower environments</td>
+            </tr>
+            <tr>
+              <th>Dynamic masking</th>
+              <td class="c-db"><span class="mk yes">✔</span><b>Native engine DDM</b> (<code>ADD MASKED</code>) — enforced by the database for all sessions, live, idempotent, instantly revertible</td>
+              <td><span class="mk part">◑</span>Applied <b>in the proxy</b> as results pass through (in-transit)</td>
+            </tr>
+            <tr>
+              <th>Anonymization</th>
+              <td class="c-db"><span class="mk yes">✔</span>6 techniques incl. format-preserving; staged copy→switch→archive with preview</td>
+              <td><span class="mk yes">✔</span>Obfuscation incl. synthetic / format-preserving</td>
+            </tr>
+            <tr>
+              <th>Tokenization</th>
+              <td class="c-db"><span class="mk yes">✔</span>Surrogates + <b>separate encrypted vault</b> (no key at source); reversible de-tokenize</td>
+              <td><span class="mk yes">✔</span>Tokenization / format-preserving encryption</td>
+            </tr>
+            <tr>
+              <th>Enforcement point</th>
+              <td class="c-db"><span class="mk yes">✔</span><b>Inside the database</b> — no inline component</td>
+              <td><span class="mk no">●</span>Inline proxy on the connection path</td>
+            </tr>
+            <tr>
+              <th>Added query latency</th>
+              <td class="c-db"><span class="mk yes">✔</span>None (out-of-band)</td>
+              <td><span class="mk part">◑</span>A network hop per query through the gateway</td>
+            </tr>
+            <tr>
+              <th>Holds if the tool is offline</th>
+              <td class="c-db"><span class="mk yes">✔</span>Yes — controls are in the database</td>
+              <td><span class="mk part">◑</span>In-transit masking depends on the proxy being in path</td>
+            </tr>
+            <tr>
+              <th>Deploys without re-routing clients</th>
+              <td class="c-db"><span class="mk yes">✔</span>Yes — nothing to repoint</td>
+              <td><span class="mk no">●</span>Clients point at the proxy</td>
+            </tr>
+            <tr>
+              <th>Bundled DAM, alerting &amp; compliance scoring</th>
+              <td class="c-db"><span class="mk yes">✔</span>Root-cause catalog, blocking, incident lifecycle &amp; a weighted compliance scorecard in the same appliance</td>
+              <td><span class="mk yes">✔</span>DAM, audit &amp; database firewall</td>
+            </tr>
+            <tr>
+              <th>Operator surface</th>
+              <td class="c-db"><span class="mk yes">✔</span>Grafana-native dashboards; one-click actions with dry-run guards &amp; previews</td>
+              <td><span class="mk yes">✔</span>Web console</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY ============ -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Why DBDOME</span>
+        <h2>Five reasons teams choose in-database enforcement.</h2>
+      </div>
+      <div class="verdict">
+        <div class="vcard"><span class="n">01</span><h4>No new tier on the wire</h4><p>Nothing to insert between apps and databases — so no per-query latency, no proxy cluster to size, and no connection strings to repoint across the estate.</p></div>
+        <div class="vcard"><span class="n">02</span><h4>No bypass surface</h4><p>Masks, roles and tokens are enforced by the engine for every session. Protection isn't conditional on traffic passing through a gateway.</p></div>
+        <div class="vcard"><span class="n">03</span><h4>Fails safe</h4><p>Because controls are part of the database, they stay in force even if the DBDOME service is stopped for maintenance.</p></div>
+        <div class="vcard"><span class="n">04</span><h4>Safe by construction</h4><p>Backup-before-change, staged copy→switch→archive, dry-run switches, allow-listed mask functions, and full audit to <code>dp_log</code> / <code>rbac_log</code> / <code>masking_log</code>.</p></div>
+        <div class="vcard"><span class="n">05</span><h4>One appliance, whole lifecycle</h4><p>Discover → classify → enforce → monitor → alert → score for PCI-DSS, HIPAA and GDPR — without stitching together separate products.</p></div>
+      </div>
+
+      <div class="fair">
+        <h4>A fair word on DataSunrise</h4>
+        <p>DataSunrise is a mature, broad, multi-engine platform, and its proxy model has real strengths: a single in-line policy point across many database technologies, format-preserving encryption and synthetic data, and context-aware rules coupled with a database firewall and SQL-injection defenses at the gateway. Where a centralized in-transit choke-point across heterogeneous engines is the goal, it fits well. DBDOME makes the opposite architectural bet — push enforcement into the database itself — which is the better fit for teams that want native controls, zero added latency, no bypass surface, and discovery-to-compliance unified in one on-prem appliance.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <hr class="rule"/>
+    <div><strong>DBDOME</strong> — Security Enforcement white paper. DBDOME capability descriptions reflect the implementation in the <code>dbdome_dbanalytics_service</code> platform (processes <code>data_protection</code>, <code>data_masking_engine</code>, <code>rbac_provisioning</code>, <code>continuous_data_discovery</code>, <code>auto_mask</code>) and its Grafana dashboards.</div>
+    <div>DataSunrise capabilities are summarized from the vendor's public documentation:
+      <a href="https://www.datasunrise.com/dynamic-data-masking/">Dynamic Data Masking</a>,
+      <a href="https://www.datasunrise.com/knowledge-center/data-masking-tools-and-techniques-for-postgresql/">Data Masking Techniques</a>,
+      <a href="https://www.datasunrise.com/knowledge-center/data-obfuscation-in-microsoft-sql-server/">Data Obfuscation in SQL Server</a>.
+      Comparisons are architectural, not benchmarks; validate against your own requirements.</div>
+  </div>
+</footer>

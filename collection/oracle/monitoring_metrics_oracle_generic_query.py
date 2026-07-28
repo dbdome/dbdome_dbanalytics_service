@@ -8,16 +8,31 @@ from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy import MetaData, Table
 from sqlalchemy.dialects.postgresql import insert
 from utils.utils_config_dotenv import get_connection_string
+from utils.metric_json import to_records_json
 from utils.log4dbexpert import db_write_log
+try:
+    from analysis.self_activity_filter import (
+        is_self_activity, filter_excluded_logins, filter_self_statements)
+except Exception:
+    def is_self_activity(*_a, **_k):
+        return False
+    def filter_excluded_logins(df):
+        return df
+    def filter_self_statements(df):
+        return df
 from email_utils.smtp_email_sender import send_mail_alert_no_attachment
+from utils.alert_resultset import fetch_alert_resultset
 from siem.rapid.rapid_sender import siem_rapid_send
 from siem.crowdstrike.crowdstrike_sender import siem_crowdstrike_send
+from siem.wazuh.wazuh_sender import siem_wazuh_send
+from siem.generic.syslog_sender import siem_send_all
 from alerts.alert_dispatcher import dispatch          # background alert delivery
 from alerts.alert_helper import manage_diagnosys_alerts
 import json
 import re
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from utils.oracle_client import oracle_connect, OracleError
+from utils.secrets_crypto import decrypt_secret
 from collection.comparison import compute_calc_query
 
 
@@ -106,6 +121,11 @@ def _substitute_parameters(sql, parameters):
 
 
 def collect_all_metrics_oracle_queries(username, password, server, port, service_name, domain_filter=None, risk_filter=None, server_id=None):
+
+    # The monitored-DB password is stored encrypted. decrypt_secret is idempotent
+    # (legacy plaintext / already-decrypted values pass through unchanged), so this
+    # is safe even though the main dispatcher already decrypts upstream.
+    password = decrypt_secret(password)
 
     # Strip port from server if it contains host:port
     if ':' in str(server):
@@ -217,6 +237,13 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
             category_id = query_row.category_id
             metric_name = query_row.metric_name
 
+            # ---- self-activity / false-alarm suppression (analysis.suppression_rules) ----
+            # Skip DBDOME's own benign inventory queries: do not run, store, or alert.
+            if is_self_activity(metric_name, query_row.get('query'), 'oracle'):
+                db_write_log(f"Metric '{metric_name}' suppressed as DBDOME self-activity/benign inventory - not stored, not alerted.",
+                             0, "collect_all_metrics_oracle_queries", server, port=port)
+                continue
+
             # Substitute :param placeholders with literal values from
             # detection_steps.parameters (step_parameters in the joined view).
             # Without this, oracledb sees the bind variables and raises DPY-4010.
@@ -234,14 +261,15 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                 with oracle_connect(username, password, server, port, service_name) as ora_conn:
 
                     df = pd.read_sql_query(oracle_sql, ora_conn)  # type: ignore[arg-type]
+                    # drop rows for logins registered in metrics.exclude_logins (self-activity)
+                    df = filter_excluded_logins(df)
+                    # drop captured statements that are DBDOME's own collector SQL
+                    df = filter_self_statements(df)
 
                     if len(df) > 5000:
                         df = df.head(5000)
 
-                    metric_metadata_json = df.to_json(
-                        orient="records",
-                        default_handler=str
-                    )
+                    metric_metadata_json = to_records_json(df)
                     comparison = _build_comparison(metric_metadata_json, query_row.get('expected'), step_params)
 
                     # If the metric returned no rows, replace the empty '[]'
@@ -280,6 +308,7 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                     if comparison_data.get("matched") is True:
                         _risk_level = query_row.get('risk_level') or comparison_data.get('severity') or 'medium'
                         # ===== add to alerts.alert_log =====
+                        alert_row_id = None
                         try:
                             with pg_engine.begin() as alog:
                                 # One alert per (server, root_cause_id) per hour: drop any earlier alert for
@@ -293,10 +322,11 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                                     """),
                                     {"server": server_key, "rc": query_row.get('root_cause_id') or metric_name}
                                 )
-                                alog.execute(
+                                alert_row_id = alog.execute(
                                     text("""
                                         INSERT INTO alerts.alert_log (server, root_cause_id, risk_level, metadata, login_name)
                                         VALUES (:server, :rc, :risk, CAST(:meta AS jsonb), :login_name)
+                                        RETURNING row_id
                                     """),
                                     {
                                         "server": server_key,
@@ -305,7 +335,7 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                                         "meta": json.dumps(metric_metadata_json),
                                         "login_name": next((r.get('login_name') for r in metric_metadata_json if isinstance(r, dict)), None) if isinstance(metric_metadata_json, list) else metric_metadata_json.get('login_name') if isinstance(metric_metadata_json, dict) else None,
                                     }
-                                )
+                                ).scalar()
                         except Exception as alog_ex:
                             db_write_log(f"alert_log insert failed for '{metric_name}': {alog_ex}", 0,
                                          "collect_all_metrics_oracle_queries", server, port=port)
@@ -353,6 +383,7 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                                     expected=query_row.get('expected'),
                                     comparison_data=comparison_data,
                                     metric_metadata_json=metric_metadata_json,
+                                    alert_id=alert_row_id,
                                 )
                                 db_write_log(f"Alert sent for '{metric_name}' (matched, authorised)", 0, "collect_all_metrics_oracle_queries", server, port=port)
                             except Exception as alert_ex:
@@ -379,13 +410,39 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                                         f"issue:{query_row.get('issue_name') or ''}, "
                                         f"root:{query_row.get('root_cause_name') or metric_name}"
                                     ).encode('utf-8', errors='ignore').decode('utf-8')
+                                    # Detection results delivered to SIEM = the alert's
+                                    # canonical resultset (same rows as the alert panel):
+                                    # monitoring.get_alert_log_resultset_byid(alert_id).
+                                    _details = None
+                                    if alert_row_id:
+                                        _rows = fetch_alert_resultset(alert_row_id)
+                                        if _rows:
+                                            _details = {"alert_id": alert_row_id,
+                                                        "detection_results": _rows}
                                     dispatch(siem_rapid_send, _rc_id, _risk_level, server_key, _desc)
-                                    dispatch(siem_crowdstrike_send, 
+                                    dispatch(siem_crowdstrike_send,
                                         event_type=_rc_id,
                                         severity=_risk_level,
                                         server=server_key,
                                         root_cause_id=_rc_id,
                                         description=_desc,
+                                        additional_data=_details,
+                                    )
+                                    dispatch(siem_wazuh_send,
+                                        event_type=_rc_id,
+                                        severity=_risk_level,
+                                        server=server_key,
+                                        root_cause_id=_rc_id,
+                                        description=_desc,
+                                        additional_data=_details,
+                                    )
+                                    dispatch(siem_send_all,
+                                        event_type=_rc_id,
+                                        severity=_risk_level,
+                                        server=server_key,
+                                        root_cause_id=_rc_id,
+                                        description=_desc,
+                                        additional_data=_details,
                                     )
                         except Exception as siem_ex:
                             db_write_log(f"SIEM alert failed for '{metric_name}': {siem_ex}", 0, "collect_all_metrics_oracle_queries", server, port=port)

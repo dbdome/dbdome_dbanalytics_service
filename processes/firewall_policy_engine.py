@@ -29,6 +29,11 @@ _policy_cache: list = []
 _cache_loaded_at: float = 0.0
 _CACHE_TTL = 60  # seconds
 
+# ── Exception cache (reloaded every 60 s) ───────────────────────────────────
+
+_exception_cache: list = []
+_exception_cache_loaded_at: float = 0.0
+
 
 def _load_policies() -> list:
     """Load active policies from DB, ordered by priority ASC."""
@@ -76,6 +81,77 @@ def _get_policies() -> list:
     if time.time() - _cache_loaded_at > _CACHE_TTL:
         _load_policies()
     return _policy_cache
+
+
+def _load_exceptions() -> list:
+    """Load active policy exceptions from config.v_active_policy_exceptions."""
+    global _exception_cache, _exception_cache_loaded_at
+    try:
+        pool = _get_pool()
+        conn = pool.getconn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT exception_id, policy_id, server_name,
+                       db_user, client_ip_cidr
+                FROM   config.v_active_policy_exceptions
+                """
+            )
+            rows = cur.fetchall()
+            cur.close()
+            _exception_cache = [
+                {
+                    "exception_id":  r[0],
+                    "policy_id":     r[1],
+                    "server_name":   r[2],
+                    "db_user":       r[3],
+                    "client_ip_cidr":r[4],
+                }
+                for r in rows
+            ]
+            _exception_cache_loaded_at = time.time()
+        finally:
+            pool.putconn(conn)
+    except Exception as e:
+        print(f"firewall_policy_engine: failed to load exceptions: {e}")
+    return _exception_cache
+
+
+def _get_exceptions() -> list:
+    if time.time() - _exception_cache_loaded_at > _CACHE_TTL:
+        _load_exceptions()
+    return _exception_cache
+
+
+def _has_exception(policy_id, server_name: str, db_user: str, client_ip: str) -> bool:
+    """Return True if an active exception covers this policy+context combination."""
+    for exc in _get_exceptions():
+        # policy scope: None means exception covers all policies
+        if exc["policy_id"] is not None and exc["policy_id"] != policy_id:
+            continue
+        # server scope: None means any server
+        if exc["server_name"] and exc["server_name"] != server_name:
+            continue
+        # user scope: None means any user
+        if exc["db_user"] and exc["db_user"] != db_user:
+            continue
+        # IP scope: None means any IP; supports exact or CIDR
+        if exc["client_ip_cidr"] and client_ip:
+            try:
+                addr = ipaddress.ip_address(client_ip)
+                cidr = exc["client_ip_cidr"]
+                if "/" in cidr:
+                    if addr not in ipaddress.ip_network(cidr, strict=False):
+                        continue
+                elif cidr != client_ip:
+                    continue
+            except ValueError:
+                continue
+        elif exc["client_ip_cidr"] and not client_ip:
+            continue
+        return True
+    return False
 
 
 # ── Condition matchers ───────────────────────────────────────────────────────
@@ -239,6 +315,14 @@ def evaluate_query(
             )
             break  # first match wins (policies ordered by priority)
 
+    # ── Exception bypass: downgrade BLOCK/ALERT to ALLOW when an active
+    #    policy exception covers this server+user+IP combination ─────────────
+    if action in ("BLOCK", "ALERT") and matched_policy is not None:
+        if _has_exception(matched_policy["policy_id"], server_name, db_user, client_ip):
+            action = "ALLOW"
+            risk_score = 0
+    # ─────────────────────────────────────────────────────────────────────────
+
     # Map action to audit action_taken label
     action_taken_map = {
         "ALLOW": "ALLOWED",
@@ -273,7 +357,9 @@ def evaluate_query(
 
 
 def reload_policy_cache():
-    """Force an immediate cache refresh — call after UI policy changes."""
-    global _cache_loaded_at
+    """Force an immediate cache refresh — call after UI policy or exception changes."""
+    global _cache_loaded_at, _exception_cache_loaded_at
     _cache_loaded_at = 0.0
+    _exception_cache_loaded_at = 0.0
     _load_policies()
+    _load_exceptions()

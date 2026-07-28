@@ -1,12 +1,15 @@
 import smtplib
 import ssl
 import json
+import html
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import psycopg2
 from datetime import datetime
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
+from utils.secrets_crypto import decrypt_secret, encrypt_secret
+from utils.alert_resultset import fetch_alert_resultset
 from email.mime.application import MIMEApplication
 from ssrs.ssrs_report_download import ssrs_download_alert_report , ssrs_download_alert_report_with_params
 import smtplib
@@ -64,10 +67,69 @@ def _get_smtp_connection(server_host, port, tls, user, password):
         s.starttls()
         s.ehlo()
     if user and str(user).strip():
-        s.login(user, password)
+        s.login(user, decrypt_secret(password))
     _smtp_cache["conn"] = s
     _smtp_cache["key"] = key
     return s
+
+
+def _metric_metadata_table_html(meta, max_rows=100):
+    """Render metric_metadata_json as an HTML table for alert emails.
+
+    Accepts a list-of-dicts (the usual detection result), a single dict, or a JSON
+    string of either; columns are the union of keys (first-seen order), one row per
+    record. Values are HTML-escaped. Returns '' when there is nothing to show.
+    This replaces the old 'Comparison' block (expected / comparison_data) so every
+    generic collector's alert email shows the actual result rows as a table."""
+    if meta is None:
+        return ""
+    data = meta
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            return ('<h3 style="margin-top:20px;">📋 Detection Results</h3>'
+                    '<pre style="background:#f4f4f4;padding:12px;border-radius:6px;'
+                    'font-size:13px;overflow-x:auto;border:1px solid #ddd;">'
+                    f'{html.escape(str(meta))}</pre>')
+    if isinstance(data, dict):
+        rows = [data]
+    elif isinstance(data, list):
+        rows = [r for r in data if isinstance(r, dict)]
+        if not rows and data:                       # list of scalars
+            rows = [{"value": v} for v in data]
+    else:
+        rows = [{"value": data}]
+    if not rows:
+        return ""
+
+    total = len(rows)
+    rows = rows[:max_rows]
+    cols = []
+    for r in rows:
+        for k in r.keys():
+            if k not in cols:
+                cols.append(k)
+
+    th = "".join(
+        '<th style="padding:8px;border:1px solid #ddd;background:#34495e;color:#fff;'
+        f'text-align:left;font-size:13px;">{html.escape(str(c))}</th>' for c in cols)
+    body_rows = []
+    for i, r in enumerate(rows):
+        bg = "#ffffff" if i % 2 == 0 else "#f8f9fa"
+        tds = "".join(
+            '<td style="padding:8px;border:1px solid #ddd;font-size:13px;">'
+            f'{html.escape("" if r.get(c) is None else str(r.get(c)))}</td>' for c in cols)
+        body_rows.append(f'<tr style="background:{bg};">{tds}</tr>')
+    note = (f'<p style="font-size:12px;color:#888;">showing first {max_rows} of {total} rows</p>'
+            if total > max_rows else "")
+    return (
+        '<h3 style="margin-top:20px;">📋 Detection Results</h3>'
+        '<div style="overflow-x:auto;">'
+        '<table style="border-collapse:collapse;width:100%;font-size:13px;">'
+        f'<thead><tr>{th}</tr></thead><tbody>{"".join(body_rows)}</tbody></table></div>'
+        f'{note}'
+    )
 
 
 def send_mail_alert_no_attachment(
@@ -85,8 +147,9 @@ def send_mail_alert_no_attachment(
                         query                   ,
                         expected                =None,
                         comparison_data         =None,
-                        metric_metadata_json    =None ,  
-                        transaction_type='security_alert'
+                        metric_metadata_json    =None ,
+                        transaction_type='security_alert',
+                        alert_id                =None
 ):
     # Coerce a gate parameter to a plain trimmed str; NaN/None/NA -> "".
     # A float NaN is *truthy*, so `x or ""` does NOT catch it, and psycopg2
@@ -98,6 +161,21 @@ def send_mail_alert_no_attachment(
         if v is None or (pandas.isna(v) if not isinstance(v, str) else False):
             return ""
         return str(v).strip()
+
+    # ========== Area gate: drop only a GARBAGE area, never a merely blank one ==========
+    # The original ask was "don't send mail when Area: nan". A pandas float NaN
+    # renders as "nan" in the subject; None/NaN/NaT and the literal tokens below
+    # are garbage and get suppressed. A genuinely empty area ("") is allowed
+    # through — many valid metric alerts have no area, and blocking those wrongly
+    # stopped legitimate mail (e.g. Security/critical alerts) from being sent.
+    _area_is_nan = (not isinstance(area_name, str)) and (area_name is None or pandas.isna(area_name))
+    _area_token  = "" if _area_is_nan else str(area_name).strip().lower()
+    if _area_is_nan or _area_token in ("nan", "none", "na", "null"):
+        db_write_log(
+            f"Alert skipped for {root_cause_id} on {server} - area is NaN ('{area_name}')",
+            0, "send_mail_alert_no_attachment", server,
+        )
+        return
 
     # ========== Mail-authorisation gate ==========
     # Two checks, BOTH must pass before any email is sent:
@@ -183,11 +261,19 @@ def send_mail_alert_no_attachment(
         db_write_log(f"Alert dedup check failed: {dedup_ex}", 0, "send_mail_alert_no_attachment", server)
         # Continue sending if dedup check fails
 
-    # Extract login_name from metric_metadata_json (list-of-dicts, dict, or JSON string)
+    # Detection results: the canonical rows for this alert are what the Grafana
+    # alert-detail panel shows — SELECT * FROM
+    # monitoring.get_alert_log_resultset_byid(alert_id) keyed on
+    # alerts.alert_log.row_id. Fall back to the raw collector payload only when
+    # there is no alert_id or the function returns no rows.
+    detection_rows = fetch_alert_resultset(alert_id) if alert_id else []
+    display_results = detection_rows or metric_metadata_json
+
+    # Extract login_name from the detection results (list-of-dicts, dict, or JSON string)
     login_name = None
-    if metric_metadata_json:
+    if display_results:
         try:
-            data = metric_metadata_json
+            data = display_results
             if isinstance(data, str):
                 data = json.loads(data)
             if isinstance(data, list) and data:
@@ -206,29 +292,9 @@ def send_mail_alert_no_attachment(
         <pre style="background:#f4f4f4; padding:12px; border-radius:6px; font-size:13px; overflow-x:auto; border:1px solid #ddd;">{query}</pre>
         """
 
-    comparison_html = ""
-    if expected is not None or comparison_data is not None:
-        comparison_html = '<h3 style="margin-top:20px;">📈 Comparison</h3>'
-        comparison_html += '<table style="border-collapse: collapse; width:100%; font-size:14px;">'
-        if expected is not None:
-            comparison_html += f"""
-            <tr style="background:#f8f9fa;">
-            <td style="padding:8px; border:1px solid #ddd;"><b>Expected</b></td>
-            <td style="padding:8px; border:1px solid #ddd;">{expected}</td>
-            </tr>"""
-        if comparison_data is not None:
-            comparison_html += f"""
-            <tr>
-            <td style="padding:8px; border:1px solid #ddd;"><b>Actual</b></td>
-            <td style="padding:8px; border:1px solid #ddd;">{comparison_data}</td>
-            </tr>"""
-        if metric_metadata_json is not None:
-            comparison_html += f"""
-            <tr>
-            <td style="padding:8px; border:1px solid #ddd;"><b>Actual</b></td>
-            <td style="padding:8px; border:1px solid #ddd;">{metric_metadata_json}</td>
-            </tr>"""
-        comparison_html += '</table>'
+    # Comparison block removed: show the alert's detection rows as a table
+    # instead. expected / comparison_data are no longer rendered.
+    metadata_html = _metric_metadata_table_html(display_results)
 
 
     login_suffix = f", login: {login_name}" if login_name else ""
@@ -310,7 +376,7 @@ def send_mail_alert_no_attachment(
 
     {query_html}
 
-    {comparison_html}
+    {metadata_html}
 
     <br>
 
@@ -375,9 +441,9 @@ def send_mail_alert_no_attachment(
 
                 # Log to mail_alert_log for 72-hour dedup
                 _meta_json = None
-                if metric_metadata_json is not None:
+                if display_results is not None:
                     try:
-                        _meta_json = json.dumps(metric_metadata_json) if not isinstance(metric_metadata_json, str) else metric_metadata_json
+                        _meta_json = json.dumps(display_results) if not isinstance(display_results, str) else display_results
                     except Exception:
                         pass
                 cur.execute(
@@ -453,7 +519,7 @@ def send_alert_email_and_log(
         else:
             server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context, timeout=10)
 
-        server.login(smtp_user, smtp_password)
+        server.login(smtp_user, decrypt_secret(smtp_password))
         server.sendmail(smtp_user, recipients, msg.as_string())
         server.quit()
 
@@ -531,7 +597,7 @@ def send_mail_with_pdf_attachment( report_name , recipients , source ,file_name 
             server = smtplib.SMTP(smtp_server, smtp_port)
             if tls:
                 server.starttls()
-            server.login(smtp_user, password)
+            server.login(smtp_user, decrypt_secret(password))
             server.send_message(msg)
             server.quit()
         except Exception as e:
@@ -582,7 +648,7 @@ def send_email_with_attachment(
         else:
             server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context, timeout=10)
 
-        server.login(smtp_user, smtp_password)
+        server.login(smtp_user, decrypt_secret(smtp_password))
         server.sendmail(smtp_user, recipients, msg.as_string())
         server.quit()
 
@@ -595,119 +661,36 @@ def send_email_with_attachment(
 
 
 def send_mail_with_attachment( pdf_path ,  report_name , recipients , source ,file_name , smtp_user , smtp_server , smtp_port , password ,mail_sender,tls):
-    if smtp_user is None : 
-        try:    
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
+    """Send a report PDF by mail. RAISES on failure (and logs it) so callers
+    can tell a failed send from a successful one — a swallowed SMTP error here
+    previously made scheduled reports report success while nothing arrived."""
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = f"DBDOME – {report_name}"
+        msg["From"] = mail_sender
+        msg["To"] = recipients
+        msg.set_content(f"{report_name}")
 
-            with open(pdf_path, "rb") as f:
-                msg.add_attachment(
+        with open(pdf_path, "rb") as f:
+            msg.add_attachment(
                 f.read(),
                 maintype="application",
                 subtype="pdf",
                 filename=file_name
             )
 
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-    
-    else:
-        try:  
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        if tls:
+            server.starttls()
+        if smtp_user is not None:
+            server.login(smtp_user, decrypt_secret(password))
+        server.send_message(msg)
+        server.quit()
+        db_write_log(f"send_mail_with_attachment sent '{report_name}' to {recipients}", 0, "send_mail_with_attachment", "")
+    except Exception as e:
+        db_write_log(f"send_mail_with_attachment failed with error:{e}", 0, "send_mail_with_attachment", "send_mail_with_attachment")
+        raise
 
-            with open(pdf_path, "rb") as f:
-                msg.add_attachment(
-                f.read(),
-                maintype="application",
-                subtype="pdf",
-                filename=file_name
-            )
-
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.login(smtp_user, password)
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-      
-
-def send_mail_with_attachment( pdf_path ,  report_name , recipients , source ,file_name , smtp_user , smtp_server , smtp_port , password ,mail_sender,tls):
-    if smtp_user is None : 
-        try:    
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
-
-            with open(pdf_path, "rb") as f:
-                msg.add_attachment(
-                f.read(),
-                maintype="application",
-                subtype="pdf",
-                filename=file_name
-            )
-
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-    
-    else:
-        try:  
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
-
-            with open(pdf_path, "rb") as f:
-                msg.add_attachment(
-                f.read(),
-                maintype="application",
-                subtype="pdf",
-                filename=file_name
-            )
-
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.login(smtp_user, password)
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-      
-    
 
 def send_mail_with_html_attachment(
                     report , 
@@ -783,7 +766,7 @@ WHERE h.file_name = %s
             server.starttls()
 
         if smtp_user:
-            server.login(smtp_user, smtp_password)
+            server.login(smtp_user, decrypt_secret(smtp_password))
 
         server.send_message(msg)
         server.quit()
@@ -803,6 +786,62 @@ WHERE h.file_name = %s
             "send_mail_with_attachment",
             "send_mail_with_attachment"
         )
+
+
+def send_report_files_email(subject, recipients, file_paths, mail_sender,
+                            smtp_user, smtp_server, smtp_port, smtp_password, tls):
+    """Email on-disk report files (html/pdf) as attachments.
+
+    Unlike send_mail_with_html_attachment (which reads the report from the
+    reports.* DB tables and needs a live `conn`, and swallows all errors), this
+    attaches the files JSONReportGenerator actually writes to disk and RAISES on
+    failure so the caller can report it. `recipients` may be a comma-separated
+    string. Returns the list of attached file basenames."""
+    # Read files first. set_content() must be called BEFORE any add_attachment()
+    # (the first attachment converts the message to multipart, after which
+    # set_content raises "set_content not valid on multipart").
+    atts, html_body = [], None
+    for fp in (file_paths or []):
+        if not fp or not os.path.isfile(fp):
+            continue
+        low = fp.lower()
+        if low.endswith(".html"):
+            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                data = f.read()
+            if html_body is None:
+                html_body = data
+            atts.append((data.encode("utf-8"), "text", "html", os.path.basename(fp)))
+        elif low.endswith(".pdf"):
+            with open(fp, "rb") as f:
+                atts.append((f.read(), "application", "pdf", os.path.basename(fp)))
+        elif low.endswith(".csv"):
+            with open(fp, "rb") as f:
+                atts.append((f.read(), "text", "csv", os.path.basename(fp)))
+    if not atts:
+        raise Exception("no report files found to attach")
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = mail_sender
+    msg["To"] = recipients
+    msg.set_content("Report attached. Please view the HTML or PDF attachment.")
+    if html_body is not None:
+        msg.add_alternative(html_body, subtype="html")
+    for (payload, maintype, subtype, filename) in atts:
+        msg.add_attachment(payload, maintype=maintype, subtype=subtype, filename=filename)
+    attached = [a[3] for a in atts]
+    s = smtplib.SMTP(smtp_server, int(smtp_port), timeout=30)
+    try:
+        if tls:
+            s.starttls()
+        if smtp_user and str(smtp_user).strip():
+            s.login(smtp_user, decrypt_secret(smtp_password))
+        s.send_message(msg)
+    finally:
+        try:
+            s.quit()
+        except Exception:
+            pass
+    return attached
 
 
 

@@ -351,6 +351,53 @@ _REGULATION_BUILDERS = {
     "SOC2":    _build_soc2_sections,
 }
 
+# Reports defined as JSON templates (templates/rpt_*.json, rendered by
+# JSONReportGenerator) rather than reportlab builder functions. Keyed by the
+# schedule's `regulation` code so an existing daily/weekly schedule row can drive
+# them with no new APScheduler job. The template owns its own reporting window
+# (report.time_window_hours), so lookback_days is informational for these.
+_TEMPLATE_REPORTS = {
+    "DAM": "rpt_8_compliance_dam_compliance.json",
+}
+
+
+def _template_dir() -> str:
+    """Directory holding the rpt_*.json templates (bundled under _internal when
+    frozen, or the repo root when running from source)."""
+    if getattr(sys, 'frozen', False):
+        base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(sys.executable)))
+    else:
+        base = _service_dir()
+    return os.path.join(base, "templates")
+
+
+def _run_template_schedule(schedule: dict, template_file: str):
+    """Render a JSON report template via JSONReportGenerator and email the PDF.
+
+    Mirrors _run_schedule's side effects (generate -> optional email -> mark run)
+    but uses the template pipeline instead of the reportlab builders."""
+    report_name = schedule.get("Report Name") or schedule.get("report_name", template_file)
+    recipients  = schedule.get("Recipients") or schedule.get("recipients", "")
+    schedule_id = schedule.get("Schedule Id") or schedule.get("schedule_id")
+
+    tpl_path = os.path.join(_template_dir(), template_file)
+    if not os.path.exists(tpl_path):
+        db_write_log(f"compliance_report: template not found: {tpl_path}", 0,
+                     "compliance_report_generator", "")
+        return
+    try:
+        from ReportGenerator.json_report_generator import JSONReportGenerator
+        pdf_path, _html = JSONReportGenerator(tpl_path).generate()
+        db_write_log(f"compliance template PDF generated: {pdf_path}", 0,
+                     "compliance_report_generator", "")
+        if pdf_path and recipients.strip():
+            _send_report(pdf_path, report_name, recipients)
+        if schedule_id:
+            _mark_run(int(schedule_id))
+    except Exception as e:
+        db_write_log(f"compliance_report template run error ({template_file}): {e}", 0,
+                     "compliance_report_generator", "")
+
 # ── PDF writer ────────────────────────────────────────────────────────────────
 
 def _generate_pdf(elements: list, pdf_path: str):
@@ -420,6 +467,13 @@ def _run_schedule(schedule: dict):
     recipients   = schedule.get("Recipients") or schedule.get("recipients", "")
     schedule_id  = schedule.get("Schedule Id") or schedule.get("schedule_id")
 
+    # JSON-template reports (e.g. DAM) render via JSONReportGenerator, not a
+    # reportlab builder.
+    template_file = _TEMPLATE_REPORTS.get(regulation)
+    if template_file:
+        _run_template_schedule(schedule, template_file)
+        return
+
     since = datetime.utcnow() - timedelta(days=lookback)
     builder = _REGULATION_BUILDERS.get(regulation)
     if builder is None:
@@ -472,6 +526,19 @@ def run_compliance_report_on_demand(regulation: str, lookback_days: int = 7, rec
     Called from the Phase 5 HTTP API endpoint.
     Returns the PDF file path.
     """
+    # JSON-template reports (e.g. DAM) render via JSONReportGenerator.
+    template_file = _TEMPLATE_REPORTS.get(regulation)
+    if template_file:
+        tpl_path = os.path.join(_template_dir(), template_file)
+        if not os.path.exists(tpl_path):
+            raise FileNotFoundError(f"template not found: {tpl_path}")
+        from ReportGenerator.json_report_generator import JSONReportGenerator
+        pdf_path, _html = JSONReportGenerator(tpl_path).generate()
+        db_write_log(f"on-demand template PDF: {pdf_path}", 0, "compliance_report_generator", "")
+        if recipients.strip():
+            _send_report(pdf_path, f"DBDOME {regulation} Compliance Report", recipients)
+        return pdf_path
+
     since = datetime.utcnow() - timedelta(days=lookback_days)
     builder = _REGULATION_BUILDERS.get(regulation)
     if builder is None:

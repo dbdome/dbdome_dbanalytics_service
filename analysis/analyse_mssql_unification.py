@@ -29,4 +29,4 @@ def metrics_sql_unification():
     finally:
             db_write_log(f"metrics_sql_injection_analysis sucess"   ,0,"metrics_active_transactions_analysis","" )
             conn.close()
-            return  1
+    return  1

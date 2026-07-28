@@ -8,6 +8,11 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.dialects.postgresql import insert
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
+try:
+    from analysis.self_activity_filter import filter_excluded_logins as _dbdome_filter_excluded_logins
+except Exception:
+    def _dbdome_filter_excluded_logins(df, *a, **k):
+        return df
 
 def collect_metric_postgres_stat_activity(pg_server,pg_servername  ,pg_port, pg_database , pg_username , pg_password , pg_driver ):
    
@@ -22,9 +27,9 @@ def collect_metric_postgres_stat_activity(pg_server,pg_servername  ,pg_port, pg_
     try:
         # ========== 2. Create SQLAlchemy Engines ==========
         
-        pg_home_server_engine = create_engine(pg_home_connection_string , echo=True)
+        pg_home_server_engine = create_engine(pg_home_connection_string )
         # PostgreSQL (target)
-        monitored_engine = create_engine(pg_monitored_connection_string , echo=True)
+        monitored_engine = create_engine(pg_monitored_connection_string )
         metadata = MetaData(schema="monitoring")  
  
         raw_conn = monitored_engine.raw_connection()    
@@ -48,6 +53,7 @@ def collect_metric_postgres_stat_activity(pg_server,pg_servername  ,pg_port, pg_
                         ORDER BY start_time;
                         """           
         df = pd.read_sql_query(p_sql_cmd, con=raw_conn)    
+        df = _dbdome_filter_excluded_logins(df)
         raw_conn.close()
         # ========== 4. Bulk UPSERT into PostgreSQL ==========
         if df.empty:
@@ -73,6 +79,6 @@ def collect_metric_postgres_stat_activity(pg_server,pg_servername  ,pg_port, pg_
     finally:
             db_write_log(f"✅collect_metric_postgres_active_transactions success"   ,0,"collect_metric_postgres_stat_activity" , pg_servername , port=pg_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

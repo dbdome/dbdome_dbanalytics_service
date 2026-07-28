@@ -1,0 +1,27 @@
+{
+  "_note": "Copy this file to <module>.json, fill in root causes (one object per RC), then run:  python gen_rootcause_module.py specs/<module>.json > insert_<module>_rootcause.sql",
+  "_vendors_note": "Set detect[vendor] to the actual SQL the monitor runs on that DB; leave null for vendors not yet implemented (the generator skips them).",
+  "module": "MODULE_NAME",
+  "area_code": "XXX",
+  "vendors": ["postgresql", "sqlserver", "oracle", "mysql"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-XXX-001-RC01",
+      "issue": "SEC-SQL-XXX-001",
+      "name": "Short human-readable name",
+      "slug": "kebab-case-slug",
+      "description": "What the root cause is and why it matters.",
+      "topics": ["topic1", "topic2"],
+      "risk_level": "high",
+      "resolution": "Remediation guidance.",
+      "expected": {"condition": "row_count > 0", "description": "What a positive detection means"},
+      "columns": ["col_a", "col_b"],
+      "detect": {
+        "postgresql": "SELECT ...",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

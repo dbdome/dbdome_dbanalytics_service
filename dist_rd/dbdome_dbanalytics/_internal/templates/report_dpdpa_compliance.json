@@ -1,0 +1,61 @@
+{
+  "report": {
+    "title": "DPDPA 2023 Compliance Report - Database Activity Monitoring",
+    "author": "DBDOME Security Team (dbexpert.ai)",
+    "date": "auto"
+  },
+  "database": { "database": "dbanalytics" },
+  "sections": [
+    { "type": "header", "level": 1, "text": "DPDPA 2023 - Database Activity Monitoring Compliance Report" },
+    { "type": "text", "content": "Compliance evidence for the Digital Personal Data Protection Act, 2023 and its Rules, generated automatically by the DBDOME platform. Sections map to DPDPA Rule 6 (reasonable security safeguards), Rule 7 (personal data breach notification) and Rule 15 (cross-border transfer of personal data)." },
+
+    { "type": "header", "level": 2, "text": "1. Executive Summary (last 24h)" },
+    { "type": "text",
+      "query": "SELECT COUNT(DISTINCT server) AS monitored_servers, COUNT(DISTINCT metric_name) AS detection_rules, COUNT(*) AS total_executions, SUM(CASE WHEN metric_metadata_vs_expected::jsonb->>'matched' = 'true' THEN 1 ELSE 0 END) AS confirmed_findings, SUM(CASE WHEN metric_metadata_vs_expected::jsonb->>'severity' IN ('high','critical') AND metric_metadata_vs_expected::jsonb->>'matched' = 'true' THEN 1 ELSE 0 END) AS high_findings FROM monitoring.general_metric_metadata_results WHERE entry_date >= CURRENT_DATE - INTERVAL '1 day'",
+      "template": "In the last 24 hours: {monitored_servers} databases monitored, {detection_rules} detection rules executed, {total_executions} checks performed. Confirmed findings: {confirmed_findings} ({high_findings} high/critical)." },
+
+    { "type": "header", "level": 2, "text": "2. Rule 6 - Reasonable Security Safeguards" },
+    { "type": "header", "level": 3, "text": "2.1 Sensitive / Personal Data Discovery (PII)" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, COALESCE(rc.name, gm.metric_name) AS control, (gm.metric_metadata_vs_expected::jsonb->>'row_count')::int AS items_found, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','medium') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = gm.metric_name WHERE gm.metric_name LIKE 'SEC-SQL-PRI%%' AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "control", "items_found", "severity", "detected_at"] },
+    { "type": "header", "level": 3, "text": "2.2 Least Privilege & Segregation of Duties Violations" },
+    { "type": "table",
+      "query": "SELECT rule_name, action_type, attempted_by, resource_id, violation_reason, detected_at, CASE WHEN acknowledged_at IS NULL THEN 'OPEN' ELSE 'ACKNOWLEDGED' END AS status FROM log.sod_violations WHERE detected_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY detected_at DESC LIMIT 25",
+      "headers": ["rule_name", "action_type", "attempted_by", "resource_id", "violation_reason", "detected_at", "status"] },
+    { "type": "header", "level": 3, "text": "2.3 Encryption & Network Security Posture" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, COALESCE(rc.name, gm.metric_name) AS control, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','medium') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm LEFT JOIN rootcause.root_causes rc ON rc.root_cause_id = gm.metric_name WHERE (gm.metric_name LIKE 'SEC-SQL-ENC%%' OR gm.metric_name LIKE 'SEC-SQL-NET%%') AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "control", "severity", "detected_at"] },
+
+    { "type": "header", "level": 2, "text": "3. Rule 7 - Personal Data Breach Notification" },
+    { "type": "text",
+      "query": "SELECT COUNT(*) AS open_breaches, COUNT(*) FILTER (WHERE gdpr_notification_due < now() AND gdpr_notified_at IS NULL) AS overdue_notifications, COALESCE(SUM(affected_records_count),0) AS affected_records FROM log.incidents WHERE involves_personal_data IS TRUE AND state NOT IN ('CLOSED','RESOLVED')",
+      "template": "Open personal-data incidents: {open_breaches}. Notifications overdue (past the Rule 7 window and not yet notified): {overdue_notifications}. Personal-data records affected: {affected_records}." },
+    { "type": "table",
+      "query": "SELECT incident_id, title, severity, state, affected_records_count, detected_at, gdpr_notification_due, gdpr_notified_at FROM log.incidents WHERE involves_personal_data IS TRUE AND detected_at >= CURRENT_DATE - INTERVAL '90 days' ORDER BY detected_at DESC LIMIT 25",
+      "headers": ["incident_id", "title", "severity", "state", "affected_records_count", "detected_at", "gdpr_notification_due", "gdpr_notified_at"] },
+
+    { "type": "header", "level": 2, "text": "4. Rule 15 - Cross-Border Transfer of Personal Data" },
+    { "type": "chart", "chart_type": "bar",
+      "query": "SELECT destination_country, SUM(transfer_count) AS transfers FROM log.v_cross_border_summary GROUP BY destination_country ORDER BY transfers DESC LIMIT 12",
+      "x_column": "destination_country", "y_column": "transfers",
+      "title": "Cross-Border Data Transfers by Destination Country", "x_label": "Destination country", "y_label": "Transfers",
+      "caption": "Detected outbound personal-data transfers grouped by destination country" },
+    { "type": "header", "level": 3, "text": "4.1 Transfers Without a Recorded Legal Basis (highest risk)" },
+    { "type": "table",
+      "query": "SELECT source_server, destination_server, destination_country, transfer_mechanism, db_user, table_name, risk_level, detected_at FROM log.cross_border_transfers WHERE has_legal_basis IS NOT TRUE AND detected_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY detected_at DESC LIMIT 25",
+      "headers": ["source_server", "destination_server", "destination_country", "transfer_mechanism", "db_user", "table_name", "risk_level", "detected_at"] },
+
+    { "type": "header", "level": 2, "text": "5. Tamper-Evident Audit Integrity" },
+    { "type": "table",
+      "query": "SELECT table_name, rows_hashed, last_hashed_id, verified_at, CASE WHEN is_valid THEN 'INTACT' ELSE 'BROKEN' END AS chain_status, broken_at_id FROM log.hash_chain_checkpoints ORDER BY verified_at DESC NULLS LAST LIMIT 25",
+      "headers": ["table_name", "rows_hashed", "last_hashed_id", "verified_at", "chain_status", "broken_at_id"] },
+
+    { "type": "header", "level": 2, "text": "6. Compliance Status" },
+    { "type": "text",
+      "query": "SELECT COUNT(DISTINCT server) AS servers, COUNT(DISTINCT metric_name) AS rules_checked, SUM(CASE WHEN metric_metadata_vs_expected::jsonb->>'matched' = 'true' THEN 1 ELSE 0 END) AS findings FROM monitoring.general_metric_metadata_results WHERE entry_date >= CURRENT_DATE - INTERVAL '7 days'",
+      "template": "Weekly summary: {servers} databases monitored across {rules_checked} detection rules; {findings} confirmed findings. Continuous monitoring provides the demonstrable safeguards, breach-detection and cross-border visibility required by DPDPA 2023." }
+  ],
+  "output": { "pdf": "report_dpdpa_compliance", "html": "report_dpdpa_compliance" }
+}

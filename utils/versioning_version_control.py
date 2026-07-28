@@ -43,4 +43,4 @@ def post_version():
             db_write_log(f"metrics_sql_injection_analysis sucess"   ,0,"metrics_active_transactions_analysis","" )
             print(f"application_name:{application_name} , Version:{version_number}")
             raw_conn.close()
-            return  1
+    return  1

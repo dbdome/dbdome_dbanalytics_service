@@ -1,13 +1,18 @@
+import os
 import pyodbc
 import psycopg2
 import urllib.parse
 from collection.mssql.mssql_driver_util import get_installed_driver_by_priority
 from utils.log4dbexpert import db_write_log
-import oracledb
+from utils.oracle_client import oracle_connect
+from utils.secrets_crypto import decrypt_secret
 
 
 def get_target_connection(vendor, server, database, username, password, port, auth_type, service_name=None):
     """Return a DB-API connection to a monitored target server."""
+    # Stored passwords are encrypted; decrypt_secret is idempotent (plaintext
+    # passes through), so this is safe regardless of whether the caller decrypted.
+    password = decrypt_secret(password)
     match vendor.lower():
         case "sqlserver" | "mssql":
             return _connect_mssql(server, database, username, password, auth_type)
@@ -38,7 +43,7 @@ def _connect_mssql(server, database, username, password, auth_type):
         odbc_str = (
             f"DRIVER={{{driver}}};"
             f"SERVER={server};"
-            f"DATABASE={database};"
+            f"DATABASE={database or 'master'};"
             f"Trusted_Connection=yes;"
             f"Encrypt=yes;"
             f"TrustServerCertificate=yes;"
@@ -47,7 +52,7 @@ def _connect_mssql(server, database, username, password, auth_type):
         odbc_str = (
             f"DRIVER={{{driver}}};"
             f"SERVER={server};"
-            f"DATABASE={database};"
+            f"DATABASE={database or 'master'};"
             f"UID={username};"
             f"PWD={password};"
             f"Encrypt=yes;"
@@ -80,44 +85,7 @@ def _connect_postgresql(server, database, username, password, port):
 
 
 def _connect_oracle(server, username, password, port, service_name, oracle_version=None):
-    """
-    Connect to Oracle. Supports:
-      - oracle-19c: tries thin mode first, falls back to thick mode if Oracle Client is available
-      - oracle-21c: thin mode (default, no client needed)
-      - oracle-23ai: thin mode with enhanced AI/vector features
-    """
-    import oracledb
-
-    version = (oracle_version or "").lower().strip()
-    port = int(port) if port else 1521
-    dsn = oracledb.makedsn(server, port, service_name=service_name)
-
-    if version == "oracle-19c":
-        # 19c: try thin mode first (works with python-oracledb >= 1.0 against 19c)
-        try:
-            return oracledb.connect(
-                user=username, password=password,
-                dsn=dsn,
-                tcp_connect_timeout=30
-            )
-        except oracledb.DatabaseError:
-            # Thin mode failed — try thick mode with Oracle Client libraries
-            try:
-                oracledb.init_oracle_client()
-            except oracledb.ProgrammingError:
-                pass  # already initialized
-            return oracledb.connect(
-                user=username, password=password,
-                dsn=dsn
-            )
-
-    else:
-        # Default for 21c, 23ai, and plain "oracle": thin mode
-        return oracledb.connect(
-            user=username, password=password,
-            dsn=dsn,
-            tcp_connect_timeout=30
-        )
+    return oracle_connect(username, password, server, port, service_name)
 
 
 def _connect_mysql(server, database, username, password, port):

@@ -1,0 +1,9 @@
+{
+  "meta": {"generated_at": "2026-06-24T11:08:43", "source": "C:\\dev\\dbdome_dbanalytics_service\\dist_tester\\oracle_rootcause_queries.json", "servers": 3, "root_causes": 593},
+  "results": [
+    {"server": "server:oracle:1518-32", "rootcause": null, "query": null, "status": "failed", "error": "password decrypt failed: decryption returned ciphertext (DBDOME_SECRET_KEY mismatch?)", "rows": null, "elapsed_ms": null},
+    {"server": "server:oracle:1521-33", "rootcause": null, "query": null, "status": "failed", "error": "password decrypt failed: decryption returned ciphertext (DBDOME_SECRET_KEY mismatch?)", "rows": null, "elapsed_ms": null},
+    {"server": "server:oracle:1523-34", "rootcause": null, "query": null, "status": "failed", "error": "password decrypt failed: decryption returned ciphertext (DBDOME_SECRET_KEY mismatch?)", "rows": null, "elapsed_ms": null}
+  ],
+  "summary": {"total": 3, "success": 0, "failed": 3}
+}

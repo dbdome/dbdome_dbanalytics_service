@@ -1,0 +1,21 @@
+{
+  "_note": "STUB — area_code 'CLD' is a placeholder; confirm against CLOUD_MISCONFIG_DETECTION.md / the *_detection.json knowledge file, then fill root_causes and set detect[vendor] SQL.",
+  "module": "cloud_misconfig",
+  "area_code": "CLD",
+  "vendors": ["postgresql", "sqlserver", "oracle", "mysql"],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-CLD-001-RC01",
+      "issue": "SEC-SQL-CLD-001",
+      "name": "TODO: first root cause for cloud_misconfig",
+      "slug": "cloud_misconfig-todo-rc01",
+      "description": "TODO: copy from the module's detection knowledge.",
+      "topics": ["cloud_misconfig"],
+      "risk_level": "high",
+      "resolution": "TODO: remediation guidance.",
+      "expected": {"condition": "row_count > 0", "description": "TODO"},
+      "columns": [],
+      "detect": {"postgresql": null, "sqlserver": null, "oracle": null, "mysql": null}
+    }
+  ]
+}

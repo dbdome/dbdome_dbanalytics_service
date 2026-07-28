@@ -1,0 +1,175 @@
+{
+  "report": {
+    "title": "IPS Dashboard - FortiAnalyzer",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "IPS Dashboard - FortiAnalyzer"
+    },
+    {
+      "type": "text",
+      "content": "Live Intrusion Prevention System dashboard. Source: FortiAnalyzer. Generated automatically by DBDOME."
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Summary"
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Severity Overview"
+    },
+    {
+      "type": "chart",
+      "chart_type": "pie",
+      "query": "SELECT initcap(severity) || ' (' || total || ')' AS label, total FROM siem.v_ips_severity_summary ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 WHEN 'info' THEN 5 ELSE 6 END",
+      "chart_text": "Intrusions By Severity"
+    },
+    {
+      "type": "table",
+      "query": "SELECT initcap(severity) AS \"Severity\", total AS \"Count\", pct || '%' AS \"% of Total\" FROM siem.v_ips_severity_summary",
+      "headers": ["Severity", "Count", "% of Total"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Critical / High / Medium Timeline"
+    },
+    {
+      "type": "chart",
+      "chart_type": "line",
+      "query": "SELECT to_char(hour_bucket, 'MM-DD HH24:MI') AS \"Time\", critical AS \"Critical\", high AS \"High\", medium AS \"Medium\" FROM siem.v_ips_timeline WHERE hour_bucket >= NOW() - INTERVAL '7 days' ORDER BY hour_bucket",
+      "chart_text": "Critical, High and Medium Intrusions Timeline (Last 7 Days)"
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Intrusions By Type"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "SELECT intrusion_type AS \"Type\", total AS \"Count\" FROM siem.v_ips_type_summary LIMIT 10",
+      "chart_text": "Intrusions By Type"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", intrusion_type AS \"Intrusion Type\", total AS \"Counts\" FROM siem.v_ips_type_summary",
+      "headers": ["#", "Intrusion Type", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Intrusions Detected"
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Critical Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", attack_name AS \"Attack Name\", COALESCE(cve_id, '') AS \"CVE-ID\", COALESCE(intrusion_type, '') AS \"Intrusion Type\", total AS \"Counts\" FROM siem.v_ips_detected WHERE severity = 'critical'",
+      "headers": ["#", "Attack Name", "CVE-ID", "Intrusion Type", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "High Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", attack_name AS \"Attack Name\", COALESCE(cve_id, '') AS \"CVE-ID\", COALESCE(intrusion_type, '') AS \"Intrusion Type\", total AS \"Counts\" FROM siem.v_ips_detected WHERE severity = 'high'",
+      "headers": ["#", "Attack Name", "CVE-ID", "Intrusion Type", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Medium Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", attack_name AS \"Attack Name\", COALESCE(cve_id, '') AS \"CVE-ID\", COALESCE(intrusion_type, '') AS \"Intrusion Type\", total AS \"Counts\" FROM siem.v_ips_detected WHERE severity = 'medium'",
+      "headers": ["#", "Attack Name", "CVE-ID", "Intrusion Type", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Attack Sources"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", source_ip AS \"Attack Source\", critical AS \"Critical\", high AS \"High\", medium AS \"Medium\", total AS \"Counts\", pct_of_total || '%' AS \"Percent of Total Attacks\" FROM siem.v_ips_sources LIMIT 20",
+      "headers": ["#", "Attack Source", "Critical", "High", "Medium", "Counts", "Percent of Total Attacks"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Attack Victims"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY total DESC) AS \"#\", victim_ip AS \"Attack Victim\", critical AS \"Critical\", high AS \"High\", medium AS \"Medium\", total AS \"Counts\", pct_of_total || '%' AS \"Percent of Total Attacks\" FROM siem.v_ips_victims LIMIT 20",
+      "headers": ["#", "Attack Victim", "Critical", "High", "Medium", "Counts", "Percent of Total Attacks"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Intrusions Blocked"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, total DESC) AS \"#\", attack_name AS \"Intrusion Name\", intrusion_type AS \"Intrusion Type\", initcap(severity) AS \"Severity\", total AS \"Counts\" FROM siem.v_ips_blocked",
+      "headers": ["#", "Intrusion Name", "Intrusion Type", "Severity", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Intrusions Monitored (Pass)"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, total DESC) AS \"#\", attack_name AS \"Intrusion Name\", intrusion_type AS \"Intrusion Type\", initcap(severity) AS \"Severity\", total AS \"Counts\" FROM siem.v_ips_monitored",
+      "headers": ["#", "Intrusion Name", "Intrusion Type", "Severity", "Counts"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Attacks Over HTTP/HTTPs"
+    },
+    {
+      "type": "table",
+      "query": "SELECT ROW_NUMBER() OVER (ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, total DESC) AS \"#\", attack_name AS \"Attack Name\", initcap(severity) AS \"Severity\", total AS \"Attack Counts\" FROM siem.v_ips_http_attacks",
+      "headers": ["#", "Attack Name", "Severity", "Attack Counts"]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_ips_fortianalyzer_ips_report",
+    "html": "rpt_ips_fortianalyzer_ips_report"
+  }
+}

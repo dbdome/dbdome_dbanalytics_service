@@ -1,0 +1,44 @@
+{
+  "module": "active_transactions_excl_mon",
+  "area_code": "ACC",
+  "vendors": [
+    "sqlserver"
+  ],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-ACC-011-RC02",
+      "issue": "SEC-SQL-ACC-011",
+      "name": "Active transactions (excluding monitoring user)",
+      "slug": "active-transactions-excluding-monitoring-user",
+      "description": "All currently open / in-flight user transactions on the instance, excluding the dbdome monitoring login (dbd_mon_usr / dbdome_mon_usr). Surfaces who is holding a transaction, against which database, for how long, the transaction state and the SQL text - for spotting long-running or abandoned transactions, blocking, and anomalous activity.",
+      "topics": [
+        "active transactions",
+        "in-flight transactions",
+        "blocking",
+        "long-running transaction",
+        "monitoring"
+      ],
+      "risk_level": "low",
+      "resolution": "Review long-running or abandoned transactions: identify the session/login, database, duration and SQL text; chase blocking chains and transactions open beyond expected thresholds. Persistent open transactions from application logins may indicate a missing COMMIT/ROLLBACK.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Open user transactions are present (excluding the monitoring account)"
+      },
+      "columns": [
+        "session_id",
+        "login_name",
+        "host_name",
+        "program_name",
+        "database_name",
+        "transaction_id",
+        "transaction_begin_time",
+        "duration_seconds",
+        "transaction_state",
+        "query_text"
+      ],
+      "detect": {
+        "sqlserver": "SELECT\n    @@SERVERNAME AS server,\n    s.session_id,\n    s.login_name,\n    s.host_name,\n    s.program_name,\n    DB_NAME(s.database_id) AS database_name,\n    t.transaction_id,\n    tat.transaction_begin_time,\n    DATEDIFF(SECOND, tat.transaction_begin_time, GETDATE()) AS duration_seconds,\n    tat.transaction_state,\n    SUBSTRING(st.text, 1, 4000) AS query_text\nFROM sys.dm_tran_active_transactions tat\nJOIN sys.dm_tran_session_transactions t ON t.transaction_id = tat.transaction_id\nJOIN sys.dm_exec_sessions s ON s.session_id = t.session_id\nLEFT JOIN sys.dm_exec_connections c ON c.session_id = s.session_id\nOUTER APPLY sys.dm_exec_sql_text(c.most_recent_sql_handle) st\nWHERE s.is_user_process = 1\n  AND s.login_name NOT IN ('dbd_mon_usr','dbdome_mon_usr')\nORDER BY tat.transaction_begin_time"
+      }
+    }
+  ]
+}

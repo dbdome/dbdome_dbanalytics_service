@@ -84,7 +84,7 @@ WHERE mr.row_id IN (
         finally:
             db_write_log(f"metrics_custom_metrics_analysis sucess"   ,0,"metrics_custom_metrics_analysis","" )
             conn.close()
-            return  1
+        return  1
 
 def get_observed_at( _query ):
     pg_connection_string = get_connection_string()
@@ -263,7 +263,7 @@ def metrics_custom_analysis_active_transactions_parse():
     finally:
         db_write_log(f"metrics_active_transactions_analysis_parse success"   ,0,"metrics_active_transactions_analysis",servername, port=get_port_for_server(servername) )  
         raw_conn.close()  
-        return 1
+    return 1
 
 
 
@@ -429,7 +429,7 @@ and 	mqp.query_id  IS NULL
     finally:
             db_write_log(f"custom_metrics_active_transactions_analysis_parse success"   ,0,"custom_metrics_active_transactions_analysis_parse","" )  
             raw_conn.close()            
-            return 1;
+    return 1;
 import sqlparse
 from sqlparse.sql import IdentifierList, Identifier, Where, Comparison, Function
 from sqlparse.tokens import Keyword, DML, Punctuation

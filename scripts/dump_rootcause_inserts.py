@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+r"""
+dump_rootcause_inserts.py
+=========================
+Generate one .sql file containing INSERT statements for the ENTIRE rootcause
+catalog (every base table in the rootcause schema), so the catalog can be
+recreated/seeded on another database.
+
+  * Dependency order  — lookups -> issues -> root_causes -> detection_* ->
+                        resolution_* -> alert/decision-tree tables, so a fresh
+                        load satisfies references (detection_path_steps after
+                        detection_steps/detection_paths, etc.).
+  * Idempotent        — INSERT ... ON CONFLICT (<pk>) DO NOTHING by default
+                        (use --on-conflict do-update to upsert, or none).
+  * Exact escaping    — values are rendered with psycopg2.mogrify, so jsonb,
+                        text[] arrays, timestamps, booleans and NULLs are
+                        always correct.
+  * Explicit ids      — serial id/row_id columns are included verbatim so
+                        cross-table references stay intact; sequences are
+                        re-synced with setval() at the end.
+
+Usage:
+    python dump_rootcause_inserts.py                       # -> rootcause_seed.sql
+    python dump_rootcause_inserts.py --output seed.sql
+    python dump_rootcause_inserts.py --tables issues,root_causes
+    python dump_rootcause_inserts.py --on-conflict do-update
+    python dump_rootcause_inserts.py --batch 500
+"""
+import argparse
+import os
+import sys
+
+import psycopg2
+
+# Dependency order: parents before children.
+TABLE_ORDER = [
+    ("database_types", ["code"]),
+    ("domains", ["code"]),
+    ("areas", ["code", "database_type_code"]),
+    ("vendors", ["slug"]),
+    ("risk_level", ["row_id"]),
+    ("severity", ["row_id"]),
+    ("issues", ["issue_id"]),
+    ("root_causes", ["root_cause_id"]),
+    ("root_causes_purges", ["root_cause_id"]),
+    ("detection_steps", ["id"]),
+    ("detection_paths", ["id"]),
+    ("detection_path_steps", ["id"]),
+    ("resolution_steps", ["id"]),
+    ("resolution_paths", ["id"]),
+    ("resolution_path_steps", ["id"]),
+    ("issue_root_causes_vendor_query", ["issue_id", "root_cause_number", "vendor"]),
+    ("rootcause_alert_query", ["row_id"]),
+    ("rootcause_alert_query_result_server", ["row_id"]),
+    ("issue_decision_trees", ["id"]),
+    ("issue_decision_tree_nodes", ["id"]),
+]
+# serial columns to re-sync with setval after load
+SERIAL_RESETS = {
+    "detection_steps": "id", "detection_paths": "id", "detection_path_steps": "id",
+    "resolution_steps": "id", "resolution_paths": "id", "resolution_path_steps": "id",
+    "risk_level": "row_id", "severity": "row_id",
+    "rootcause_alert_query": "row_id", "rootcause_alert_query_result_server": "row_id",
+    "issue_decision_trees": "id", "issue_decision_tree_nodes": "id",
+}
+
+
+def load_env():
+    env = {}
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "..", ".env")
+    for line in open(path, encoding="utf-8", errors="ignore"):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip('"').strip("'")
+    return env
+
+
+def columns(cur, table):
+    """Return [(name, data_type), ...] in column order."""
+    cur.execute("""SELECT column_name, data_type FROM information_schema.columns
+                   WHERE table_schema='rootcause' AND table_name=%s
+                   ORDER BY ordinal_position""", (table,))
+    return cur.fetchall()
+
+
+def conflict_clause(pk, mode, cols):
+    target = "(" + ", ".join(pk) + ")"
+    if mode == "none":
+        return ""
+    if mode == "do-update":
+        setters = ", ".join(f"{c} = EXCLUDED.{c}" for c in cols if c not in pk)
+        if not setters:
+            return f"ON CONFLICT {target} DO NOTHING"
+        return f"ON CONFLICT {target} DO UPDATE SET {setters}"
+    return f"ON CONFLICT {target} DO NOTHING"   # default: do-nothing
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Dump the rootcause catalog as INSERTs.")
+    ap.add_argument("--output", default="rootcause_seed.sql")
+    ap.add_argument("--tables", help="comma-separated subset (default: all)")
+    ap.add_argument("--on-conflict", choices=["do-nothing", "do-update", "none"],
+                    default="do-nothing")
+    ap.add_argument("--batch", type=int, default=200, help="rows per INSERT (default 200)")
+    args = ap.parse_args()
+
+    env = load_env()
+    con = psycopg2.connect(host=env["PG_HOST"], port=env["PG_PORT"], user=env["PG_USER"],
+                           password=env["PG_PASSWORD"], dbname=env["PG_DB"])
+    con.set_session(readonly=True)
+    cur = con.cursor()
+
+    wanted = set(args.tables.split(",")) if args.tables else None
+    tables = [(t, pk) for t, pk in TABLE_ORDER if not wanted or t in wanted]
+
+    total = 0
+    with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+        f.write("-- rootcause catalog seed (generated by dump_rootcause_inserts.py)\n")
+        f.write(f"-- on-conflict mode: {args.on_conflict}\n")
+        f.write("SET session_replication_role = 'replica';  -- skip triggers/FK during bulk load\n")
+        f.write("BEGIN;\n\n")
+        for table, pk in tables:
+            cols_info = columns(cur, table)
+            if not cols_info:
+                continue
+            cols = [c for c, _ in cols_info]
+            # json/jsonb -> ::text so they round-trip as string literals (psycopg2
+            # parses jsonb into dicts otherwise, which mogrify can't adapt).
+            sel = ", ".join(f"{c}::text AS {c}" if t in ("json", "jsonb") else c
+                            for c, t in cols_info)
+            collist = ", ".join(cols)
+            tmpl = "(" + ", ".join(["%s"] * len(cols)) + ")"
+            conflict = conflict_clause(pk, args.on_conflict, cols)
+            rcur = con.cursor(name=f"c_{table}")          # server-side cursor (streams)
+            rcur.itersize = max(args.batch, 200)
+            rcur.execute(f"SELECT {sel} FROM rootcause.{table}")
+            n = 0
+            batch = []
+            f.write(f"-- {table} ----------------------------------------------------\n")
+
+            def flush():
+                if not batch:
+                    return
+                f.write(f"INSERT INTO rootcause.{table} ({collist}) VALUES\n")
+                f.write(",\n".join(batch))
+                f.write(f"\n{conflict};\n" if conflict else ";\n")
+                batch.clear()
+
+            for row in rcur:
+                batch.append(cur.mogrify(tmpl, row).decode("utf-8"))
+                n += 1
+                if len(batch) >= args.batch:
+                    flush()
+            flush()
+            rcur.close()
+            f.write(f"-- ({n} rows)\n\n")
+            total += n
+            print(f"  {table:38} {n} rows")
+
+        # re-sync sequences so future inserts don't collide with explicit ids
+        f.write("-- sequence re-sync -------------------------------------------------\n")
+        for table, col in SERIAL_RESETS.items():
+            if wanted and table not in wanted:
+                continue
+            f.write(f"SELECT setval(pg_get_serial_sequence('rootcause.{table}', '{col}'), "
+                    f"GREATEST((SELECT COALESCE(MAX({col}), 1) FROM rootcause.{table}), 1));\n")
+        f.write("\nCOMMIT;\n")
+        f.write("SET session_replication_role = 'origin';\n")
+
+    con.close()
+    size = os.path.getsize(args.output)
+    print(f"\nWrote {total} rows across {len(tables)} tables -> {args.output} "
+          f"({size/1_048_576:.1f} MB)")
+
+
+if __name__ == "__main__":
+    main()

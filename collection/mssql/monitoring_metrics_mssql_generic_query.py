@@ -2,17 +2,31 @@ import pandas as pd
 import re
 from sqlalchemy import create_engine, text, event
 from utils.config_dotenv import get_connection_string
+from utils.metric_json import to_records_json
 from utils.log4dbexpert import db_write_log
+from utils.secrets_crypto import decrypt_secret
+try:
+    from analysis.self_activity_filter import (
+        is_self_activity, filter_excluded_logins, filter_self_statements)
+except Exception:
+    def is_self_activity(*_a, **_k):
+        return False
+    def filter_excluded_logins(df):
+        return df
+    def filter_self_statements(df):
+        return df
 from email_utils.smtp_email_sender import send_mail_alert_no_attachment
+from utils.alert_resultset import fetch_alert_resultset
 from siem.rapid.rapid_sender import siem_rapid_send
 from siem.crowdstrike.crowdstrike_sender import siem_crowdstrike_send
+from siem.wazuh.wazuh_sender import siem_wazuh_send
+from siem.generic.syslog_sender import siem_send_all
 import json
 from datetime import datetime
 import pyodbc
 from urllib.parse import quote_plus  # <-- this is required
 import urllib.parse
 import psycopg2
-from purgers.purge_metric_metadata import purge_general_metric_metadata_per_root_cause
 
 from alerts.alert_helper import manage_alerts, manage_diagnosys_alerts
 from alerts.alert_dispatcher import dispatch          # background alert delivery
@@ -115,6 +129,51 @@ def _escape_sqlalchemy_params(sql):
     Handles patterns like LIKE '2:%:1' where :1 looks like a parameter.
     """
     return re.sub(r'(?<!\w):(?=[a-zA-Z0-9_])', r'\\:', sql)
+
+
+_SENSITIVE_TOKEN = '/*__SENSITIVE_COLS_VALUES__*/'
+
+
+def _inject_sensitive_values(sql, server_key, pg_engine):
+    """Replace the RC15 sensitive-list placeholder with this server's sensitive
+    columns from metrics.v_sensitive_columns_all (curated UNION auto-discovered).
+
+    Only metrics containing the placeholder are touched (RC15), so this is a
+    no-op for every other metric. Fail-safe: on any error or an empty list the
+    placeholder is left in place -- the stored SQL is still valid T-SQL and just
+    yields the sentinel row (which matches no real query text), so the metric
+    never errors and never falls back to the expensive per-cycle catalog scan.
+    """
+    if _SENSITIVE_TOKEN not in sql:
+        return sql
+    try:
+        with pg_engine.connect() as c:
+            rows = c.execute(
+                text("""
+                    SELECT db_name, schema_name, table_name, column_name, pii_category
+                    FROM metrics.v_sensitive_columns_all
+                    WHERE table_name IS NOT NULL
+                      AND (server = :srv OR server IS NULL)
+                """),
+                {"srv": server_key},
+            ).fetchall()
+    except Exception:
+        return sql
+    if not rows:
+        return sql
+
+    def _lit(v):
+        if v is None:
+            return "NULL"
+        # Double single quotes for T-SQL; escape ':' so SQLAlchemy text() does
+        # not read it as a bind parameter.
+        return "N'" + str(v).replace("'", "''").replace(":", "\\:") + "'"
+
+    values = ",".join(
+        "(%s,%s,%s,%s,%s)" % (_lit(r[0]), _lit(r[1]), _lit(r[2]), _lit(r[3]), _lit(r[4]))
+        for r in rows
+    )
+    return sql.replace(_SENSITIVE_TOKEN, "," + values)
 
 
 def _sanitize_json(text):
@@ -221,12 +280,12 @@ def _build_mssql_engine(driver, server_str, database, username, password, auth_t
     common = f"Encrypt={encrypt};TrustServerCertificate=yes;Connection Timeout=15;"
     if auth_type == "win":
         odbc_str = (
-            f"DRIVER={{{driver}}};SERVER={server_str};DATABASE={database};"
+            f"DRIVER={{{driver}}};SERVER={server_str};DATABASE={database or 'master'};"
             f"Trusted_Connection=yes;{common}"
         )
     else:
         odbc_str = (
-            f"DRIVER={{{driver}}};SERVER={server_str};DATABASE={database};"
+            f"DRIVER={{{driver}}};SERVER={server_str};DATABASE={database or 'master'};"
             f"UID={username};PWD={password};{common}"
         )
     conn_str = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(odbc_str)
@@ -266,6 +325,10 @@ def collect_all_metrics_mssql_queries(mssql_server, mssql_database, mssql_userna
     domain_filter: None = all metrics, or one of 'SEC', 'PERF', 'HLTH', 'OTHER'
     risk_filter:   None = all risk levels, or one of 'low','medium','high','critical'
     """
+
+    # The target-DB password is stored encrypted (enc:v1:...); decrypt_secret is
+    # idempotent (plaintext / already-decrypted values pass through unchanged).
+    mssql_password = decrypt_secret(mssql_password)
 
     installed_drivers = pyodbc.drivers()
     print("Installed drivers:", installed_drivers)
@@ -421,7 +484,7 @@ union all
         # there can be hundreds per domain; running them serially is the real
         # bottleneck on a single-server deployment. The engine's connection pool
         # gives each worker its own connection. All result processing, inserts,
-        # purges and alerts below stay strictly serial (order preserved), so the
+        # alerts below stay strictly serial (order preserved), so the
         # stateful issue-flush / bulk-insert / alert logic is unchanged.
         # Tune with DBEXPERT_QUERY_PARALLELISM (1 = serial, the old behaviour).
         import os as _os
@@ -438,6 +501,7 @@ union all
                 except (json.JSONDecodeError, ValueError):
                     sp = None
             mq = _compute_calc_query(qr['query'], sp_raw)
+            mq = _inject_sensitive_values(mq, server_key, pg_engine)
             return (pd.read_sql_query(text(mq), con=mssql_engine), mq, sp)
 
         prefetch = {}
@@ -464,6 +528,12 @@ union all
             metric_query = query_row['query']
             category_id = query_row['category_id']
             metric_name = query_row['metric_name']
+
+            # ---- self-activity / false-alarm suppression (analysis.suppression_rules) ----
+            if is_self_activity(metric_name, query_row.get('query'), 'sqlserver'):
+                db_write_log(f"Metric '{metric_name}' suppressed as DBDOME self-activity/benign inventory - not stored, not alerted.",
+                             0, "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
+                continue
             issue_id = query_row['issue_id']
             expected = query_row['expected']
             risk_level = query_row['risk_level']
@@ -488,10 +558,16 @@ union all
                 if isinstance(_pre, tuple) and len(_pre) == 2 and _pre[0] == '__error__':
                     raise _pre[1]
                 df, metric_query, step_params = _pre
+                # drop rows for logins registered in metrics.exclude_logins (self-activity)
+                df = filter_excluded_logins(df)
+                # drop captured statements that are DBDOME's OWN collector SQL — the
+                # destructive-DDL detections were reporting DBDOME's temp tables
+                # (CREATE/DROP #sensitive_cols) as destructive DDL.
+                df = filter_self_statements(df)
                 # Fix Windows-1252 chars (e.g. 0x96 en-dash) that break UTF-8 encoding
                 for col in df.select_dtypes(include=['object']).columns:
                     df[col] = df[col].apply(lambda v: v.encode('utf-8', errors='replace').decode('utf-8') if isinstance(v, str) else v)
-                metric_metadata_json = _sanitize_json(df.to_json(orient='records'))
+                metric_metadata_json = _sanitize_json(to_records_json(df))
                 comparison = _sanitize_json(_build_comparison(metric_metadata_json, query_row.get('expected'), step_params))
 
                 # If the metric returned no rows, replace the empty '[]' with
@@ -518,7 +594,6 @@ union all
                     )
                 })
                 _bulk_insert(insert_payloads, pg_engine, mssql_server, mssql_port)
-                purge_general_metric_metadata_per_root_cause(metric_name)
                 # Queue alerts separately
                 comparison_data = json.loads(comparison)
                 if comparison_data.get("matched") is True:
@@ -540,6 +615,7 @@ union all
             for metric_name, metric_query, query_row, comparison_data in alert_queue:
                 _risk_level = query_row.get('risk_level') or 'medium'
                 # ===== add to alerts.alert_log =====
+                alert_row_id = None
                 try:
                     with pg_engine.begin() as alog:
                         # One alert per (server, root_cause_id) per hour: drop any
@@ -554,10 +630,11 @@ union all
                             """),
                             {"server": server_key, "rc": query_row.get('root_cause_id') or metric_name}
                         )
-                        alog.execute(
+                        alert_row_id = alog.execute(
                             text("""
                                 INSERT INTO alerts.alert_log (server, root_cause_id, risk_level, metadata, login_name)
                                 VALUES (:server, :rc, :risk, CAST(:meta AS jsonb), :login_name)
+                                RETURNING row_id
                             """),
                             {
                                 "server": server_key,
@@ -566,7 +643,7 @@ union all
                                 "meta": json.dumps(metric_metadata_json),
                                 "login_name": next((r.get('login_name') for r in metric_metadata_json if isinstance(r, dict)), None) if isinstance(metric_metadata_json, list) else metric_metadata_json.get('login_name') if isinstance(metric_metadata_json, dict) else None,
                             }
-                        )
+                        ).scalar()
                 except Exception as alog_ex:
                     db_write_log(f"alert_log insert failed for '{metric_name}': {alog_ex}", 0,
                                  "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
@@ -620,6 +697,7 @@ union all
                     expected=query_row.get('expected'),
                     comparison_data=comparison_data,
                     metric_metadata_json=metric_metadata_json,
+                    alert_id=alert_row_id,
                 )
                 db_write_log(f"Alert queued for '{metric_name}' (matched, authorised)", 0, "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
 
@@ -644,6 +722,15 @@ union all
                                 f"issue:{query_row.get('issue_name') or ''}, "
                                 f"root:{query_row.get('root_cause_name') or metric_name}"
                             ).encode('utf-8', errors='ignore').decode('utf-8')
+                            # Detection results delivered to SIEM = the alert's
+                            # canonical resultset (same rows as the alert panel):
+                            # monitoring.get_alert_log_resultset_byid(alert_id).
+                            _details = None
+                            if alert_row_id:
+                                _rows = fetch_alert_resultset(alert_row_id)
+                                if _rows:
+                                    _details = {"alert_id": alert_row_id,
+                                                "detection_results": _rows}
                             # SIEM/webhook deliveries are HTTP — also dispatch them
                             # to the background so they can't block collection.
                             dispatch(siem_rapid_send, _rc_id, _risk_level, server_key, _desc,
@@ -653,7 +740,22 @@ union all
                                      severity=_risk_level,
                                      server=server_key,
                                      root_cause_id=_rc_id,
-                                     description=_desc)
+                                     description=_desc,
+                                     additional_data=_details)
+                            dispatch(siem_wazuh_send, label=f"siem_wazuh:{metric_name}",
+                                     event_type=_rc_id,
+                                     severity=_risk_level,
+                                     server=server_key,
+                                     root_cause_id=_rc_id,
+                                     description=_desc,
+                                     additional_data=_details)
+                            dispatch(siem_send_all, label=f"siem_generic:{metric_name}",
+                                     event_type=_rc_id,
+                                     severity=_risk_level,
+                                     server=server_key,
+                                     root_cause_id=_rc_id,
+                                     description=_desc,
+                                     additional_data=_details)
                 except Exception as siem_ex:
                     db_write_log(f"SIEM alert failed for '{metric_name}': {siem_ex}", 0, "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
 

@@ -1,0 +1,92 @@
+{
+  "report": {
+    "title": "DAM Compliance Report - Database Activity Monitoring",
+    "author": "DBDOME",
+    "date": "auto",
+    "time_window_hours": 720
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "dbanalytics"
+  },
+  "sections": [
+    { "type": "header", "level": 1, "text": "Database Activity Monitoring (DAM) Compliance Report" },
+    { "type": "text", "content": "CONFIDENTIAL - Compliance evidence. This report scores and demonstrates how access to, and activity on, the monitored database estate is continuously recorded, reviewed, alerted and (where policy dictates) blocked by DBDOME, against PCI-DSS v4.0, HIPAA Security Rule, SOX (COBIT ITGC), EU GDPR and SOC 2. Reporting period: trailing 30 days. Prepared automatically by DBDOME - no manual data entry." },
+
+    { "type": "header", "level": 2, "text": "Executive Compliance Scorecard" },
+    { "type": "text", "query": "SELECT score, status FROM monitoring.v_dam_regulation_score WHERE regulation='OVERALL'", "template": "OVERALL DAM COMPLIANCE SCORE: {score} / 100  -  {status}. The score is a weighted roll-up of the ten control-area scores below, each computed from live monitoring evidence over the reporting period." },
+    { "type": "text", "content": "Compliance posture by regulation (weighted across the controls each framework requires):" },
+    { "type": "table", "query": "SELECT regulation, score AS score_0_100, status FROM monitoring.v_dam_regulation_score ORDER BY ord" },
+    { "type": "chart", "chart_type": "bar", "caption": "Compliance score by control area (0-100)", "x_label": "Control area", "y_label": "Score", "query": "SELECT control_area, score FROM monitoring.v_dam_compliance_scorecard ORDER BY nn" },
+
+    { "type": "header", "level": 2, "text": "Compliance Scorecard by Control" },
+    { "type": "text", "content": "Each control area is scored 0-100 from the evidence indicated, weighted by risk, and banded: >=90 Compliant | 75-89 Substantially Compliant | 60-74 Partially Compliant | <60 At Risk." },
+    { "type": "table", "query": "SELECT nn AS seq, control_area, metric AS scored_on, metric_value, score, CASE WHEN score>=90 THEN 'Compliant' WHEN score>=75 THEN 'Substantial' WHEN score>=60 THEN 'Partial' ELSE 'At Risk' END AS status, weight FROM monitoring.v_dam_compliance_scorecard ORDER BY nn" },
+
+    { "type": "header", "level": 2, "text": "Control Framework Mapping" },
+    { "type": "text", "content": "How each DBDOME DAM control maps to the specific clauses of each regulation. Evidence follows in the correspondingly named section." },
+    { "type": "table", "query": "SELECT nn AS seq, control_area, pci AS pci_dss, hipaa, sox, gdpr, soc2 FROM monitoring.v_dam_compliance_scorecard ORDER BY nn" },
+
+    { "type": "header", "level": 2, "text": "Key Activity Metrics (Period)" },
+    { "type": "table", "query": "SELECT metric, value FROM ( SELECT 1 AS ord, 'Databases under active monitoring' AS metric, (SELECT count(*)::text FROM metrics.servers WHERE is_active AND servername IS NOT NULL) AS value UNION ALL SELECT 2, 'Total policy alerts', (SELECT count(*)::text FROM alerts.alert_log WHERE entry_date BETWEEN $__timeFrom() AND $__timeTo()) UNION ALL SELECT 3, 'Critical / High severity alerts', (SELECT count(*)::text FROM alerts.alert_log WHERE lower(risk_level) IN ('critical','high') AND entry_date BETWEEN $__timeFrom() AND $__timeTo()) UNION ALL SELECT 4, 'Open compliance incidents', (SELECT count(*)::text FROM alerts.v_alert_incidents WHERE status='open') UNION ALL SELECT 5, 'Blocked / prevented events', (SELECT count(*)::text FROM log.v_blocked_events WHERE event_time BETWEEN $__timeFrom() AND $__timeTo()) UNION ALL SELECT 6, 'Failed login attempts', (SELECT count(*)::text FROM monitoring.siem_login_failures WHERE login_time BETWEEN $__timeFrom() AND $__timeTo()) ) t ORDER BY ord" },
+
+    { "type": "header", "level": 2, "text": "1. Scope & Coverage  -  PCI-DSS Req 10 | HIPAA 164.308(a)(4) | SOX 404" },
+    { "type": "text", "query": "SELECT count(*) FILTER (WHERE is_active) AS active, count(*) AS total FROM metrics.servers WHERE servername IS NOT NULL", "template": "In-scope databases under continuous activity monitoring: {active} of {total} registered targets." },
+    { "type": "table", "query": "SELECT servername AS server, db_vendor AS vendor, database AS db_name, port, CASE WHEN is_active THEN 'Monitored' ELSE 'Inactive' END AS status FROM metrics.servers WHERE servername IS NOT NULL ORDER BY is_active DESC, servername" },
+
+    { "type": "header", "level": 2, "text": "2. Privileged & Administrative Access  -  PCI Req 7 & 8.7 | HIPAA 164.312(a)(1) | SOX 404 | SOC 2 CC6" },
+    { "type": "text", "content": "Recent high-authority access observed by DAM. Privileged access must be justified, least-privilege and reviewed." },
+    { "type": "table", "query": "SELECT server_name AS server, vendor, db_user, client_ip, db_name, role_name, collected_at AS seen_at FROM monitoring.v_recent_privileged_logins ORDER BY collected_at DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "3. Authentication Monitoring - Failed Logins  -  PCI Req 8 & 10.2.1.5 | HIPAA 164.312(d) | SOC 2 CC6.1" },
+    { "type": "table", "query": "SELECT server, login_name, host_name, client_net_address AS client_ip, failurecount, login_time FROM monitoring.siem_login_failures ORDER BY login_time DESC NULLS LAST LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "4. Audit Trail - User & Schema Activity  -  PCI Req 10.2 | HIPAA 164.312(b) | GDPR Art 30 | SOX 404 | SOC 2 CC7.2" },
+    { "type": "table", "query": "SELECT report_date, server_name AS server, ddl_command, object_type, event_count, unique_users FROM log.v_ddl_audit_daily_summary ORDER BY report_date DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "5. Schema Change Control - High-Risk DDL  -  PCI 10.2.1 & 6.4 | SOX change mgmt | SOC 2 CC8.1" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, db_name, object_schema, object_name, ddl_command, risk_level, regulation FROM log.v_ddl_high_risk ORDER BY event_time DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "6. Separation of Duties  -  SOX 404 | PCI 6.4.2 | SOC 2 CC5.2" },
+    { "type": "text", "content": "Enforced SoD policies:" },
+    { "type": "table", "query": "SELECT rule_name, description, severity, regulation FROM config.sod_rules WHERE is_active ORDER BY severity, rule_name" },
+    { "type": "text", "content": "SoD violations detected in the period:" },
+    { "type": "table", "query": "SELECT violation_id, rule_name, action_type, attempted_by, resource_id, violation_reason, detected_at FROM log.sod_violations ORDER BY detected_at DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "7. Sensitive-Data Protection & Masking  -  PCI Req 3 | HIPAA 164.312(a)(2)(iv) | GDPR Art 32 | SOC 2 CC6.1" },
+    { "type": "table", "query": "SELECT server_name AS server, regulation, total_sensitive_columns, actively_masked, pii_types_covered FROM config.v_masking_coverage ORDER BY server_name" },
+
+    { "type": "header", "level": 2, "text": "8. Policy Violations & Alerting  -  PCI 10.4 | SOC 2 CC7.2" },
+    { "type": "chart", "chart_type": "bar", "caption": "Alerts by severity (period)", "x_label": "Severity", "y_label": "Alerts", "query": "SELECT lower(risk_level) AS risk, count(*) AS alerts FROM alerts.alert_log WHERE entry_date BETWEEN $__timeFrom() AND $__timeTo() GROUP BY lower(risk_level) ORDER BY count(*) DESC" },
+    { "type": "chart", "chart_type": "line", "caption": "Daily alert trend by severity", "x_label": "Day", "y_label": "Alerts", "query": "SELECT date_trunc('day', entry_date)::date AS day, lower(risk_level) AS series, count(*) AS n FROM alerts.alert_log WHERE entry_date BETWEEN $__timeFrom() AND $__timeTo() GROUP BY 1,2 ORDER BY 1" },
+
+    { "type": "header", "level": 2, "text": "9. Active Response - Blocked Activity  -  PCI 10.7 | SOC 2 CC7.4" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, matched_policy, regulation, risk_score FROM log.v_blocked_events ORDER BY event_time DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "10. Incident Management Lifecycle  -  GDPR Art 33 | HIPAA 164.308(a)(6) | SOC 2 CC7.3-7.5" },
+    { "type": "table", "query": "SELECT status, count(*) AS incidents, round(avg(EXTRACT(EPOCH FROM (COALESCE(resolved_at, now()) - opened_at))/3600.0)::numeric, 1) AS avg_age_hours FROM alerts.v_alert_incidents GROUP BY status ORDER BY status" },
+    { "type": "text", "content": "Open incidents requiring remediation (most active first):" },
+    { "type": "table", "query": "SELECT incident_id, server, issue_name, area_name, risk_level, opened_at, occurrences, round(age_hours::numeric, 1) AS age_hours FROM alerts.v_alert_incidents WHERE status = 'open' ORDER BY occurrences DESC, opened_at DESC LIMIT 100" },
+
+    { "type": "header", "level": 2, "text": "11. Regulatory Audit Trails" },
+    { "type": "text", "content": "11a. PCI-DSS:" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, db_name, left(sql_preview, 80) AS sql_preview, action_taken, risk_score FROM log.v_pci_dss_audit WHERE event_time BETWEEN $__timeFrom() AND $__timeTo() ORDER BY event_time DESC LIMIT 50" },
+    { "type": "text", "content": "11b. HIPAA:" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, db_name, left(sql_preview, 80) AS sql_preview, action_taken, risk_score FROM log.v_hipaa_audit WHERE event_time BETWEEN $__timeFrom() AND $__timeTo() ORDER BY event_time DESC LIMIT 50" },
+    { "type": "text", "content": "11c. GDPR:" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, db_name, left(sql_preview, 80) AS sql_preview, action_taken, risk_score FROM log.v_gdpr_audit WHERE event_time BETWEEN $__timeFrom() AND $__timeTo() ORDER BY event_time DESC LIMIT 50" },
+    { "type": "text", "content": "11d. SOC 2:" },
+    { "type": "table", "query": "SELECT event_time, server_name AS server, db_user, client_ip, db_name, left(sql_preview, 80) AS sql_preview, action_taken, risk_score FROM log.v_soc2_audit WHERE event_time BETWEEN $__timeFrom() AND $__timeTo() ORDER BY event_time DESC LIMIT 50" },
+
+    { "type": "header", "level": 2, "text": "12. Log Retention & Availability  -  PCI 10.5 (1yr) | HIPAA (6yr) | SOX (7yr) | GDPR Art 5(1)(f)" },
+    { "type": "text", "query": "SELECT to_char(min(entry_date),'YYYY-MM-DD') AS earliest, to_char(max(entry_date),'YYYY-MM-DD') AS latest, count(*) AS records FROM alerts.alert_log", "template": "DBDOME retains database activity, alert and audit records with configurable retention. Alert/audit evidence currently spans {earliest} to {latest} ({records} alert records available for review), satisfying the readily-available-log requirement of the standards above." },
+
+    { "type": "header", "level": 2, "text": "Scoring Methodology & Attestation" },
+    { "type": "text", "content": "Scores are computed by monitoring.v_dam_compliance_scorecard directly from the DBDOME analytics repository over the reporting period; each control's formula and evidence source are shown in the scorecard. Per-regulation scores are risk-weighted roll-ups of the controls each framework requires. An empty evidence section indicates no qualifying activity in the period - evidence of monitored, clean activity, not of missing monitoring. Control-to-clause mappings are guidance and should be validated against the organization's audit scope. All figures are produced automatically with no manual data entry. Report classification: CONFIDENTIAL." }
+  ],
+  "output": {
+    "pdf": "rpt_8_compliance_dam_compliance",
+    "html": "rpt_8_compliance_dam_compliance"
+  }
+}

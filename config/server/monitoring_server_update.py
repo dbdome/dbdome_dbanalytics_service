@@ -6,6 +6,7 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.dialects.postgresql import insert
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
+from utils.secrets_crypto import encrypt_secret
 import json
 from pathlib import Path
 
@@ -22,7 +23,7 @@ def save_servers():
             _db_version     = data.get("db_version")
             _auth_type      = data.get("auth_type")
             _user           = data.get("user")
-            _password        = data.get("password")
+            _password        = encrypt_secret(data.get("password"))   # store encrypted
             _add_delete_modify  = data.get("add_dmodify_delete")
         
             delete_file("server_data.json" )
@@ -56,7 +57,7 @@ def save_servers():
             )
         """), {
             "p_ip_address": _ip_address,
-            "p_port": _port,
+            "p_port": str(_port) if _port is not None else None,
             "p_server_name":_server_name ,
             "p_db_vendor": _db_vendor,
             "p_db_version": _db_version,
@@ -70,7 +71,7 @@ def save_servers():
                         db_write_log(f"save_servers failed with error:{e}"   ,0,"save_servers",_server_name , port=_port)
         finally:
                 print("✅ save_servers Data sync complete.")               
-                return  1
+        return  1
         return 0;
     else:
           return 0;
@@ -101,8 +102,8 @@ def save_mail():
             _port           = data.get("port")
             _mail_sender    = data.get("mail_sender")
             _mail_username  = data.get("mail_user")
-            _mail_password  = data.get("mail_password")
-            _recipients     = data.get("recipients")                    
+            _mail_password  = encrypt_secret(data.get("mail_password"))   # store encrypted
+            _recipients     = data.get("recipients")
             delete_file("mail_config.json" )
 
         pg_connection_string = get_connection_string()
@@ -144,7 +145,7 @@ def save_mail():
                         db_write_log(f"save_servers failed with error:{e}"   ,0,"save_servers","" )
         finally:
                 print("✅ save_servers Data sync complete.")               
-                return  1
+        return  1
         return 0;
     else:
           return 0;

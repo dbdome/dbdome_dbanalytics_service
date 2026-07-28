@@ -1,0 +1,159 @@
+{
+  "report": {
+    "title": "IPS Dashboard",
+    "author": "DBDOME",
+    "date": "auto"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "dbanalytics",
+    "user": "dbdome_adm",
+    "password": "Yd2243796Anz!!"
+  },
+  "sections": [
+    {
+      "type": "header",
+      "level": 1,
+      "text": "IPS Dashboard - Analyzer"
+    },
+    {
+      "type": "text",
+      "content": "Live Intrusion Prevention System dashboard. Source: dbdome. Generated automatically by DBDOME."
+    },
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Summary"
+    },
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Severity Overview"
+    },
+    {
+      "type": "chart",
+      "chart_type": "pie",
+      "query": "SELECT risk_level AS Severity, count(*) AS Count FROM alerts.alert_log  GROUP BY risk_level ORDER BY CASE risk_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END",
+      "chart_text": "Intrusions By Severity"
+    },
+    {
+      "type": "table",
+      "query": "SELECT risk_level AS Severity, count(*) *100 / (select count(*) from alerts.alert_log) pct_of_total FROM alerts.alert_log  GROUP BY risk_level ORDER BY CASE risk_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END",
+      "headers": ["Severity", "pct_of_total"]
+    },
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Critical / High / Medium Timeline"
+    },
+    {
+      "type": "chart",
+      "chart_type": "line",
+      "query": "SELECT date_trunc('hour', entry_date)::timestamp AS time ,risk_level AS severity ,COUNT(*) AS count FROM alerts.alert_log where entry_date > current_date - interval '7 days' GROUP BY  risk_level, date_trunc('hour', entry_date)  ORDER BY     time;",
+      "chart_text": "time, count,severity"
+    },
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Intrusions By Type"
+    },
+    {
+      "type": "chart",
+      "chart_type": "bar",
+      "query": "select RC.issue_name as Type  , count(*)  AS Count from alerts.alert_log al join rootcause.v_rootcauses rc on rc.root_cause_id = al.root_cause_id where entry_date >  current_date - interval '7 days'  group by al.root_cause_id , issue_name limit 10",
+      "chart_text": "Intrusions By Type"
+    },
+    {
+      "type": "table",
+      "query": "select RC.issue_name as Type  , count(*)  AS Count from alerts.alert_log al join rootcause.v_rootcauses rc on rc.root_cause_id = al.root_cause_id where entry_date >  current_date - interval '7 days'  group by al.root_cause_id , issue_name limit 10",
+      "headers": ["count", "Type"]
+    },
+
+    {
+      "type": "header",
+      "level": 2,
+      "text": "Intrusions Detected"
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Critical Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT root_cause_name AS Attack, issue_name AS Type, risk_level AS Severity, count(*) AS Count FROM alerts.mail_alert_log ma join rootcause.v_rootcauses rc on rc.root_cause_id  = ma.metric_name where entry_date > current_date - interval '7 days'  group by root_cause_name , issue_name ,risk_level ORDER BY CASE risk_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END DESC LIMIT 20",
+      "headers": ["Attack",  "Type", "Severity" , "Count"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "High Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT root_cause_name AS Attack, issue_name AS Type, risk_level AS Severity, count(*) AS Count FROM alerts.mail_alert_log ma join rootcause.v_rootcauses rc on rc.root_cause_id  = ma.metric_name where entry_date > current_date - interval '7 days'  group by root_cause_name , issue_name ,risk_level ORDER BY CASE risk_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END DESC LIMIT 20",
+      "headers": ["Attack", "Type", "Severity", "Count"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Medium Severity Intrusions"
+    },
+    {
+      "type": "table",
+      "query": "SELECT root_cause_name AS Attack, issue_name AS Type, al.risk_level AS Severity, count(*) AS Count FROM alerts.alert_log al join rootcause.v_rootcauses rc on rc.root_cause_id  = al.root_cause_id where entry_date > current_date - interval '7 days' and al.risk_level = 'medium' group by root_cause_name , issue_name ,al.risk_level   LIMIT 20",
+      "headers": ["Attack", "Type", "Severity", "Count"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Attack Sources"
+    },
+    {
+      "type": "table",
+      "query": "SELECT count(*)*100 /(select count(*) from alerts.alert_log al1 where al1.entry_date > current_date - interval '7 days' ) pct_of_total , risk_level FROM alerts.alert_log al where al.entry_date > current_date - interval '7 days' and exists (select 1 from monitoring.general_metric_metadata_results gmmr where gmmr.server = al.server and gmmr.metric_name = al.root_cause_id and gmmr.entry_date between al.entry_date - interval '1 second' and al.entry_date + interval '1 second') group by risk_level order by pct_of_total desc",
+      "headers": ["#", "Attack Source", "Critical", "High", "Medium", "Counts", "Percent of Total Attacks"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Attack Victims"
+    },
+    {
+      "type": "table",
+      "query": "SELECT count(*) *100 / (select count(*) from alerts.alert_log al1 where al1.entry_date > current_date - interval '7 days' ) pct_of_total ,risk_level, g.metric_metadata FROM alerts.alert_log al cross join lateral (select metric_metadata from monitoring.general_metric_metadata_results gmmr where gmmr.server = al.server and gmmr.metric_name = al.root_cause_id and gmmr.entry_date between al.entry_date - interval '1 second' and al.entry_date + interval '1 second' limit 1) g where al.entry_date > current_date - interval '7 days' group by risk_level , g.metric_metadata order by pct_of_total desc limit 15",
+      "headers": ["pct_of_total", "risk_level"]
+    },
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Top Intrusions Blocked"
+    },
+    {
+      "type": "table",
+      "query": "SELECT root_cause_name AS Attack, issue_name AS Type, risk_level AS Severity, count(*) AS Count FROM alerts.mail_alert_log ma join rootcause.v_rootcauses rc on rc.root_cause_id  = ma.metric_name where entry_date > current_date - interval '7 days'  group by root_cause_name , issue_name ,risk_level ORDER BY CASE risk_level WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END DESC LIMIT 20",
+      "headers": ["Attack", "Type", "Intrusion Type", "Severity", "Count"]
+    },
+
+    {
+      "type": "header",
+      "level": 3,
+      "text": "Intrusions Monitored (Pass)"
+    },
+    {
+      "type": "table",
+      "query": "SELECT root_cause_name AS Attack, issue_name AS Type,al.risk_level severity   , count(*) AS Count FROM alerts.alert_log  al join rootcause.v_rootcauses rc on rc.root_cause_id  = al.root_cause_id  where entry_date > current_date - interval '7 days'  group by root_cause_name , issue_name ,al.risk_level LIMIT 20",
+      "headers": ["Attack", "Type", "Intrusion Type", "Severity", "Count"]
+    }
+  ],
+  "output": {
+    "pdf": "rpt_ips_fortianalyzer_ips_report",
+    "html": "rpt_ips_fortianalyzer_ips_report"
+  }
+}

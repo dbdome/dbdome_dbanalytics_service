@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Processes</title>
+<link rel="stylesheet" href="../static/css/processform_style.css" />
+<style>
+  .process-success { display: none; margin-top: 1rem; color: green; font-weight: bold; }
+  .process-sparkle { position: absolute; width: 6px; height: 6px; border-radius: 50%; opacity: 0; animation: sparkle 0.5s ease-out forwards; }
+  .cyan { background-color: cyan; }
+  .white { background-color: white; }
+  @keyframes sparkle { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">dbdome</div>
+</header>
+
+<main class="form-shell">
+  <div class="process-sparkles" id="processSparkles"></div>
+
+  <form class="processes-form" id="processesForm" action="/submit-processform" method="POST">
+    <h1 class="form-title">Processes</h1>
+
+    <div class="field-group">
+      <label for="process-name" class="field-label">Processes Name</label>
+      <select id="process-name" name="process_name" required>
+        <option value="" disabled selected>Select Processes Name</option>
+        <option value="export_nested_report_operation">export_nested_report_operation</option>
+        <option value="metrics_advisories">metrics_advisories</option>
+        <option value="metrics_category_definitions">metrics_category_definitions</option>
+        <option value="process_json_to_home_db">process_json_to_home_db</option>
+        <option value="save_mail">save_mail</option>
+        <option value="save_servers">save_servers</option>
+        <option value="widget_dashboard_json_export">widget_dashboard_json_export</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Active</label>
+      <div class="radio-field">
+        <label class="radio-option">
+          <input type="radio" name="active" value="true" required />
+          <span>True</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="active" value="false" required />
+          <span>False</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label for="interval" class="field-label">Interval</label>
+      <select id="interval" name="interval" required>
+        <option value="" disabled selected>Select Interval</option>
+        <option value="10">10</option>
+        <option value="60">60</option>
+      </select>
+    </div>
+
+    <button type="submit" class="primary-btn" id="deployBtn">Submit</button>
+  </form>
+
+  <div class="process-success" id="processSuccess" aria-live="polite">
+    The process has been successfully sent
+  </div>
+</main>
+
+<script>
+const processesForm = document.getElementById("processesForm");
+const sparklesContainer = document.getElementById("processSparkles");
+const successPopup = document.getElementById("processSuccess");
+const deployBtn = document.getElementById("deployBtn");
+
+// Function to create sparkles
+function createSparkle(x, y, color, delay) {
+  const sparkle = document.createElement("div");
+  sparkle.className = `process-sparkle ${color}`;
+  sparkle.style.left = `${x}%`;
+  sparkle.style.top = `${y}%`;
+  sparkle.style.animationDelay = `${delay}s`;
+  sparklesContainer.appendChild(sparkle);
+
+  setTimeout(() => {
+    if (sparkle.parentNode) sparkle.parentNode.removeChild(sparkle);
+  }, 500);
+}
+
+function emitSparkles() {
+  const rect = processesForm.getBoundingClientRect();
+  const centerX = ((rect.left + rect.width / 2) / window.innerWidth) * 100;
+  const centerY = ((rect.top + rect.height / 2) / window.innerHeight) * 100;
+
+  const count = 35;
+  for (let i = 0; i < count; i++) {
+    const offsetX = (Math.random() - 0.5) * 20;
+    const offsetY = (Math.random() - 0.5) * 10;
+    const x = centerX + offsetX;
+    const y = centerY + offsetY;
+    const color = Math.random() > 0.5 ? "cyan" : "white";
+    const delay = Math.random() * 0.3;
+    createSparkle(x, y, color, delay);
+  }
+}
+
+// Disable button temporarily
+processesForm.addEventListener("submit", () => {
+  deployBtn.disabled = true;
+  setTimeout(() => { deployBtn.disabled = false; }, 1500);
+});
+
+// Show success popup if query parameter success=1
+window.addEventListener("DOMContentLoaded", () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("success") === "1") {
+    emitSparkles();
+    successPopup.style.display = "block";
+    setTimeout(() => { successPopup.style.display = "none"; }, 3000);
+  }
+});
+</script>
+</body>
+</html>

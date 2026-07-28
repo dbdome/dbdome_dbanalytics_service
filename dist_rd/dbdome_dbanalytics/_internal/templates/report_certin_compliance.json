@@ -1,0 +1,46 @@
+{
+  "report": {
+    "title": "CERT-In Directions (2022) - Incident Logging & Reporting Report",
+    "author": "DBDOME Security Team (dbexpert.ai)",
+    "date": "auto"
+  },
+  "database": { "database": "dbanalytics" },
+  "sections": [
+    { "type": "header", "level": 1, "text": "CERT-In Directions 2022 - Database Logging & Incident Reporting" },
+    { "type": "text", "content": "Compliance evidence aligned to the CERT-In Directions (No. 20(3)/2022) requirements for logging, synchronized activity records, tamper-proof retention and timely incident reporting, generated automatically by the DBDOME platform." },
+
+    { "type": "header", "level": 2, "text": "1. Incident Detection & 6-Hour Reporting Window" },
+    { "type": "text",
+      "query": "SELECT COUNT(*) AS incidents_30d, COUNT(*) FILTER (WHERE created_at - detected_at <= INTERVAL '6 hours') AS logged_within_6h, COUNT(*) FILTER (WHERE state NOT IN ('CLOSED','RESOLVED')) AS open_incidents FROM log.incidents WHERE detected_at >= CURRENT_DATE - INTERVAL '30 days'",
+      "template": "Last 30 days: {incidents_30d} incidents; {logged_within_6h} recorded within the CERT-In 6-hour window; {open_incidents} still open. Recorded incidents are forwarded to the SIEM for onward CERT-In reporting." },
+    { "type": "table",
+      "query": "SELECT incident_id, title, severity, category, state, detected_at, created_at, ROUND(EXTRACT(EPOCH FROM (created_at - detected_at))/3600.0, 2) AS hours_to_log FROM log.incidents WHERE detected_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY detected_at DESC LIMIT 25",
+      "headers": ["incident_id", "title", "severity", "category", "state", "detected_at", "created_at", "hours_to_log"] },
+
+    { "type": "header", "level": 2, "text": "2. Incident Timeline (chain of custody)" },
+    { "type": "table",
+      "query": "SELECT tl.incident_id, tl.event_type, tl.actor, tl.note, tl.event_time FROM log.incident_timeline tl WHERE tl.event_time >= CURRENT_DATE - INTERVAL '30 days' ORDER BY tl.event_time DESC LIMIT 30",
+      "headers": ["incident_id", "event_type", "actor", "note", "event_time"] },
+
+    { "type": "header", "level": 2, "text": "3. Continuous Activity Logging Coverage" },
+    { "type": "text",
+      "query": "SELECT COUNT(DISTINCT server) AS servers_logged, COUNT(DISTINCT metric_name) AS detection_rules, COUNT(*) AS log_events_7d FROM monitoring.general_metric_metadata_results WHERE entry_date >= CURRENT_DATE - INTERVAL '7 days'",
+      "template": "Continuous logging: {servers_logged} databases, {detection_rules} detection rules, {log_events_7d} activity/telemetry records captured in the last 7 days." },
+    { "type": "chart", "chart_type": "line",
+      "query": "SELECT DATE_TRUNC('day', entry_date) AS day, COUNT(*) AS events FROM monitoring.general_metric_metadata_results WHERE entry_date >= CURRENT_DATE - INTERVAL '14 days' GROUP BY day ORDER BY day",
+      "x_column": "day", "y_column": "events",
+      "title": "Daily Activity-Logging Volume (14 days)", "x_label": "Date", "y_label": "Records",
+      "caption": "Continuity of database activity logging across the estate" },
+
+    { "type": "header", "level": 2, "text": "4. Tamper-Proof Log Retention (integrity verification)" },
+    { "type": "table",
+      "query": "SELECT table_name, rows_hashed, last_hashed_id, verified_at, CASE WHEN is_valid THEN 'INTACT' ELSE 'BROKEN' END AS chain_status, broken_at_id, error_detail FROM log.hash_chain_checkpoints ORDER BY verified_at DESC NULLS LAST LIMIT 25",
+      "headers": ["table_name", "rows_hashed", "last_hashed_id", "verified_at", "chain_status", "broken_at_id", "error_detail"] },
+
+    { "type": "header", "level": 2, "text": "5. Threat Detection & Response" },
+    { "type": "table",
+      "query": "SELECT gm.server, gm.metric_name AS root_cause_id, (gm.metric_metadata_vs_expected::jsonb->>'row_count')::int AS events, COALESCE(gm.metric_metadata_vs_expected::jsonb->>'severity','high') AS severity, gm.entry_date AS detected_at FROM monitoring.general_metric_metadata_results gm WHERE (gm.metric_name LIKE 'SEC-SQL-ACC-010-RC06%%' OR gm.metric_name LIKE 'SEC-SQL-ACC-010-RC09%%' OR gm.metric_name LIKE 'SEC-SQL-AUD-027%%') AND gm.metric_metadata_vs_expected::jsonb->>'matched' = 'true' AND gm.entry_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY gm.entry_date DESC LIMIT 25",
+      "headers": ["server", "root_cause_id", "events", "severity", "detected_at"] }
+  ],
+  "output": { "pdf": "report_certin_compliance", "html": "report_certin_compliance" }
+}

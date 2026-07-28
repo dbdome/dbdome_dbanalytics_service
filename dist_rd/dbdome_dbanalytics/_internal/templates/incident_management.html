@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Incident Management - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg-primary);padding:0 16px;}
+  .tab{padding:10px 18px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab-pane{display:none;padding:12px 16px;}
+  .tab-pane.active{display:block;}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .btn-danger{background:transparent;border:1px solid var(--red);color:var(--red-text);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .stats-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .stat-panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:14px 20px;flex:1;min-width:110px;text-align:center;}
+  .stat-value{font-size:24px;font-weight:500;line-height:1.2;}
+  .stat-label{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-detected{background:#0a1020;color:var(--blue);}
+  .badge-contained{background:#2a1500;color:var(--orange);}
+  .badge-eradicated{background:#1a1f0a;color:var(--yellow);}
+  .badge-recovered{background:#0a1f20;color:var(--blue);}
+  .badge-closed{background:#0a1f0a;color:var(--green-text);}
+  .badge-critical{background:#3a0010;color:var(--red-text);}
+  .badge-high{background:#2a1000;color:var(--orange);}
+  .badge-medium{background:#2a2000;color:var(--yellow);}
+  .badge-low{background:#1a1a1a;color:var(--text-secondary);}
+  .badge-gdpr{background:#1a0a3a;color:#bb88ff;}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .form-group{margin-bottom:12px;}
+  .form-group label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .form-group textarea{min-height:60px;resize:vertical;}
+  .form-row{display:flex;gap:8px;}
+  .form-row .form-group{flex:1;}
+  .state-bar{display:flex;gap:0;margin-bottom:16px;}
+  .state-step{flex:1;padding:8px;text-align:center;font-size:11px;border:1px solid var(--border);border-right:none;position:relative;}
+  .state-step:last-child{border-right:1px solid var(--border);}
+  .state-step.done{background:#0a1f0a;color:var(--green-text);}
+  .state-step.active{background:#0a1020;color:var(--blue);font-weight:600;}
+  .gdpr-timer{background:#1a0a2a;border:1px solid #9933cc;border-radius:4px;padding:8px 14px;font-size:12px;color:#bb88ff;margin-bottom:8px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1f6b33;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;display:none;z-index:9999;}
+  .toast.err{background:#7a0a25;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Incident Lifecycle Management</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('active')">Active Incidents</div>
+  <div class="tab" onclick="switchTab('capa')">CAPA Actions</div>
+  <div class="tab" onclick="switchTab('new')">Open Incident</div>
+  <div class="tab" onclick="switchTab('history')">History</div>
+</div>
+
+<!-- Active Tab -->
+<div id="tab-active" class="tab-pane active">
+  <div class="stats-row" id="inc-stats"></div>
+  <div class="panel">
+    <div class="panel-header"><span>Active Incidents</span>
+      <button class="btn-sm" onclick="loadActive()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Title</th><th>Severity</th><th>State</th><th>GDPR</th>
+          <th>Detected</th><th>Assigned To</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="active-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="incident-detail" style="display:none">
+    <div class="panel">
+      <div class="panel-header"><span id="detail-title">Incident Detail</span>
+        <button class="btn-sm" onclick="document.getElementById('incident-detail').style.display='none'">Close</button></div>
+      <div style="padding:16px;">
+        <div class="state-bar" id="state-bar"></div>
+        <div id="gdpr-timer-row"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-sm" onclick="advanceState('CONTAINED')">→ Contained</button>
+          <button class="btn btn-sm" onclick="advanceState('ERADICATED')">→ Eradicated</button>
+          <button class="btn btn-sm" onclick="advanceState('RECOVERED')">→ Recovered</button>
+          <button class="btn btn-sm" onclick="advanceState('CLOSED')">→ Closed</button>
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label>Action Notes</label>
+            <input id="advance-notes" placeholder="Describe actions taken…">
+          </div>
+          <div class="form-group">
+            <label>Action By</label>
+            <input id="advance-by" value="analyst">
+          </div>
+        </div>
+        <div class="panel-header" style="margin-top:12px;margin-bottom:0"><span>Timeline</span></div>
+        <table style="margin-top:0">
+          <thead><tr><th>Time</th><th>State From</th><th>State To</th><th>Action</th><th>By</th><th>Notes</th></tr></thead>
+          <tbody id="timeline-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CAPA Tab -->
+<div id="tab-capa" class="tab-pane">
+  <div class="panel">
+    <div class="panel-header"><span>CAPA Actions (Corrective & Preventive)</span>
+      <button class="btn-sm" onclick="loadCapa()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Incident #</th><th>Type</th><th>Description</th>
+          <th>Assigned To</th><th>Due Date</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="capa-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel" style="max-width:560px">
+    <div class="panel-header"><span>Add CAPA Action</span></div>
+    <div style="padding:16px;">
+      <div class="form-row">
+        <div class="form-group"><label>Incident #</label><input id="capa-inc-id" type="number" placeholder="Incident ID"></div>
+        <div class="form-group"><label>Type</label>
+          <select id="capa-type"><option value="CORRECTIVE">Corrective</option><option value="PREVENTIVE">Preventive</option></select></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="capa-desc"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Assigned To</label><input id="capa-assignee"></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="capa-due"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addCapa()">Add CAPA</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Incident Tab -->
+<div id="tab-new" class="tab-pane">
+  <div class="panel" style="max-width:640px">
+    <div class="panel-header"><span>Open New Incident</span></div>
+    <div style="padding:16px;">
+      <div class="form-group"><label>Title</label><input id="ni-title" placeholder="Brief incident title"></div>
+      <div class="form-group"><label>Description</label><textarea id="ni-desc"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Severity</label>
+          <select id="ni-severity">
+            <option value="LOW">Low</option><option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option><option value="CRITICAL">Critical</option>
+          </select></div>
+        <div class="form-group"><label>Category</label>
+          <select id="ni-category">
+            <option value="data_breach">Data Breach</option>
+            <option value="unauthorized_access">Unauthorized Access</option>
+            <option value="ddl_abuse">DDL Abuse</option>
+            <option value="privilege_escalation">Privilege Escalation</option>
+            <option value="ransomware">Ransomware</option>
+            <option value="other">Other</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Assigned To</label><input id="ni-assignee" placeholder="analyst@company.com"></div>
+        <div class="form-group"><label>Created By</label><input id="ni-created-by" value="grc-user"></div>
+      </div>
+      <div class="form-group"><label>Affected Servers (comma-separated)</label>
+        <input id="ni-servers" placeholder="prod-mysql-01, prod-pg-02"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Affected Records (estimate)</label>
+          <input id="ni-records" type="number" placeholder="0"></div>
+        <div class="form-group"><label>Regulation (comma-separated)</label>
+          <input id="ni-regulation" placeholder="GDPR,PCI-DSS"></div>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="ni-personal-data" style="width:auto">
+        <label style="margin:0;color:var(--text-primary)">Involves personal data (triggers GDPR 72h timer)</label>
+      </div>
+      <button class="btn btn-primary" style="margin-top:8px" onclick="openIncident()">Open Incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Tab -->
+<div id="tab-history" class="tab-pane">
+  <div class="panel">
+    <div class="panel-header"><span>Closed Incidents</span>
+      <button class="btn-sm" onclick="loadHistory()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Title</th><th>Severity</th><th>Category</th>
+          <th>Detected</th><th>Closed</th><th>Duration (h)</th><th>GDPR</th>
+        </tr></thead>
+        <tbody id="history-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentIncidentId=null;
+
+function switchTab(t){
+  ['active','capa','new','history'].forEach((id,idx)=>{
+    document.querySelectorAll('.tab')[idx].classList.toggle('active',id===t);
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='active') loadActive();
+  if(t==='capa') loadCapa();
+  if(t==='history') loadHistory();
+}
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');t.style.display='block';setTimeout(()=>t.style.display='none',3500);
+}
+function fmtTs(ts){ return (ts||'').replace('T',' ').substring(0,16); }
+
+const STATES=['DETECTED','CONTAINED','ERADICATED','RECOVERED','CLOSED'];
+
+async function loadActive(){
+  const res=await fetch('/api/incidents?exclude_state=CLOSED');
+  const data=await res.json();
+  const incs=data.incidents||[];
+  const crit=incs.filter(i=>i.severity==='CRITICAL').length;
+  const gdpr=incs.filter(i=>i.involves_personal_data&&!i.gdpr_notified_at).length;
+  document.getElementById('inc-stats').innerHTML=`
+    <div class="stat-panel"><div class="stat-value">${incs.length}</div><div class="stat-label">Active Incidents</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--red-text)">${crit}</div><div class="stat-label">Critical</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:#bb88ff">${gdpr}</div><div class="stat-label">GDPR 72h Pending</div></div>
+  `;
+  document.getElementById('active-body').innerHTML=incs.length?incs.map(i=>`<tr>
+    <td style="font-size:11px">#${i.incident_id}</td>
+    <td style="font-size:12px;font-weight:500;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.title}</td>
+    <td><span class="badge badge-${(i.severity||'low').toLowerCase()}">${i.severity||''}</span></td>
+    <td><span class="badge badge-${(i.state||'detected').toLowerCase()}">${i.state||''}</span></td>
+    <td>${i.involves_personal_data?'<span class="badge badge-gdpr">GDPR</span>':'—'}</td>
+    <td style="font-size:11px">${fmtTs(i.detected_at)}</td>
+    <td style="font-size:11px">${i.assigned_to||'—'}</td>
+    <td><button class="btn-sm" onclick="showDetail(${i.incident_id})">Manage</button></td>
+  </tr>`).join(''):'<tr><td colspan="8" class="empty">No active incidents</td></tr>';
+}
+
+async function showDetail(id){
+  currentIncidentId=id;
+  const res=await fetch(`/api/incidents/${id}`);
+  const data=await res.json();
+  const inc=data.incident||{};
+  document.getElementById('detail-title').textContent=`#${inc.incident_id}: ${inc.title}`;
+  // State bar
+  const curIdx=STATES.indexOf(inc.state||'DETECTED');
+  document.getElementById('state-bar').innerHTML=STATES.map((s,i)=>
+    `<div class="state-step ${i<curIdx?'done':i===curIdx?'active':''}">${s}</div>`
+  ).join('');
+  // GDPR timer
+  let timerHtml='';
+  if(inc.involves_personal_data&&inc.gdpr_notification_due){
+    const due=new Date(inc.gdpr_notification_due);
+    const now=new Date();
+    const hoursLeft=Math.round((due-now)/3600000);
+    const overdue=hoursLeft<0;
+    timerHtml=`<div class="gdpr-timer">&#x1F6A8; GDPR 72h Timer: notification due ${fmtTs(inc.gdpr_notification_due)} (${overdue?'OVERDUE by '+(Math.abs(hoursLeft))+'h':hoursLeft+'h remaining'})${inc.gdpr_notified_at?' — notified ':''}</div>`;
+  }
+  document.getElementById('gdpr-timer-row').innerHTML=timerHtml;
+  // Timeline
+  const tl=data.timeline||[];
+  document.getElementById('timeline-body').innerHTML=tl.length?tl.map(e=>`<tr>
+    <td style="font-size:11px">${fmtTs(e.created_at)}</td>
+    <td style="font-size:11px">${e.state_from||'—'}</td>
+    <td style="font-size:11px">${e.state_to||'—'}</td>
+    <td style="font-size:11px">${e.action_taken||''}</td>
+    <td style="font-size:11px">${e.action_by||''}</td>
+    <td style="font-size:11px">${e.notes||''}</td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:12px;color:var(--text-secondary)">No timeline entries</td></tr>';
+  document.getElementById('incident-detail').style.display='block';
+}
+
+async function advanceState(newState){
+  if(!currentIncidentId) return;
+  const notes=document.getElementById('advance-notes').value.trim();
+  const by=document.getElementById('advance-by').value.trim()||'analyst';
+  const res=await fetch(`/api/incidents/${currentIncidentId}/advance`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({new_state:newState,notes,action_by:by})
+  });
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast(`Incident moved to ${newState}`);
+  showDetail(currentIncidentId);
+  loadActive();
+}
+
+async function loadCapa(){
+  const res=await fetch('/api/incidents/capa');
+  const data=await res.json();
+  const items=data.capa||[];
+  document.getElementById('capa-body').innerHTML=items.length?items.map(c=>`<tr>
+    <td>#${c.capa_id}</td>
+    <td>#${c.incident_id}</td>
+    <td><span class="badge" style="background:#0a1020;color:var(--blue)">${c.capa_type}</span></td>
+    <td style="max-width:280px;font-size:11px">${c.description}</td>
+    <td style="font-size:11px">${c.assigned_to||'—'}</td>
+    <td style="font-size:11px">${c.due_date||'—'}</td>
+    <td><span class="badge badge-${c.status==='COMPLETE'?'closed':c.status==='OPEN'?'detected':'contained'}">${c.status}</span></td>
+    <td>${c.status!=='COMPLETE'?`<button class="btn-sm" onclick="completeCapa(${c.capa_id})">Complete</button>`:''}</td>
+  </tr>`).join(''):'<tr><td colspan="8" class="empty">No CAPA actions</td></tr>';
+}
+
+async function addCapa(){
+  const body={
+    incident_id:parseInt(document.getElementById('capa-inc-id').value),
+    capa_type:document.getElementById('capa-type').value,
+    description:document.getElementById('capa-desc').value.trim(),
+    assigned_to:document.getElementById('capa-assignee').value.trim()||null,
+    due_date:document.getElementById('capa-due').value||null,
+  };
+  const res=await fetch('/api/incidents/capa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('CAPA action added');
+  loadCapa();
+}
+
+async function completeCapa(id){
+  const res=await fetch(`/api/incidents/capa/${id}/complete`,{method:'POST'});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('CAPA marked complete');
+  loadCapa();
+}
+
+async function openIncident(){
+  const servers=document.getElementById('ni-servers').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const regulation=document.getElementById('ni-regulation').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const personalData=document.getElementById('ni-personal-data').checked;
+  const body={
+    title:document.getElementById('ni-title').value.trim(),
+    description:document.getElementById('ni-desc').value.trim()||null,
+    severity:document.getElementById('ni-severity').value,
+    category:document.getElementById('ni-category').value,
+    assigned_to:document.getElementById('ni-assignee').value.trim()||null,
+    created_by:document.getElementById('ni-created-by').value.trim()||'grc-user',
+    affected_servers:servers,
+    affected_records_count:parseInt(document.getElementById('ni-records').value)||null,
+    regulation,
+    involves_personal_data:personalData,
+  };
+  const res=await fetch('/api/incidents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('Incident opened — ID #'+data.incident_id);
+  switchTab('active');
+}
+
+async function loadHistory(){
+  const res=await fetch('/api/incidents?state=CLOSED');
+  const data=await res.json();
+  const incs=data.incidents||[];
+  document.getElementById('history-body').innerHTML=incs.length?incs.map(i=>{
+    const det=new Date(i.detected_at);
+    const cl=i.closed_at?new Date(i.closed_at):null;
+    const dur=cl?Math.round((cl-det)/3600000):'—';
+    return `<tr>
+      <td>#${i.incident_id}</td>
+      <td style="font-size:12px;font-weight:500">${i.title}</td>
+      <td><span class="badge badge-${(i.severity||'low').toLowerCase()}">${i.severity||''}</span></td>
+      <td style="font-size:11px">${i.category||''}</td>
+      <td style="font-size:11px">${fmtTs(i.detected_at)}</td>
+      <td style="font-size:11px">${fmtTs(i.closed_at)}</td>
+      <td style="text-align:center">${dur}</td>
+      <td>${i.involves_personal_data?'<span class="badge badge-gdpr">GDPR</span>':'—'}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="8" class="empty">No closed incidents</td></tr>';
+}
+
+loadActive();
+</script>
+</body>
+</html>

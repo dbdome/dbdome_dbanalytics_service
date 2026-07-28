@@ -1,0 +1,2173 @@
+{
+  "module": "sql_injection",
+  "area_code": "INJ",
+  "source": "PLANS/SQL_INJECTION_DETECTION.md",
+  "vendors": [
+    "postgresql",
+    "sqlserver",
+    "oracle",
+    "mysql"
+  ],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-INJ-001-RC01",
+      "issue": "SEC-SQL-INJ-001",
+      "name": "Error-based injection",
+      "slug": "inj-001",
+      "description": "Error-based extraction via cast/XML/convert/UTL leak functions (extractvalue, updatexml, convert(int), utl_inaddr).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* '(xmlparse|xpath\\s*\\(|cast\\s*\\(.*as\\s+(int|numeric))'",
+        "sqlserver": "SELECT r.session_id, s.login_name, t.text AS query FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE (t.text LIKE '%convert(int%' OR t.text LIKE '%convert (int%' OR t.text LIKE '%cast(0x%')",
+        "oracle": "SELECT s.sid, s.username, q.sql_text AS query FROM v$session s JOIN v$sql q ON q.sql_id = s.sql_id WHERE q.sql_text IS NOT NULL AND REGEXP_LIKE(q.sql_text, 'utl_inaddr|ctxsys\\.drithsx|dbms_xmlgen|xmltype\\s*\\(', 'i')",
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP 'extractvalue|updatexml|exp\\\\(~|floor\\\\(rand'"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-002-RC01",
+      "issue": "SEC-SQL-INJ-002",
+      "name": "UNION-based injection",
+      "slug": "inj-002",
+      "description": "UNION SELECT appended to read other tables/columns.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* 'union\\s+(all\\s+)?select'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP 'union\\\\s+(all\\\\s+)?select'"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-003-RC01",
+      "issue": "SEC-SQL-INJ-003",
+      "name": "Boolean-based blind injection",
+      "slug": "inj-003",
+      "description": "Boolean blind via numeric tautology (AND 1=1 / 1=2).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* '(and|or)\\s+[0-9]+\\s*=\\s*[0-9]+'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-004-RC01",
+      "issue": "SEC-SQL-INJ-004",
+      "name": "Time-based blind injection",
+      "slug": "inj-004",
+      "description": "Timing oracle via sleep functions (pg_sleep / SLEEP / WAITFOR DELAY / DBMS_LOCK.SLEEP).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* 'pg_sleep\\s*\\('",
+        "sqlserver": "SELECT r.session_id, s.login_name, t.text AS query FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE (t.text LIKE '%waitfor delay%')",
+        "oracle": "SELECT s.sid, s.username, q.sql_text AS query FROM v$session s JOIN v$sql q ON q.sql_id = s.sql_id WHERE q.sql_text IS NOT NULL AND REGEXP_LIKE(q.sql_text, 'dbms_lock\\.sleep|dbms_session\\.sleep', 'i')",
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP 'sleep\\\\s*\\\\('"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-005-RC01",
+      "issue": "SEC-SQL-INJ-005",
+      "name": "Stacked queries",
+      "slug": "inj-005",
+      "description": "A second statement appended after a semicolon (;DROP/;EXEC/;INSERT).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* ';\\s*(insert|update|delete|drop|create|alter|grant|copy)'",
+        "sqlserver": "SELECT r.session_id, s.login_name, t.text AS query FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE (t.text LIKE '%; drop %' OR t.text LIKE '%; exec%' OR t.text LIKE '%; insert%' OR t.text LIKE '%; update%' OR t.text LIKE '%; delete%')",
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-006-RC01",
+      "issue": "SEC-SQL-INJ-006",
+      "name": "Out-of-band exfiltration",
+      "slug": "inj-006",
+      "description": "OOB channel via UTL_HTTP / xp_dirtree / COPY ... PROGRAM / pg_read_file.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "critical",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* 'copy\\s+.*\\s+program|pg_read_file|pg_ls_dir'",
+        "sqlserver": "SELECT r.session_id, s.login_name, t.text AS query FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE (t.text LIKE '%xp_dirtree%' OR t.text LIKE '%xp_cmdshell%' OR t.text LIKE '%sp_oacreate%' OR t.text LIKE '%xp_fileexist%')",
+        "oracle": "SELECT s.sid, s.username, q.sql_text AS query FROM v$session s JOIN v$sql q ON q.sql_id = s.sql_id WHERE q.sql_text IS NOT NULL AND REGEXP_LIKE(q.sql_text, 'utl_http|utl_inaddr|httpuritype|utl_tcp', 'i')",
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-007-RC01",
+      "issue": "SEC-SQL-INJ-007",
+      "name": "Tautology / auth-bypass",
+      "slug": "inj-007",
+      "description": "Classic auth bypass via a constant-true predicate (' OR '1'='1).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* '(or|and)\\s+'?[0-9a-z]+'?\\s*=\\s*'?[0-9a-z]+'?(\\s*(--|#|/\\*))?'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-008-RC01",
+      "issue": "SEC-SQL-INJ-008",
+      "name": "Comment / inline-comment evasion",
+      "slug": "inj-008",
+      "description": "Keyword splitting or trailing comments (UN/**/ION, /*!...*/, -- , #).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP '/\\\\*!|--\\\\s|#|/\\\\*.*\\\\*/'"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-009-RC01",
+      "issue": "SEC-SQL-INJ-009",
+      "name": "Dynamic-SQL / stored-proc injection",
+      "slug": "inj-009",
+      "description": "Injection through EXEC()/EXECUTE IMMEDIATE/sp_executesql dynamic SQL.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": "SELECT r.session_id, s.login_name, t.text AS query FROM sys.dm_exec_requests r JOIN sys.dm_exec_sessions s ON s.session_id = r.session_id CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t WHERE (t.text LIKE '%exec(%' OR t.text LIKE '%execute(%' OR t.text LIKE '%sp_executesql%')",
+        "oracle": "SELECT s.sid, s.username, q.sql_text AS query FROM v$session s JOIN v$sql q ON q.sql_id = s.sql_id WHERE q.sql_text IS NOT NULL AND REGEXP_LIKE(q.sql_text, 'execute\\s+immediate', 'i')",
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-010-RC01",
+      "issue": "SEC-SQL-INJ-010",
+      "name": "Schema/catalog enumeration via injection",
+      "slug": "inj-010",
+      "description": "Catalog probing (information_schema / pg_catalog / pg_tables).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* 'information_schema\\.|pg_catalog\\.|pg_tables|pg_class|pg_attribute'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-011-RC01",
+      "issue": "SEC-SQL-INJ-011",
+      "name": "ORDER BY / column-count probing",
+      "slug": "inj-011",
+      "description": "Column-count discovery via ORDER BY <n>.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP 'order\\\\s+by\\\\s+[0-9]+'"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-012-RC01",
+      "issue": "SEC-SQL-INJ-012",
+      "name": "NoSQL operator injection ($ne/$gt/$regex)",
+      "slug": "inj-012",
+      "description": "MongoDB operator injection.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-013-RC01",
+      "issue": "SEC-SQL-INJ-013",
+      "name": "NoSQL $where / $function server-side-JS injection",
+      "slug": "inj-013",
+      "description": "MongoDB server-side JS injection.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "critical",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-014-RC01",
+      "issue": "SEC-SQL-INJ-014",
+      "name": "Encoding / obfuscation evasion",
+      "slug": "inj-014",
+      "description": "Hex / CHAR() / CONCAT obfuscation of the payload.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT id, user, host, db, info AS query FROM information_schema.processlist WHERE info IS NOT NULL AND info REGEXP '0x[0-9a-f]{4,}|char\\\\s*\\\\(|concat\\\\s*\\\\('"
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-015-RC01",
+      "issue": "SEC-SQL-INJ-015",
+      "name": "Automated-tool signature (sqlmap / NoSQLMap)",
+      "slug": "inj-015",
+      "description": "Tooling fingerprint in the statement text.",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": "SELECT pid, usename, host(client_addr) AS client_addr, state, query FROM pg_stat_activity WHERE query IS NOT NULL AND state <> 'idle' AND query ~* 'sqlmap|nosqlmap|/\\*[0-9a-f]{4}\\*/'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-016-RC01",
+      "issue": "SEC-SQL-INJ-016",
+      "name": "Second-order (stored) injection",
+      "slug": "inj-016",
+      "description": "Payload stored then executed later \u2014 correlation-dependent (TODO: trace stored payload).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-017-RC01",
+      "issue": "SEC-SQL-INJ-017",
+      "name": "Inline-comment keyword split (UN/**/ION, /*!...*/)",
+      "slug": "inj-017",
+      "description": "Inline-comment keyword split (UN/**/ION, /*!...*/) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-018-RC01",
+      "issue": "SEC-SQL-INJ-018",
+      "name": "Error oracle via floor(rand)/exp/geometry/XML-gen",
+      "slug": "inj-018",
+      "description": "Error oracle via floor(rand)/exp/geometry/XML-gen (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-019-RC01",
+      "issue": "SEC-SQL-INJ-019",
+      "name": "Char-by-char blind via substring()/ascii()",
+      "slug": "inj-019",
+      "description": "Char-by-char blind via substring()/ascii() (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-020-RC01",
+      "issue": "SEC-SQL-INJ-020",
+      "name": "Timing oracle via heavy compute (no sleep keyword)",
+      "slug": "inj-020",
+      "description": "Timing oracle via heavy compute (no sleep keyword) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-021-RC01",
+      "issue": "SEC-SQL-INJ-021",
+      "name": "OOB via sp_OACreate / sp_send_dbmail / DBMS_LDAP",
+      "slug": "inj-021",
+      "description": "OOB via sp_OACreate / sp_send_dbmail / DBMS_LDAP (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-022-RC01",
+      "issue": "SEC-SQL-INJ-022",
+      "name": "Auth-bypass without '=' (OR 1 / LIKE / BETWEEN / ||)",
+      "slug": "inj-022",
+      "description": "Auth-bypass without '=' (OR 1 / LIKE / BETWEEN / ||) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-023-RC01",
+      "issue": "SEC-SQL-INJ-023",
+      "name": "Catalog enumeration on MySQL / SQL Server / Oracle",
+      "slug": "inj-023",
+      "description": "Catalog enumeration on MySQL / SQL Server / Oracle (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-024-RC01",
+      "issue": "SEC-SQL-INJ-024",
+      "name": "Payload laundered through the application role",
+      "slug": "inj-024",
+      "description": "Payload laundered through the application role (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-025-RC01",
+      "issue": "SEC-SQL-INJ-025",
+      "name": "Tooling with --random-agent / --tamper (fingerprint stripped)",
+      "slug": "inj-025",
+      "description": "Tooling with --random-agent / --tamper (fingerprint stripped) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-026-RC01",
+      "issue": "SEC-SQL-INJ-026",
+      "name": "Payload in a normalized constant slot (digest-matching)",
+      "slug": "inj-026",
+      "description": "Payload in a normalized constant slot (digest-matching) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-027-RC01",
+      "issue": "SEC-SQL-INJ-027",
+      "name": "Baseline poisoning during the learning window",
+      "slug": "inj-027",
+      "description": "Baseline poisoning during the learning window (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-028-RC01",
+      "issue": "SEC-SQL-INJ-028",
+      "name": "Slow-and-low manual injection on a single high-value action",
+      "slug": "inj-028",
+      "description": "Slow-and-low manual injection on a single high-value action (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-029-RC01",
+      "issue": "SEC-SQL-INJ-029",
+      "name": "Injection inside a dynamic-SQL function/module body",
+      "slug": "inj-029",
+      "description": "Injection inside a dynamic-SQL function/module body (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-030-RC01",
+      "issue": "SEC-SQL-INJ-030",
+      "name": "Batch/ETL-path second-order (scheduled job)",
+      "slug": "inj-030",
+      "description": "Batch/ETL-path second-order (scheduled job) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-031-RC01",
+      "issue": "SEC-SQL-INJ-031",
+      "name": "SQL/JSON path injection (jsonb_path_query / JSON_EXTRACT)",
+      "slug": "inj-031",
+      "description": "SQL/JSON path injection (jsonb_path_query / JSON_EXTRACT) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-032-RC01",
+      "issue": "SEC-SQL-INJ-032",
+      "name": "ORDER BY-clause injection (ORDER BY CASE WHEN)",
+      "slug": "inj-032",
+      "description": "ORDER BY-clause injection (ORDER BY CASE WHEN) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-033-RC01",
+      "issue": "SEC-SQL-INJ-033",
+      "name": "Space-free / Unicode keyword evasion",
+      "slug": "inj-033",
+      "description": "Space-free / Unicode keyword evasion (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-034-RC01",
+      "issue": "SEC-SQL-INJ-034",
+      "name": "ORM raw-fragment ($queryRaw / knex.raw / literal())",
+      "slug": "inj-034",
+      "description": "ORM raw-fragment ($queryRaw / knex.raw / literal()) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-035-RC01",
+      "issue": "SEC-SQL-INJ-035",
+      "name": "Connection-handshake injection (search_path / options)",
+      "slug": "inj-035",
+      "description": "Connection-handshake injection (search_path / options) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-036-RC01",
+      "issue": "SEC-SQL-INJ-036",
+      "name": "Trigger-fired dynamic SQL (detonates on write)",
+      "slug": "inj-036",
+      "description": "Trigger-fired dynamic SQL (detonates on write) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-037-RC01",
+      "issue": "SEC-SQL-INJ-037",
+      "name": "Type-juggling (WHERE token = 0 matches any string)",
+      "slug": "inj-037",
+      "description": "Type-juggling (WHERE token = 0 matches any string) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-038-RC01",
+      "issue": "SEC-SQL-INJ-038",
+      "name": "Multibyte charset quote-smuggling (GBK)",
+      "slug": "inj-038",
+      "description": "Multibyte charset quote-smuggling (GBK) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-039-RC01",
+      "issue": "SEC-SQL-INJ-039",
+      "name": "Mass-assignment / column-name injection",
+      "slug": "inj-039",
+      "description": "Mass-assignment / column-name injection (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-040-RC01",
+      "issue": "SEC-SQL-INJ-040",
+      "name": "Header/log-stored second-order",
+      "slug": "inj-040",
+      "description": "Header/log-stored second-order (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-041-RC01",
+      "issue": "SEC-SQL-INJ-041",
+      "name": "Polyglot payload (valid as SQL + NoSQL)",
+      "slug": "inj-041",
+      "description": "Polyglot payload (valid as SQL + NoSQL) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-042-RC01",
+      "issue": "SEC-SQL-INJ-042",
+      "name": "Prepared-statement-body scan gap",
+      "slug": "inj-042",
+      "description": "Prepared-statement-body scan gap (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-043-RC01",
+      "issue": "SEC-SQL-INJ-043",
+      "name": "Capture-integrity self-check (sensor blinded)",
+      "slug": "inj-043",
+      "description": "Capture-integrity self-check (sensor blinded) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-044-RC01",
+      "issue": "SEC-SQL-INJ-044",
+      "name": "Auto-SQL shape baseline (PostgREST/Hasura/Data-API)",
+      "slug": "inj-044",
+      "description": "Auto-SQL shape baseline (PostgREST/Hasura/Data-API) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-045-RC01",
+      "issue": "SEC-SQL-INJ-045",
+      "name": "SECURITY DEFINER dynamic-SQL routines (RLS-bypass)",
+      "slug": "inj-045",
+      "description": "SECURITY DEFINER dynamic-SQL routines (RLS-bypass) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-046-RC01",
+      "issue": "SEC-SQL-INJ-046",
+      "name": "Clause-context injection (LIMIT/OFFSET/GROUP BY/HAVING/IN)",
+      "slug": "inj-046",
+      "description": "Clause-context injection (LIMIT/OFFSET/GROUP BY/HAVING/IN) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-047-RC01",
+      "issue": "SEC-SQL-INJ-047",
+      "name": "Write-path & RETURNING/CTE injection",
+      "slug": "inj-047",
+      "description": "Write-path & RETURNING/CTE injection (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-048-RC01",
+      "issue": "SEC-SQL-INJ-048",
+      "name": "MongoDB aggregation-pipeline injection",
+      "slug": "inj-048",
+      "description": "MongoDB aggregation-pipeline injection (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-049-RC01",
+      "issue": "SEC-SQL-INJ-049",
+      "name": "MongoDB nested array-operator injection",
+      "slug": "inj-049",
+      "description": "MongoDB nested array-operator injection (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-050-RC01",
+      "issue": "SEC-SQL-INJ-050",
+      "name": "WAF-evasion token variants (sci-notation / versioned comments / RLIKE)",
+      "slug": "inj-050",
+      "description": "WAF-evasion token variants (sci-notation / versioned comments / RLIKE) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-051-RC01",
+      "issue": "SEC-SQL-INJ-051",
+      "name": "SQL Server linked-server passthrough + EXECUTE AS",
+      "slug": "inj-051",
+      "description": "SQL Server linked-server passthrough + EXECUTE AS (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-052-RC01",
+      "issue": "SEC-SQL-INJ-052",
+      "name": "Sweep-scope topology gap (replicas / other DBs)",
+      "slug": "inj-052",
+      "description": "Sweep-scope topology gap (replicas / other DBs) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-053-RC01",
+      "issue": "SEC-SQL-INJ-053",
+      "name": "ORM Leak \u2014 operator-based blind exfiltration (behavioral)",
+      "slug": "inj-053",
+      "description": "ORM Leak \u2014 operator-based blind exfiltration (behavioral) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-INJ-054-RC01",
+      "issue": "SEC-SQL-INJ-054",
+      "name": "Prototype-pollution filter-less dump (missing mandatory predicate)",
+      "slug": "inj-054",
+      "description": "Prototype-pollution filter-less dump (missing mandatory predicate) (red-team variant; detection TODO \u2014 see SQL_INJECTION_DETECTION.md).",
+      "topics": [
+        "sql-injection",
+        "owasp-a03",
+        "cwe-89",
+        "inj"
+      ],
+      "risk_level": "high",
+      "resolution": "Parameterize the statement (bound variables / prepared statements / sp_executesql / EXECUTE IMMEDIATE ... USING). Least-privilege the app role and remove the abused primitive. Corroborate with the source identity before alerting.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Live/recent statement text matches an injection signature"
+      },
+      "columns": [
+        "query",
+        "pid",
+        "usename",
+        "client_addr",
+        "state",
+        "session_id",
+        "login_name",
+        "sid",
+        "username",
+        "id",
+        "user",
+        "host",
+        "db"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

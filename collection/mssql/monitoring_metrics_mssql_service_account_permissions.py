@@ -51,7 +51,7 @@ def collect_metric_mssql_service_account_permissions(mssql_server,mssql_serverna
    
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
-    sql_server_engine = create_engine(connection_string , echo=True)
+    sql_server_engine = create_engine(connection_string )
     # PostgreSQL (target)
     postgres_engine = create_engine(pg_connection_string )
     metadata = MetaData(schema="monitoring")  
@@ -76,6 +76,6 @@ def collect_metric_mssql_service_account_permissions(mssql_server,mssql_serverna
     finally:
             db_write_log(f"server_hardening_unused_inactive_sql_server_logins success"   ,0,"server_hardening_unused_inactive_sql_server_logins" )
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

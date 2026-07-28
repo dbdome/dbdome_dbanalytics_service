@@ -1,0 +1,1718 @@
+{
+  "module": "ransomware",
+  "area_code": "RAN",
+  "source": "C:/dev/PLANS/RANSOMWARE_DETECTION(2).md",
+  "vendors": [
+    "postgresql",
+    "sqlserver",
+    "oracle",
+    "mysql"
+  ],
+  "_coverage_note": "71 root causes parsed from the doc's enumerated detections; detection SQL is TODO (fill specs or generate from the knowledge JSON). The module's JSON may list more RCs than the prose enumerates.",
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-RAN-001-RC01",
+      "issue": "SEC-SQL-RAN-001",
+      "name": "Ransom-note artifacts",
+      "slug": "ran-001-ransom-note-artifacts",
+      "description": "tables/databases named `RECOVER_YOUR_DATA`, `PLEASE_READ`, `WARNING`, `README_TO_RECOVER`, `DECRYPT_*`, `RESTORE_FILES`.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Ransom-note artifacts"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-002-RC01",
+      "issue": "SEC-SQL-RAN-002",
+      "name": "Mass destruction events",
+      "slug": "ran-002-mass-destruction-events",
+      "description": "clusters of `DROP TABLE`, unqualified `DELETE`/`TRUNCATE`, unexplained row-count collapse.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Mass destruction events"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-003-RC01",
+      "issue": "SEC-SQL-RAN-003",
+      "name": "Shell-execution surface active",
+      "slug": "ran-003-shell-execution-surface-active",
+      "description": "`xp_cmdshell`, `pg_execute_server_program`, `lib_mysqludf_sys` / `sys_exec`, Oracle DBMS_SCHEDULER `EXECUTABLE` jobs.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Shell-execution surface active"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-004-RC01",
+      "issue": "SEC-SQL-RAN-004",
+      "name": "Backup & recovery sabotage",
+      "slug": "ran-004-backup-recovery-sabotage",
+      "description": "history gaps, archive-log / WAL / binlog deletion.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backup & recovery sabotage"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-005-RC01",
+      "issue": "SEC-SQL-RAN-005",
+      "name": "Pre-attack reconnaissance",
+      "slug": "ran-005-pre-attack-reconnaissance",
+      "description": "failed-login spikes, new privileged accounts, off-hours admin sessions from new client IPs.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Pre-attack reconnaissance"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-006-RC01",
+      "issue": "SEC-SQL-RAN-006",
+      "name": "Data exfiltration indicators",
+      "slug": "ran-006-data-exfiltration-indicators",
+      "description": "anomalously large result sets, pagination with extreme OFFSET, native bulk-export primitives (`COPY TO PROGRAM`, `INTO OUTFILE`, `BCP OUT`, `expdp`).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Data exfiltration indicators"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-007-RC01",
+      "issue": "SEC-SQL-RAN-007",
+      "name": "Credential and schema reconnaissance",
+      "slug": "ran-007-credential-and-schema-reconnaissance",
+      "description": "reads of `pg_authid` / `mysql.user` / `SYS.USER$` / `sys.sql_logins`; INFORMATION_SCHEMA enumeration bursts.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Credential and schema reconnaissance"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-008-RC01",
+      "issue": "SEC-SQL-RAN-008",
+      "name": "Living-off-the-land DBA tool abuse",
+      "slug": "ran-008-living-off-the-land-dba-tool-abuse",
+      "description": "`pg_dump` / `mysqldump` / `BCP` / `expdp` running from hosts outside the documented backup-operator allow-list. 62% of CrowdStrike-tracked 2026 breaches are malware-free.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Living-off-the-land DBA tool abuse"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-009-RC01",
+      "issue": "SEC-SQL-RAN-009",
+      "name": "Replication and backup infrastructure hijack",
+      "slug": "ran-009-replication-and-backup-infrastructure-hijack",
+      "description": "unauthorised replication slots, new REPLICATION grants, backup-catalog reads by non-backup accounts (Qilin's signature move).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Replication and backup infrastructure hijack"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-010-RC01",
+      "issue": "SEC-SQL-RAN-010",
+      "name": "Audit and logging tampering",
+      "slug": "ran-010-audit-and-logging-tampering",
+      "description": "`pgaudit` removed, MySQL `general_log` OFF, SQL Server XE session dropped, Oracle unified-audit policy `NOAUDIT`'d.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Audit and logging tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-011-RC01",
+      "issue": "SEC-SQL-RAN-011",
+      "name": "Ransom-note collections",
+      "slug": "ran-011-ransom-note-collections",
+      "description": "on document DBs.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Ransom-note collections"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-012-RC01",
+      "issue": "SEC-SQL-RAN-012",
+      "name": "Mass collection wipe",
+      "slug": "ran-012-mass-collection-wipe",
+      "description": "indicators.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Mass collection wipe"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-013-RC01",
+      "issue": "SEC-SQL-RAN-013",
+      "name": "MongoDB pre-attack recon",
+      "slug": "ran-013-mongodb-pre-attack-recon",
+      "description": "auth-failure spikes.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB pre-attack recon"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-014-RC01",
+      "issue": "SEC-SQL-RAN-014",
+      "name": "MongoDB exfiltration",
+      "slug": "ran-014-mongodb-exfiltration",
+      "description": "`$out` / `$merge` to external collections, hostile replica-set members.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB exfiltration"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-015-RC01",
+      "issue": "SEC-SQL-RAN-015",
+      "name": "PostgreSQL event-trigger backdoor / DDL persistence",
+      "slug": "ran-015-postgresql-event-trigger-backdoor-ddl-persistence",
+      "description": "attacker installs a `ddl_command_end` event trigger whose body grants superuser to a backdoor role. Next time *any* real superuser runs DDL, the trigger fires under that superuser's identity and creates the backdoor. (CVE-2020-25695, Staaldraad PoC, Supabase write-up.)",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL event-trigger backdoor / DDL persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-016-RC01",
+      "issue": "SEC-SQL-RAN-016",
+      "name": "Hypervisor-level ransomware (ESXi / vSphere)",
+      "slug": "ran-016-hypervisor-level-ransomware-esxi-vsphere",
+      "description": "Scattered Spider's 2025 campaign + CVE-2025-22225 give attackers kernel-level ESXi access; they encrypt every DB VM on the host at once. Disk-swap variant detaches NTDS.dit from a powered-off DC VM and reattaches it to an attacker VM. Hypervisor share of encryption events rose from 3% (H1-2025) to 25% (H2-2025).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Hypervisor-level ransomware (ESXi / vSphere)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-017-RC01",
+      "issue": "SEC-SQL-RAN-017",
+      "name": "SaaS / Cloud-DB credential compromise without MFA",
+      "slug": "ran-017-saas-cloud-db-credential-compromise-without-mfa",
+      "description": "Snowflake 2024 / UNC5537: ~165 customer instances hit using infostealer-log credentials from as far back as 2020 against instances with MFA not required. AT&T, Ticketmaster, Santander, LendingTree all on the victim list.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SaaS / Cloud-DB credential compromise without MFA"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-018-RC01",
+      "issue": "SEC-SQL-RAN-018",
+      "name": "psql client-side SQL injection (CVE-2025-1094)",
+      "slug": "ran-018-psql-client-side-sql-injection-cve-2025-1094",
+      "description": "zero-day used in the BeyondTrust breach and the December 2024 US Treasury hack. The vulnerability is in the **client tool**, not the server. Any DBA workstation running psql against an untrusted SQL file is at risk.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "psql client-side SQL injection (CVE-2025-1094)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-019-RC01",
+      "issue": "SEC-SQL-RAN-019",
+      "name": "Cross-account / cross-region snapshot sharing",
+      "slug": "ran-019-cross-account-cross-region-snapshot-sharing",
+      "description": "Datadog Cloud Security Atlas attack-of-record. `rds:ModifyDBSnapshotAttribute` shares the snapshot with the attacker's AWS account; the data never leaves the AWS VPC. Same surface for GCP Cloud SQL and Azure SQL long-term retention.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Cross-account / cross-region snapshot sharing"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-020-RC01",
+      "issue": "SEC-SQL-RAN-020",
+      "name": "REFRESH MATERIALIZED VIEW privilege escalation (CVE-2024-0985)",
+      "slug": "ran-020-refresh-materialized-view-privilege-escalation-cve-2024-0985",
+      "description": "attacker-owned materialized view tricks a superuser running `REFRESH \u2026 CONCURRENTLY` into executing arbitrary SQL with superuser privileges. Affects PG < 15.6 / 14.11 / 13.14 / 12.18.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "REFRESH MATERIALIZED VIEW privilege escalation (CVE-2024-0985)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-021-RC01",
+      "issue": "SEC-SQL-RAN-021",
+      "name": "Deterministic / ECB-mode column encryption",
+      "slug": "ran-021-deterministic-ecb-mode-column-encryption",
+      "description": "`aes-ecb` in pgcrypto, MySQL `AES_ENCRYPT()` without IV, SQL Server Always Encrypted DETERMINISTIC. Even without keys an attacker can frequency-analyse low-cardinality columns (state, country, status) and reconstruct values.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Deterministic / ECB-mode column encryption"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-022-RC01",
+      "issue": "SEC-SQL-RAN-022",
+      "name": "Functional-index / CHECK-constraint persistence",
+      "slug": "ran-022-functional-index-check-constraint-persistence",
+      "description": "`CREATE INDEX ON tbl ((attacker_function(col)))` or `CHECK (attacker_function(col))`. Every INSERT runs the attacker's function under the table owner's privileges. Invisible to trigger-only audits.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Functional-index / CHECK-constraint persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-023-RC01",
+      "issue": "SEC-SQL-RAN-023",
+      "name": "Pre-auth SQLi on DB-backed vendor app (MOVEit / CL0P pattern)",
+      "slug": "ran-023-pre-auth-sqli-on-db-backed-vendor-app-moveit-cl0p-pattern",
+      "description": "CVE-2023-34362 hit 2,700+ orgs and 93.3M individuals. Same surface: Progress WS_FTP, Citrix NetScaler, Ivanti Sentry, ScreenConnect. Backing DB sees a webshell-pattern stored procedure (LEMURLOOT) or unfamiliar sessions from the vendor app's account.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Pre-auth SQLi on DB-backed vendor app (MOVEit / CL0P pattern)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-024-RC01",
+      "issue": "SEC-SQL-RAN-024",
+      "name": "Automated-scanner toolkit signature",
+      "slug": "ran-024-automated-scanner-toolkit-signature",
+      "description": "SQLMap, Nuclei, nmap NSE, Burp Suite leave footprints: `application_name` like `sqlmap/1.x.x`, query velocity > 5/sec, distinctive WHERE patterns (`AND 1=1`, `AND SLEEP(N)`, `' OR ''='`).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Automated-scanner toolkit signature"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-025-RC01",
+      "issue": "SEC-SQL-RAN-025",
+      "name": "Database Activity Stream / audit-sink tampering",
+      "slug": "ran-025-database-activity-stream-audit-sink-tampering",
+      "description": "RDS DAS, Azure SQL audit, Cloud SQL log destinations can be silently disabled or redirected via the cloud control plane.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Database Activity Stream / audit-sink tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-026-RC01",
+      "issue": "SEC-SQL-RAN-026",
+      "name": "Kubernetes DB-operator / CRD tampering",
+      "slug": "ran-026-kubernetes-db-operator-crd-tampering",
+      "description": "CloudNativePG, Crunchy PGO, Zalando, Vitess, MongoDB Operator. Spec mutation, sidecar injection, hostPath / PVC tampering, image-tag swap. Detection: Kubernetes-side audit diff against GitOps manifest.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Kubernetes DB-operator / CRD tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-027-RC01",
+      "issue": "SEC-SQL-RAN-027",
+      "name": "KMS key-policy / grant tampering",
+      "slug": "ran-027-kms-key-policy-grant-tampering",
+      "description": "`kms:CreateGrant` + `kms:Decrypt` to an attacker principal = silent decrypt capability for every snapshot. Detection: CloudTrail diff on the DB's CMK.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "KMS key-policy / grant tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-028-RC01",
+      "issue": "SEC-SQL-RAN-028",
+      "name": "Insider threat \u2014 departing-employee or service-account bulk access",
+      "slug": "ran-028-insider-threat-departing-employee-or-service-account-bulk-ac",
+      "description": "read rate > 100\u00d7 baseline. Less an attack signature than a behavior; only baseline-deviation analysis catches it.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Insider threat \u2014 departing-employee or service-account bulk access"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-029-RC01",
+      "issue": "SEC-SQL-RAN-029",
+      "name": "Stale / orphaned account reactivation",
+      "slug": "ran-029-stale-orphaned-account-reactivation",
+      "description": "account dormant > 90 days suddenly authenticates. The single highest-yield abandoned-credential signal.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Stale / orphaned account reactivation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-030-RC01",
+      "issue": "SEC-SQL-RAN-030",
+      "name": "DB-host outbound DNS / C2 beacon",
+      "slug": "ran-030-db-host-outbound-dns-c2-beacon",
+      "description": "Cobalt Strike / Sliver / Havoc default-sleep cadences (30/60/120/300/600 s) + high-entropy subdomain labels from the DB host's source IP.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DB-host outbound DNS / C2 beacon"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-031-RC01",
+      "issue": "SEC-SQL-RAN-031",
+      "name": "Block-storage / snapshot direct-API access",
+      "slug": "ran-031-block-storage-snapshot-direct-api-access",
+      "description": "EBS Direct API (`ebs:GetSnapshotBlock`), Azure managed-disk `beginGetAccess`, GCP persistent-disk copy. Bypasses every DB-side access control. GuardDuty rule: `Exfiltration:EBS/MaliciousIPCaller`.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Block-storage / snapshot direct-API access"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-032-RC01",
+      "issue": "SEC-SQL-RAN-032",
+      "name": "Statistics / histogram poisoning",
+      "slug": "ran-032-statistics-histogram-poisoning",
+      "description": "`ALTER TABLE \u2026 ALTER COLUMN \u2026 SET STATISTICS 1` makes the planner choose bad plans for the very queries operators rely on for detection. Surveillance queries time out or scan the wrong index.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Statistics / histogram poisoning"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-033-RC01",
+      "issue": "SEC-SQL-RAN-033",
+      "name": "Vector database embedding theft / poisoning",
+      "slug": "ran-033-vector-database-embedding-theft-poisoning",
+      "description": "Milvus / Pinecone / Chroma / Qdrant / Weaviate (dbExpert already supports all of these). Embeddings cannot be deleted; bulk export = permanent semantic data leak. Hubness-poisoning (arXiv 2602.22427) hijacks RAG retrieval. Chroma April-2026 unpatched SQLi.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Vector database embedding theft / poisoning"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-034-RC01",
+      "issue": "SEC-SQL-RAN-034",
+      "name": "Vector DB collection wipe / index corruption",
+      "slug": "ran-034-vector-db-collection-wipe-index-corruption",
+      "description": "same wipe-then-ransom pattern as SQL, applied to vector collections. Recovery requires re-embedding the source corpus \u2014 often impossible because the source data was already pseudonymised.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Vector DB collection wipe / index corruption"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-035-RC01",
+      "issue": "SEC-SQL-RAN-035",
+      "name": "Audit-trail UPDATE tampering",
+      "slug": "ran-035-audit-trail-update-tampering",
+      "description": "smarter attackers UPDATE audit rows rather than delete them (rewrite their actions into someone else's identity). Invisible without a cryptographic hash chain. Ships with a **proactive playbook** that deploys SHA-256 per-row hash chaining on the customer's audit table.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Audit-trail UPDATE tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-036-RC01",
+      "issue": "SEC-SQL-RAN-036",
+      "name": "DBA tool / IDE vulnerability",
+      "slug": "ran-036-dba-tool-ide-vulnerability",
+      "description": "pgAdmin 2025/2026 CVE chain: CVE-2025-2945 (RCE), CVE-2025-9636 (COOP / account takeover), CVE-2025-12762 (RCE), CVE-2025-13780 (shell bypass), CVE-2026-7815 (SQLi \u2192 `COPY TO PROGRAM`). Detection: surfaces every connected IDE's version from `application_name` and maps to known-CVE ranges.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DBA tool / IDE vulnerability"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-037-RC01",
+      "issue": "SEC-SQL-RAN-037",
+      "name": "AI-agent / LLM-driven anomalous session",
+      "slug": "ran-037-ai-agent-llm-driven-anomalous-session",
+      "description": "Microsoft 365 Copilot zero-click prompt injection, Varonis Reprompt attack (Jan 2026), Palo Alto Unit 42 autonomous-cloud-attack research. Detection: per-session object-diversity entropy + application_name signatures (`langchain`, `mcp`, `openai-tools`, `autogen`, `crewai`).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "AI-agent / LLM-driven anomalous session"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-038-RC01",
+      "issue": "SEC-SQL-RAN-038",
+      "name": "Steganographic payload in BLOB columns",
+      "slug": "ran-038-steganographic-payload-in-blob-columns",
+      "description": "(MITRE T1027.003) \u2014 high-entropy headerless BYTEA/VARBINARY rows hiding webshells or staging data inside ostensibly-image columns.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Steganographic payload in BLOB columns"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-039-RC01",
+      "issue": "SEC-SQL-RAN-039",
+      "name": "Session-termination abuse against monitoring",
+      "slug": "ran-039-session-termination-abuse-against-monitoring",
+      "description": "attacker calls `pg_terminate_backend` / `KILL <spid>` from a non-admin role to remove the watchdog right before destruction.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Session-termination abuse against monitoring"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-040-RC01",
+      "issue": "SEC-SQL-RAN-040",
+      "name": "`SET ROLE` / impersonation-chain abuse",
+      "slug": "ran-040-set-role-impersonation-chain-abuse",
+      "description": "attacker uses native impersonation (`SET ROLE`, `EXECUTE AS`, `BECOME USER`) so the downstream audit attributes the destructive activity to an *innocent* role.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "`SET ROLE` / impersonation-chain abuse"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-041-RC01",
+      "issue": "SEC-SQL-RAN-041",
+      "name": "Forged `application_name` / session-identity spoofing",
+      "slug": "ran-041-forged-application-name-session-identity-spoofing",
+      "description": "`application_name` is client-supplied. An attacker claiming to be `pg_dump` from outside the documented backup-host range is exposed by cross-referencing app-name with client_addr.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Forged `application_name` / session-identity spoofing"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-042-RC01",
+      "issue": "SEC-SQL-RAN-042",
+      "name": "Database clock / time-zone manipulation",
+      "slug": "ran-042-database-clock-time-zone-manipulation",
+      "description": "affects time-based logic bombs (fire early), audit timestamps (misattribution), session-expiry. Detection: drift > 60 s vs trusted reference, or TIMEZONE setting change.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Database clock / time-zone manipulation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-043-RC01",
+      "issue": "SEC-SQL-RAN-043",
+      "name": "Weak / legacy password-hash storage",
+      "slug": "ran-043-weak-legacy-password-hash-storage",
+      "description": "pg_authid still using `md5`, MySQL `mysql_old_password` / `mysql_native_password`. An attacker who reads the credential table cracks these offline at ~10 GH/s.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Weak / legacy password-hash storage"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-044-RC01",
+      "issue": "SEC-SQL-RAN-044",
+      "name": "MongoDB `$where` / `$function` server-side JavaScript eval",
+      "slug": "ran-044-mongodb-where-function-server-side-javascript-eval",
+      "description": "JS-eval inside the database engine, NoSQL-injection RCE primitive.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB `$where` / `$function` server-side JavaScript eval"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-045-RC01",
+      "issue": "SEC-SQL-RAN-045",
+      "name": "Backup repository / Veeam server compromise",
+      "slug": "ran-045-backup-repository-veeam-server-compromise",
+      "description": "2026 Veeam CVEs (CVE-2026-21666 / 21667 / 21668) give an authenticated domain user RCE on the backup server or arbitrary file manipulation in the repository. Qilin specifically hits Veeam credential DBs first. Detection: archiver continuity + operator-supplied repo state.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backup repository / Veeam server compromise"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-046-RC01",
+      "issue": "SEC-SQL-RAN-046",
+      "name": "Application secrets / API tokens stored in DB tables",
+      "slug": "ran-046-application-secrets-api-tokens-stored-in-db-tables",
+      "description": "API credential theft is the **#2 cause of breaches in 2026**, behind phishing. Modern apps stash OAuth refresh tokens, JWT signing secrets, encryption keys, webhook secrets in regular DB columns. Once read, the attacker pivots straight to the customer's cloud/payment/messaging accounts \u2014 never has to encrypt anything. Detection: column-name pattern scan + read tracking.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Application secrets / API tokens stored in DB tables"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-047-RC01",
+      "issue": "SEC-SQL-RAN-047",
+      "name": "Untrusted procedural language functions",
+      "slug": "ran-047-untrusted-procedural-language-functions",
+      "description": "PL/PythonU, PL/PerlU, PL/TclU, PL/JavaU, Oracle Java with broad permissions, SQL CLR UNSAFE. Each function = permanent OS shell callable via SQL.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Untrusted procedural language functions"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-048-RC01",
+      "issue": "SEC-SQL-RAN-048",
+      "name": "Unpatched critical database CVE",
+      "slug": "ran-048-unpatched-critical-database-cve",
+      "description": "version inventory mapped to known-exploited ranges. Current high-priority entries: CVE-2026-2005 (pgcrypto, 20-year heap overflow, CVSS 8.8, ~80% of cloud PostgreSQL affected), CVE-2026-6638 (logical-replication SQL-injection-to-superuser, fixed in PG 18.4 / 17.10 / 16.14 / 15.18 / 14.23), CVE-2026-6476 (pg_createsubscriber, near-9), CVE-2025-8714 (pg_dump code injection), Oracle Jan-2026 CPU cluster, MariaDB CVE-2026-32710, MySQL Jan-2026 CPU (20 patches, 7 remote-no-auth).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Unpatched critical database CVE"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-049-RC01",
+      "issue": "SEC-SQL-RAN-049",
+      "name": "SQL Server Database Mail / Service Broker abuse",
+      "slug": "ran-049-sql-server-database-mail-service-broker-abuse",
+      "description": "Database Mail = outbound-SMTP exfil channel; Service Broker queues = quiet C2. Microsoft documented this exact path in their 2023 SQL-Server-to-cloud-lateral writeup.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server Database Mail / Service Broker abuse"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-050-RC01",
+      "issue": "SEC-SQL-RAN-050",
+      "name": "Connection pooler compromise",
+      "slug": "ran-050-connection-pooler-compromise",
+      "description": "PgBouncer < 1.25.1 has CVE-2025-12819: unauthenticated SQL injection via the SCRAM startup-message `search_path`. Pre-auth RCE on the front of every PostgreSQL connection. Multiple pre-auth integer-overflow CVEs also crash the pooler with one malformed packet.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Connection pooler compromise"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-051-RC01",
+      "issue": "SEC-SQL-RAN-051",
+      "name": "Hostile logical-replication subscription",
+      "slug": "ran-051-hostile-logical-replication-subscription",
+      "description": "attacker creates a `pg_subscription` from their own host. Every commit streams to them in real time. CVE-2026-6638 in `ALTER SUBSCRIPTION ... REFRESH PUBLICATION` further auto-escalates to publication-side superuser.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Hostile logical-replication subscription"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-052-RC01",
+      "issue": "SEC-SQL-RAN-052",
+      "name": "WAL / redo archive integrity compromise",
+      "slug": "ran-052-wal-redo-archive-integrity-compromise",
+      "description": "archive bucket file count drifts from `pg_stat_archiver` counters. Backups exist but PITR fails because the attacker corrupted the archived WAL segments.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "WAL / redo archive integrity compromise"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-053-RC01",
+      "issue": "SEC-SQL-RAN-053",
+      "name": "Stored procedure / function body obfuscation",
+      "slug": "ran-053-stored-procedure-function-body-obfuscation",
+      "description": "Oracle PL/SQL wrapped via `DBMS_DDL.WRAP`, SQL Server objects created `WITH ENCRYPTION` (definition reads as NULL), PostgreSQL functions whose body is a single base64 blob. Closed-source backdoor inside your database.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Stored procedure / function body obfuscation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-054-RC01",
+      "issue": "SEC-SQL-RAN-054",
+      "name": "Database-to-cloud lateral movement via IMDS",
+      "slug": "ran-054-database-to-cloud-lateral-movement-via-imds",
+      "description": "Microsoft Security Blog (Oct 2023) documented SQL Server \u2192 cloud lateral via `xp_cmdshell` + `curl 169.254.169.254`. The DB process pulls IAM role credentials from the instance metadata service and pivots into S3 / KMS / Secrets Manager. Detection: network-flow rule on outbound `169.254.169.254` from the DB host.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Database-to-cloud lateral movement via IMDS"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-055-RC01",
+      "issue": "SEC-SQL-RAN-055",
+      "name": "Cloud control-plane surface flip",
+      "slug": "ran-055-cloud-control-plane-surface-flip",
+      "description": "RDS/Aurora flipped to `publicly_accessible`, security group opened to 0.0.0.0/0, parameter group edited to disable SSL or `pgaudit.log`. The single most catastrophic managed-DB attack \u2014 never touches SQL. Detection via operator-supplied cloud telemetry diff. AWS GuardDuty RDS Protection documents this surface; Coalition's 2025 Cyber Claims Report puts cloud-credential misuse at 47% of intrusions.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Cloud control-plane surface flip"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-056-RC01",
+      "issue": "SEC-SQL-RAN-056",
+      "name": "search_path / schema poisoning",
+      "slug": "ran-056-search-path-schema-poisoning",
+      "description": "CVE-2018-1058 family. SECURITY DEFINER function that doesn't pin its `search_path` gets hijacked by a function the attacker created in a writable schema. Detection: SECURITY DEFINER inventory + public-schema-writability check.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "search_path / schema poisoning"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-057-RC01",
+      "issue": "SEC-SQL-RAN-057",
+      "name": "Malicious extension / trojanized library",
+      "slug": "ran-057-malicious-extension-trojanized-library",
+      "description": "PG_MEM-family (Aqua Nautilus 2024; 1,500+ servers compromised by April 2025 per The Hacker News). Brute-force \u2192 CREATE SUPERUSER \u2192 COPY FROM PROGRAM \u2192 cryptominer payload. Detection: extension allow-list diff + backdoor-superuser inventory.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Malicious extension / trojanized library"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-058-RC01",
+      "issue": "SEC-SQL-RAN-058",
+      "name": "Out-of-band network exfiltration via DB-internal functions",
+      "slug": "ran-058-out-of-band-network-exfiltration-via-db-internal-functions",
+      "description": "Oracle `UTL_HTTP`/`UTL_INADDR` (DNS exfil), PostgreSQL `pgsql-http`/`aws_s3`/`lo_export`, SQL Server `sp_OACreate`+`MSXML2.ServerXMLHTTP` / `xp_smtpsendmail`, MySQL outbound UDFs. The connection originates from the DB process, bypassing all host-network monitoring. UTL_INADDR is the textbook OOB SQL-injection primitive (HackTricks, DBSecWorx).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Out-of-band network exfiltration via DB-internal functions"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-059-RC01",
+      "issue": "SEC-SQL-RAN-059",
+      "name": "Database configuration tamper",
+      "slug": "ran-059-database-configuration-tamper",
+      "description": "`ALTER SYSTEM SET ssl=off` / `log_statement=none` / `log_destination=''` (PostgreSQL); `sp_configure` for `xp_cmdshell`, `Ad Hoc Distributed Queries`, `Ole Automation Procedures` (SQL Server); `audit_trail=NONE` (Oracle). PostgreSQL's `allow_alter_system` is the only protection and is documented as **not a security mechanism**.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Database configuration tamper"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-060-RC01",
+      "issue": "SEC-SQL-RAN-060",
+      "name": "RLS / compensating-control bypass",
+      "slug": "ran-060-rls-compensating-control-bypass",
+      "description": "row-level-security policies dropped, BYPASSRLS granted, dynamic data masking removed, Always Encrypted disabled on PII columns. Red-Gate Simple Talk's RLS attack series documents the vectors.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "RLS / compensating-control bypass"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-061-RC01",
+      "issue": "SEC-SQL-RAN-061",
+      "name": "Ransom-DDoS / database resource exhaustion",
+      "slug": "ran-061-ransom-ddos-database-resource-exhaustion",
+      "description": "sustained max_connections saturation, fork-bomb queries (`WITH RECURSIVE` infinite, cross-join cartesian, parallel-worker fork), long transactions bloating WAL. DoS as a prelude to or substitute for encryption-based extortion (Cloudflare, NETSCOUT, Wallarm).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Ransom-DDoS / database resource exhaustion"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-062-RC01",
+      "issue": "SEC-SQL-RAN-062",
+      "name": "Object ownership / default privilege poisoning",
+      "slug": "ran-062-object-ownership-default-privilege-poisoning",
+      "description": "`ALTER TABLE ... OWNER TO` shifts critical objects to an attacker role; `ALTER DEFAULT PRIVILEGES` makes every future table auto-grant to the attacker. Survives single-account credential rotation because the ownership chain itself was modified.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Object ownership / default privilege poisoning"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-063-RC01",
+      "issue": "SEC-SQL-RAN-063",
+      "name": "In-database encryption ransomware",
+      "slug": "ran-063-in-database-encryption-ransomware",
+      "description": "attacker uses `pgcrypto` / `AES_ENCRYPT` / `ENCRYPTBYKEY` / `DBMS_CRYPTO` to encrypt application columns in-place with a key only they hold. The disk and backup files look normal; file-level EDR sees nothing. Detection: native-crypto function calls + column-type drift to BYTEA/VARBINARY.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "In-database encryption ransomware"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-064-RC01",
+      "issue": "SEC-SQL-RAN-064",
+      "name": "Logic-bomb / time-bomb persistence",
+      "slug": "ran-064-logic-bomb-time-bomb-persistence",
+      "description": "triggers, stored procedures, scheduled jobs (`pg_cron`, `DBMS_SCHEDULER`, SQL Agent, MySQL events) created with destructive bodies and future-only schedules. Survives OS-level remediation entirely. The 2026 wormable XMRig campaign popularized this (The Hacker News).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Logic-bomb / time-bomb persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-065-RC01",
+      "issue": "SEC-SQL-RAN-065",
+      "name": "Federation / DBLINK exfiltration",
+      "slug": "ran-065-federation-dblink-exfiltration",
+      "description": "attacker creates `postgres_fdw`, dblink, Oracle DBLINK, SQL Server linked server, or MongoDB change-stream pointing at attacker infrastructure. Data ships off-host directly from the DB engine, bypassing host-network monitoring. The PostgreSQL dblink+`COPY FROM` chain is documented as the canonical exfil route (HackTricks, NetSPI, Imperva).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Federation / DBLINK exfiltration"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-066-RC01",
+      "issue": "SEC-SQL-RAN-066",
+      "name": "Synonym / view redirection backdoor",
+      "slug": "ran-066-synonym-view-redirection-backdoor",
+      "description": "attacker creates a synonym or recompiles a view in the application schema so application reads silently bypass attacker rows or are redirected. Application keeps working; operator never sees the persistence layer (SQL Server indexed-view restore-boundary attacks, Red-Gate Simple Talk).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Synonym / view redirection backdoor"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-067-RC01",
+      "issue": "SEC-SQL-RAN-067",
+      "name": "Extended stored procedure / CLR DLL backdoor",
+      "slug": "ran-067-extended-stored-procedure-clr-dll-backdoor",
+      "description": "Maggie (DCSO 2022), skip-2.0 (Winnti), and Cobalt-Strike SQL backdoors register themselves as `xp_` procedures or UNSAFE CLR assemblies. Hundreds of MSSQL servers backdoored in the 2022 Maggie campaign alone (BleepingComputer).",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Extended stored procedure / CLR DLL backdoor"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-068-RC01",
+      "issue": "SEC-SQL-RAN-068",
+      "name": "TDE / encryption-key tampering",
+      "slug": "ran-068-tde-encryption-key-tampering",
+      "description": "attacker rotates the TDE master key or drops the certificate, making the database unrecoverable. Microsoft Learn documents that TDE-protected DBs cannot be restored without the original certificate. Detection: certificate state + `pvt_key_last_backup_date`.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "TDE / encryption-key tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-069-RC01",
+      "issue": "SEC-SQL-RAN-069",
+      "name": "Honeytoken / canary-row access (proactive)",
+      "slug": "ran-069-honeytoken-canary-row-access-proactive",
+      "description": "dbExpert deploys decoy tables with names like `canary_dbexpert_customers` and `canary_dbexpert_credentials` into operator-blessed schemas. Any read of those rows is a confirmed intruder. CrowdStrike, Acalvio, CounterCraft cite this as the highest-signal SQL-layer detection that exists.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Honeytoken / canary-row access (proactive)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-070-RC01",
+      "issue": "SEC-SQL-RAN-070",
+      "name": "Anti-forensics \u2014 query-history / plan-cache wipe",
+      "slug": "ran-070-anti-forensics-query-history-plan-cache-wipe",
+      "description": "`DBCC FREEPROCCACHE`, `pg_stat_statements_reset()`, Oracle shared-pool flush, audit-table TRUNCATE. Visibility-suppression immediately before the destructive phase.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Anti-forensics \u2014 query-history / plan-cache wipe"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-RAN-071-RC01",
+      "issue": "SEC-SQL-RAN-071",
+      "name": "Geo-velocity / impossible-travel",
+      "slug": "ran-071-geo-velocity-impossible-travel",
+      "description": "same login authenticates from two distant geographies within minutes. Catches stolen-credential and session-replay attacks regardless of which tool the attacker uses.",
+      "topics": [
+        "ransomware",
+        "ran"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see RANSOMWARE_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Geo-velocity / impossible-travel"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

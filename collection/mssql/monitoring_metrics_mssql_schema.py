@@ -47,7 +47,7 @@ def collect_metric_mssql_table_schema(mssql_server,mssql_servername  , mssql_dat
         odbc_str = f"""
                 DRIVER={{{driver}}};
                 SERVER={server_with_port};
-                DATABASE={database};
+                DATABASE={database or 'master'};
                 Trusted_Connection=yes;
                 Encrypt=yes;
                 TrustServerCertificate=yes;
@@ -56,7 +56,7 @@ def collect_metric_mssql_table_schema(mssql_server,mssql_servername  , mssql_dat
         odbc_str = f"""
             DRIVER={{{driver}}};
             SERVER={server_with_port};
-            DATABASE={database};
+            DATABASE={database or 'master'};
             UID={username};
             PWD={password};
             Encrypt=yes;
@@ -74,7 +74,7 @@ def collect_metric_mssql_table_schema(mssql_server,mssql_servername  , mssql_dat
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
     try:
-        sql_server_engine = create_engine(connection_string, echo=True)
+        sql_server_engine = create_engine(connection_string)
         postgres_engine = create_engine(pg_connection_string)
         metadata = MetaData(schema="monitoring")
         raw_conn = sql_server_engine.raw_connection()

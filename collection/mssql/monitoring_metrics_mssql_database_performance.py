@@ -43,7 +43,7 @@ def collect_metric_mssql_database_performance(mssql_server,mssql_servername  , m
         odbc_str = f"""
                 DRIVER={{{driver}}};
                 SERVER={server_with_port};
-                DATABASE={database};
+                DATABASE={database or 'master'};
                 Trusted_Connection=yes;
                 Encrypt=yes;
                 TrustServerCertificate=yes;
@@ -52,7 +52,7 @@ def collect_metric_mssql_database_performance(mssql_server,mssql_servername  , m
         odbc_str = f"""
             DRIVER={{{driver}}};
             SERVER={server_with_port};
-            DATABASE={database};
+            DATABASE={database or 'master'};
             UID={username};
             PWD={password};
             Encrypt=yes;
@@ -72,7 +72,7 @@ def collect_metric_mssql_database_performance(mssql_server,mssql_servername  , m
    
     # ========== 2. Create SQLAlchemy Engines ==========
     # SQL Server (source)
-    sql_server_engine = create_engine(connection_string , echo=True)
+    sql_server_engine = create_engine(connection_string )
     # PostgreSQL (target)
     postgres_engine = create_engine(pg_connection_string )
     metadata = MetaData(schema="monitoring")  
@@ -118,6 +118,6 @@ def collect_metric_mssql_database_performance(mssql_server,mssql_servername  , m
     finally:
             db_write_log(f"collect_metric_mssql_database_performance success "   ,0,"collect_metric_mssql_database_performance",servername, port=mssql_port)
             raw_conn.close()
-            return  1
+    return  1
     return 0;
 

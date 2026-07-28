@@ -20,7 +20,7 @@ pg_host      = 'dbdome-pg_ubuntu'
 pg_port      =  '5432'
 pg_dbname    =  'dbdome_202504'
 pg_connection_string = f"postgresql+psycopg2://{pg_username}:{pg_password}@{pg_host}:{pg_port}/{pg_dbname}?driver={driver}"
-postgres_engine = create_engine(pg_connection_string , echo  = True)
+postgres_engine = create_engine(pg_connection_string )
 
 
 
@@ -28,7 +28,7 @@ postgres_engine = create_engine(pg_connection_string , echo  = True)
 connection_string = f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver={driver}"
 
 # Create engine
-engine = create_engine(connection_string, echo=True)
+engine = create_engine(connection_string)
 
 
 # Construct the dynamic SQL

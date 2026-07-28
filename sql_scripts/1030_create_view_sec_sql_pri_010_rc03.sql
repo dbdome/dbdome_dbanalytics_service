@@ -1,0 +1,7 @@
+-- Intentionally a NO-OP.
+-- monitoring.v_sec_sql_pri_010_rc03 is defined canonically by
+-- 2620_create_view_v_sec_sql_pri_010_rc03.sql (the auto-generated, wider shape
+-- with query_start/start_time/state/time + jsonb_lower_keys, matching the
+-- definition in 1000_create_all_rc_views.sql). This file held an older, NARROWER
+-- duplicate; running it after 1000 produced: "cannot drop columns from view".
+-- Kept as a no-op so the updater's script run stays clean; 2620 is authoritative.

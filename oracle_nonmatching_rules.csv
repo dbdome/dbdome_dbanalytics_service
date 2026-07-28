@@ -1,0 +1,570 @@
+root_cause_id,domain,risk_level,expected_condition,root_cause_name
+HLTH-SQL-AD-001-RC01,HLTH,medium,utilization_pct > 75,Connection Leaks in Application Code
+HLTH-SQL-BR-001-RC03,HLTH,medium,pct_used > 90,Disk Space Exhaustion (Source/Staging)
+HLTH-SQL-BR-001-RC08,HLTH,medium,any status != 'VALID',License Expiration
+HLTH-SQL-BR-001-RC12,HLTH,medium,any status = 'X',Media Failure
+HLTH-SQL-BR-003-RC02,HLTH,medium,seconds_in_wait > 3600,Stuck Backup Process
+HLTH-SQL-BR-003-RC04,HLTH,medium,status != 'ENABLED',Change Rate Spikes
+HLTH-SQL-BR-003-RC06,HLTH,medium,row_count = 0 OR enabled = 'FALSE',Human Error (Scheduling)
+HLTH-SQL-BR-003-RC07,HLTH,medium,gap_hours > 25 OR gap_hours < 23,DST/Time Change Bugs
+HLTH-SQL-BR-004-RC02,HLTH,medium,LOG_MODE = 'NOARCHIVELOG',Circular Logging Enabled
+HLTH-SQL-BR-004-RC07,HLTH,medium,retention_days < 7,Insufficient Log Retention
+HLTH-SQL-BR-005-RC07,HLTH,medium,VALUE LIKE '%REDUNDANCY%' OR VALUE LIKE '%NONE%',Configuration Overrides
+HLTH-SQL-BR-005-RC09,HLTH,medium,duration_seconds < 0 OR row_count = 0,Time Sync Issues
+HLTH-SQL-BR-006-RC07,HLTH,medium,avg_wait_centiseconds > 50,VM Snapshot Interference
+HLTH-SQL-CD-001-RC03,HLTH,medium,any(name='memory_target' AND value != '0') OR any(name='sga_target' AND value != '0'),Automatic Parameter Updates
+HLTH-SQL-CD-001-RC06,HLTH,medium,custom_param_count > 30,Installation/Initialization Scripts
+HLTH-SQL-CD-003-RC03,HLTH,medium,row_count > 0 with ERROR status,Stale Configuration Files
+HLTH-SQL-CD-003-RC07,HLTH,medium,significant uptime difference between instances (one recently restarted),Node Rejoining With Old State
+HLTH-SQL-CD-003-RC10,HLTH,medium,any dest with status = 'ERROR' or mismatched valid_role settings,Replication Channel Configuration Mismatch
+HLTH-SQL-CD-004-RC01,HLTH,medium,"allowed_logon_version is set to a low value (8, 9, 10) or remote_os_authent = 'TRUE'",Authentication Method Downgraded
+HLTH-SQL-CD-004-RC11,HLTH,medium,encrypted_column_count = 0,Column-Level Encryption Disabled
+HLTH-SQL-DM-001-RC08,HLTH,medium,apply_lag_sequences > 10,Stale or lagging replication slots
+HLTH-SQL-DM-001-RC09,HLTH,medium,unexpired_extents > 1000,hot_standby_feedback enabled on lagging standby
+HLTH-SQL-DM-001-RC11,HLTH,medium,row_count > 0 AND max(size_mb) > 10000,Autovacuum workers pinned to large tables
+HLTH-SQL-DM-001-RC12,HLTH,medium,total_wait_secs > 60,I/O contention with user queries
+HLTH-SQL-DM-001-RC13,HLTH,medium,used_mb > 5000,Temporary tables blocking maintenance
+HLTH-SQL-DM-001-RC15,HLTH,medium,over_allocation_count > 0 OR cache_hit_percentage < 90,Insufficient maintenance_work_mem
+HLTH-SQL-DM-002-RC04,HLTH,medium,status = 'DISABLED',Automatic statistics collection job disabled
+HLTH-SQL-DM-002-RC06,HLTH,medium,incremental_setting = 'TRUE',Incremental statistics misconfigured
+HLTH-SQL-DM-002-RC07,HLTH,medium,row_count > 0 AND max(mod_pct) BETWEEN 3 AND 10,Table modifications below statistics staleness threshold
+HLTH-SQL-DM-002-RC08,HLTH,medium,any status != 'COMPLETED',Long-running statistics collection blocking completion
+HLTH-SQL-DM-002-RC14,HLTH,medium,stale_count > 50,Insufficient background statistics workers
+HLTH-SQL-DM-002-RC15,HLTH,medium,STALE_PERCENT is high (default 10%),Conservative automatic statistics thresholds
+HLTH-SQL-DM-003-RC03,HLTH,medium,high undoblks values,High UPDATE/DELETE workload
+HLTH-SQL-DM-003-RC08,HLTH,medium,row_count > 0 AND chain_pct > 5,Low fillfactor causing internal fragmentation
+HLTH-SQL-DM-003-RC11,HLTH,medium,pct_deleted > 20,Index bloat from row versioning overhead
+HLTH-SQL-DM-003-RC14,HLTH,medium,value > 10000,VARCHAR or variable-length column updates
+HLTH-SQL-DM-003-RC15,HLTH,medium,row_count > 0 OR max_column_id > column_count,Table design with frequent column additions/modifications
+HLTH-SQL-DM-004-RC01,HLTH,medium,row_count > 0 AND index_count > 0,Frequent INSERT/UPDATE/DELETE operations
+HLTH-SQL-DM-004-RC10,HLTH,medium,physical writes direct value is significant,Bulk operations without proper optimization
+HLTH-SQL-DM-005-RC11,HLTH,medium,pct_used > 80,Temporary tables from disconnected sessions
+HLTH-SQL-DM-005-RC13,HLTH,medium,avg_wait_ms > 20,Insufficient disk I/O capacity
+HLTH-SQL-DM-007-RC09,HLTH,medium,"ACTIVE_STATE IN ('QUIESCING', 'QUIESCED')",Database in single-user or restricted mode
+HLTH-SQL-DM-007-RC13,HLTH,medium,switches > 100,Transaction log full
+HLTH-SQL-HA-001-RC01,HLTH,medium,apply_lag > 300 OR transport_lag > 300,Replication lag exceeding thresholds
+HLTH-SQL-HA-001-RC02,HLTH,medium,avg_wait_sec > 1,Network latency or bandwidth limitations
+HLTH-SQL-HA-001-RC03,HLTH,medium,any(avg_wait_sec > 0.1),Network packet loss or intermittent connectivity
+HLTH-SQL-HA-001-RC04,HLTH,medium,any(avg_wait_sec > 0.05),Disk I/O bottlenecks on standby
+HLTH-SQL-HA-001-RC10,HLTH,medium,active_user_queries > 10,Standby server under read load
+HLTH-SQL-HA-001-RC11,HLTH,medium,row_count > 0 AND any(avg_wait_sec > 0.05),Synchronous replication with flow control
+HLTH-SQL-HA-001-RC12,HLTH,medium,any(stat_name='LOAD' AND value > 3),Compression/decompression overhead
+HLTH-SQL-HA-002-RC09,HLTH,medium,net_used_pct > 85,Disk space exhaustion
+HLTH-SQL-HA-003-RC08,HLTH,medium,instance_status = 'OPEN' AND (blocked_sessions > 10 OR stuck_sessions > 10),Master still appears healthy to coordination system
+HLTH-SQL-HA-003-RC12,HLTH,medium,row_count > 0 with CSSD or voting disk errors,Lease or lock renewal issues
+HLTH-SQL-HA-003-RC15,HLTH,medium,row_count > 0 with very high last_call_et values,Stuck TCP connections after network partition
+HLTH-SQL-HA-004-RC08,HLTH,medium,pct_used > 90,Connection pool exhaustion
+HLTH-SQL-HA-004-RC13,HLTH,medium,row_count > 0 with high frequency short-lived sessions,Health check interval/threshold misconfiguration
+HLTH-SQL-HA-004-RC16,HLTH,medium,status != 'OPEN' OR database_status != 'ACTIVE',Layer 7 vs Layer 4 check mismatch
+HLTH-SQL-HA-005-RC02,HLTH,medium,row_count < expected_interconnect_count,Network partition splitting cluster
+HLTH-SQL-LM-001-RC01,HLTH,medium,row_count > 0 AND any_value duration_minutes > 60,Long-running active transactions
+HLTH-SQL-LM-001-RC08,HLTH,medium,row_count > 0 AND any_value hours_behind > 2,Replication lag or disconnected subscribers
+HLTH-SQL-LM-001-RC10,HLTH,medium,log_gap > 10,Log shipping configuration issues
+HLTH-SQL-LM-001-RC11,HLTH,medium,txn_age_secs > 3600,Open transactions with BEGIN TRAN but no COMMIT/ROLLBACK
+HLTH-SQL-LM-002-RC06,HLTH,medium,apply lag > '01:00:00',Secondary server resource constraints
+HLTH-SQL-LM-002-RC10,HLTH,medium,dg_broker_start = 'FALSE' OR row_count = 0,Monitor server offline or disconnected
+HLTH-SQL-LM-003-RC06,HLTH,medium,row_count > 0 AND high redo_mb per hour,Insufficient bandwidth for archive transfer
+HLTH-SQL-LM-003-RC09,HLTH,medium,SRL count >= ORL count + 1 per thread AND SRL size >= ORL size,Standby transaction logs misconfigured
+HLTH-SQL-LM-003-RC12,HLTH,medium,"apply lag > transport lag (apply is bottleneck, not transport)",Insufficient CPU capacity on standby
+HLTH-SQL-LM-003-RC17,HLTH,medium,sequence gaps detected between consecutive entries,Sequence number mismatches
+HLTH-SQL-LM-004-RC01,HLTH,medium,any status = 'ERROR' OR error IS NOT NULL,Destination path does not exist
+HLTH-SQL-LM-004-RC02,HLTH,medium,row_count > 0 AND error LIKE '%permission%' OR error LIKE '%access%',Insufficient permissions
+HLTH-SQL-LM-004-RC08,HLTH,medium,any failure_count > 0,Timeout issues
+HLTH-SQL-LM-004-RC09,HLTH,medium,number_of_files > 50000,Archive destination running out of inodes
+HLTH-SQL-LM-004-RC11,HLTH,medium,log_mode = 'NOARCHIVELOG',Missing archive_command configuration
+HLTH-SQL-LM-004-RC14,HLTH,medium,log_mode = 'NOARCHIVELOG',Archive_mode not enabled
+HLTH-SQL-LM-005-RC03,HLTH,medium,any apply_lag_sequences > 100,Replication lag exceeding wal_keep_size
+HLTH-SQL-LM-005-RC08,HLTH,medium,sequence_gap > 100,Disconnected standbys with active slots
+HLTH-SQL-LM-005-RC12,HLTH,medium,pct_used > 90,Archive destination full
+HLTH-SQL-LM-005-RC14,HLTH,medium,pct_used > 85,Insufficient disk space for transaction log directory
+HLTH-SQL-LM-005-RC15,HLTH,medium,avg_switch_interval_min < 15,Incorrect max_wal_size setting
+HLTH-SQL-LM-006-RC01,HLTH,medium,log_mode = 'NOARCHIVELOG',Transaction log mode does not support point-in-time recovery
+HLTH-SQL-LM-006-RC04,HLTH,medium,flashback_on = 'NO' AND log_mode = 'NOARCHIVELOG',PITR explicitly disabled in cloud database settings
+HLTH-SQL-LM-006-RC08,HLTH,medium,status = 'DISABLED' OR row_count = 0,Change tracking logging disabled
+HLTH-SQL-LM-006-RC13,HLTH,medium,pct_used > 90 OR limit_mb < 10240,Cost optimization in cloud environments
+HLTH-SQL-LM-006-RC15,HLTH,medium,STATUS = 'DISABLED' OR row_count = 0,Intentional administrative decision
+HLTH-SQL-RP-004-RC01,HLTH,medium,transport_lag > '00:05:00',Subscriber/replica disconnected
+HLTH-SQL-RP-004-RC03,HLTH,medium,row_count > 0 with failure_count > 0,Network issues preventing slot consumption
+HLTH-SQL-RP-004-RC04,HLTH,medium,row_count > 0 with old archived logs,Abandoned replication slots
+HLTH-SQL-RP-004-RC07,HLTH,medium,apply lag > '00:30:00' OR apply finish time is large,Subscriber overwhelmed and lagging
+HLTH-SQL-RP-004-RC09,HLTH,medium,"status IN ('ABORTED', 'DISABLED') with error_number set",High availability failover incomplete
+HLTH-SQL-RP-004-RC10,HLTH,medium,pct_used > 85,Slot retention exceeded `max_slot_wal_keep_size`
+HLTH-SQL-RP-004-RC11,HLTH,medium,row_count > 0 with significant redo from background processes,Primary database idle but heartbeats generating WAL
+HLTH-SQL-RP-004-RC12,HLTH,medium,days_behind > 2,Maintenance window exceeded slot timeout
+HLTH-SQL-RP-004-RC13,HLTH,medium,source_container_name does not match the PDB where application changes occur,Slot on wrong database
+HLTH-SQL-RP-004-RC14,HLTH,medium,retained_logs > 50 AND oldest log is very old,Temporary slot not cleaned up
+HLTH-SQL-RP-004-RC15,HLTH,medium,pct_used > 70 without corresponding alerts,Slot monitoring/alerting gaps
+HLTH-SQL-RP-005-RC03,HLTH,medium,row_count > 0 with timeout errors,Network latency exceeding timeout threshold
+HLTH-SQL-RP-005-RC14,HLTH,medium,avg_wait_ms > 10,Write-ahead log sync delay
+HLTH-SQL-RP-006-RC04,HLTH,medium,error_count > 10,Delete on already-deleted row
+HLTH-SQL-RP-006-RC09,HLTH,medium,supplemental_log_data_min = 'NO' OR supplemental_log_data_pk = 'NO',Missing row identity for change replication
+HLTH-SQL-RP-006-RC14,HLTH,medium,any_value apply_lag_sequences > 5,Schema changes not replicated
+HLTH-SQL-SJ-002-RC13,HLTH,medium,status != 'OPEN' OR logins = 'RESTRICTED' OR active_state != 'NORMAL' OR open_mode != 'READ WRITE',"Database state prevents job (offline, suspect, in recovery)"
+HLTH-SQL-SJ-005-RC10,HLTH,medium,row_count > 0 AND max duration exceeds average by 3x,Volume spike overwhelming extraction or transformation capacity
+HLTH-SQL-SM-001-RC14,HLTH,medium,pct_used > 30,Snapshot sprawl
+HLTH-SQL-SM-002-RC02,HLTH,medium,row_count > 0 AND size_mb > 1024,Missing or inefficient data archival
+HLTH-SQL-SM-002-RC05,HLTH,medium,row_count > 0 AND usage_mb > 500,System metadata table bloat
+HLTH-SQL-SM-002-RC08,HLTH,medium,total_mb > 10240,Replication or CDC backlog
+HLTH-SQL-SM-003-RC05,HLTH,medium,index_table_ratio > 1.5,Index rebuild operations
+HLTH-SQL-SM-004-RC05,HLTH,medium,any(temp_mb > 500),Index rebuild using temporary tablespace sorting
+HLTH-SQL-SM-006-RC06,HLTH,medium,row_count > 0 with high blevel or clustering_factor close to num_rows,Missing or fragmented indexes
+HLTH-SQL-SM-006-RC07,HLTH,medium,high wait times for write-related events,Checkpoint/flush operations
+HLTH-SQL-SM-006-RC08,HLTH,medium,buffer_cache_hit_pct < 90,Insufficient SAN cache
+HLTH-SQL-SM-006-RC09,HLTH,medium,max_wait_ms significantly higher than avg_wait_ms (10x+ ratio),Antivirus real-time scanning
+HLTH-SQL-SM-006-RC10,HLTH,medium,low or zero direct I/O counts when expected,Misconfigured storage settings
+HLTH-SQL-SM-006-RC11,HLTH,medium,significant latency differences between datafiles (some 5x+ slower than others),Storage auto-tiering issues
+HLTH-SQL-SM-006-RC12,HLTH,medium,avg_wait_ms for single block reads > 15,Virtual machine storage overhead
+HLTH-SQL-SM-006-RC13,HLTH,medium,state != 'MOUNTED' OR pct_used > 90,Failing disks in array
+HLTH-SQL-SM-006-RC14,HLTH,medium,LGWR-LNS wait time is significant portion of log file sync,Long-distance replication lag
+HLTH-SQL-SM-006-RC15,HLTH,medium,significant variance in avg_read_ms across disks in same group,Multipathing problems
+HLTH-SQL-SM-006-RC16,HLTH,medium,max_iops is low relative to demand OR latency is high,Insufficient disk spindles
+HLTH-SQL-SM-006-RC17,HLTH,medium,row_count > 0 with Data Pump or direct path operations concurrent with normal workload,Competing workloads
+HLTH-SQL-SM-006-RC19,HLTH,medium,max_to_avg_ratio > 50,Garbage collection on SSDs
+HLTH-SQL-SM-007-RC01,HLTH,medium,pct_used > 80 AND reclaimable_mb is low,Missing transaction log backups
+HLTH-SQL-SM-007-RC02,HLTH,medium,"status IN ('FAILED', 'COMPLETED WITH ERRORS', 'COMPLETED WITH WARNINGS')",Failed log backup jobs
+HLTH-SQL-SM-007-RC04,HLTH,medium,oldest_age_days > 7,Replication not configured or broken
+HLTH-SQL-SM-007-RC05,HLTH,medium,row_count > 0 with high redo generation per session,Large bulk operations
+HLTH-SQL-SM-007-RC09,HLTH,medium,size_mb < 200,Log file auto-growth configuration
+HLTH-SQL-SM-007-RC11,HLTH,medium,used_pct > 85,Snapshot isolation version store
+HLTH-SQL-SM-007-RC15,HLTH,medium,size_mb < 500,Insufficient log file pre-sizing
+HLTH-SQL-SM-007-RC16,HLTH,medium,total_gb > 10,Write-ahead log retention policies
+HLTH-SQL-UP-001-RC01,HLTH,medium,last_patch_date < SYSDATE - 180,Lack of Version Lifecycle Tracking
+HLTH-SQL-UP-001-RC02,HLTH,medium,days_on_version > 1825,Deferred Upgrade Planning
+HLTH-SQL-UP-001-RC03,HLTH,medium,row_count = 0 OR patch_date < SYSDATE - 365,End-of-Life Notification Missed
+HLTH-SQL-UP-001-RC04,HLTH,medium,"SUBSTR(version, 1, 2) IN ('11', '12')",Unclear Upgrade Path
+HLTH-SQL-UP-001-RC07,HLTH,medium,years_old > 5,Budget or Resource Unavailability
+HLTH-SQL-UP-001-RC11,HLTH,medium,age_days > 730,Production System Stability Overconfidence
+HLTH-SQL-UP-002-RC01,HLTH,medium,row_count = 0 OR any_value action_time < SYSDATE - 120,Security Advisory Not Received or Monitored
+HLTH-SQL-UP-002-RC06,HLTH,medium,any_value enabled = 'FALSE' OR row_count = 0,Maintenance Window Not Scheduled
+HLTH-SQL-UP-002-RC08,HLTH,medium,any_value flashback_on = 'NO',No Rollback Plan Confidence
+HLTH-SQL-UP-002-RC13,HLTH,medium,any_value name = 'audit_trail' AND value = 'NONE',Database Monitoring Gap
+HLTH-SQL-UP-002-RC14,HLTH,medium,total_patches = 0 OR days_since_patch > 365,Vendor Support Not Engaged
+HLTH-SQL-UP-002-RC15,HLTH,medium,any_value user_object_count > 10000 OR any_value active_job_count > 50,Post-Patch Validation Requirements Too Stringent
+HLTH-SQL-UP-003-RC03,HLTH,medium,any status != 'SUCCESS',Failed Patch Validation Checks
+HLTH-SQL-UP-003-RC04,HLTH,medium,cluster_database_instances != count of active instances,Partial Node Removal or Decommissioning
+HLTH-SQL-UP-003-RC05,HLTH,medium,versions differ across instances,Network Partition During Deployment
+HLTH-SQL-UP-003-RC09,HLTH,medium,version differs for recently restarted instance,Cluster Healing or Resync Issues
+HLTH-SQL-UP-003-RC11,HLTH,medium,versions differ,Mixed Update Strategies
+HLTH-SQL-UP-003-RC13,HLTH,medium,any status != 'VALID',Patch Metadata Inconsistency
+HLTH-SQL-UP-003-RC14,HLTH,medium,versions differ,No Cluster-Wide Patch Coordination Tool
+HLTH-SQL-UP-003-RC15,HLTH,medium,versions differ or startup times vary significantly,Scheduled Maintenance Windows Missed
+HLTH-SQL-UP-004-RC01,HLTH,medium,used_pct > 85,Insufficient Disk Space
+HLTH-SQL-UP-004-RC02,HLTH,medium,over allocation count > 0,Insufficient Memory or Swap
+HLTH-SQL-UP-004-RC05,HLTH,medium,active_sessions > 0,File Locking or Permission Issues
+HLTH-SQL-UP-004-RC06,HLTH,medium,not all versions match or any status = 'INVALID',Incompatible or Conflicting Patches
+HLTH-SQL-UP-004-RC07,HLTH,medium,status = 'OPEN',Database or Instance Still Running
+HLTH-SQL-UP-004-RC08,HLTH,medium,version information returned,Incompatible patching tool version
+HLTH-SQL-UP-004-RC10,HLTH,medium,all components have consistent versions and VALID status,Patch registry or metadata inconsistency
+HLTH-SQL-UP-004-RC11,HLTH,medium,compatible parameter is at appropriate level,Prerequisite Check Failure
+HLTH-SQL-UP-004-RC17,HLTH,medium,special configurations detected,Incomplete or Outdated Upgrade Documentation
+HLTH-SQL-UP-004-RC18,HLTH,medium,cluster_database = TRUE,Disabled or failed cluster services
+HLTH-SQL-UP-004-RC19,HLTH,medium,compatible value returned,Insufficient Database Compatibility Level
+HLTH-SQL-UP-004-RC20,HLTH,medium,any row with status != 'SUCCESS',Post-Patch Script Failure
+HLTH-SQL-UP-004-RC22,HLTH,medium,flashback_on = 'YES' AND log_mode = 'ARCHIVELOG',No Recovery or Rollback Capability
+PERF-SQL-CE-001-RC01,PERF,medium,buffer_cache_hit_pct < 95,Insufficient buffer pool/cache allocation
+PERF-SQL-CE-001-RC02,PERF,medium,data_mb >> cache_mb,Working set exceeds allocated cache size
+PERF-SQL-CE-001-RC06,PERF,medium,buffer_cache_hit_pct < 90,Concurrent workload contention
+PERF-SQL-CE-001-RC09,PERF,medium,status != 'ENABLED',Poor query selectivity due to stale statistics
+PERF-SQL-CE-001-RC12,PERF,medium,any event = 'log file switch (checkpoint incomplete)' AND total_waits > 100,Checkpoint frequency too aggressive
+PERF-SQL-CE-001-RC13,PERF,medium,over allocation count > 0 OR extra bytes read/written > 0,Memory overcommitment with swapping
+PERF-SQL-CE-001-RC14,PERF,medium,free_buffer_inspected is high relative to physical_reads,Suboptimal eviction policy configuration
+PERF-SQL-CE-002-RC01,PERF,medium,hard_parse_pct > 30,Ad-hoc queries with literal values
+PERF-SQL-CE-002-RC02,PERF,medium,sql area >> free memory,Whitespace and case sensitivity differences
+PERF-SQL-CE-002-RC05,PERF,medium,row_count > 0 AND unique_sql >> unique_patterns for any program,Multiple client applications generating similar queries
+PERF-SQL-CE-002-RC06,PERF,medium,value = 'EXACT',Automatic query parameterization failures
+PERF-SQL-CE-002-RC08,PERF,medium,gethitratio < 0.9 OR reloads > 10000,High volume of one-time queries
+PERF-SQL-CE-002-RC12,PERF,medium,reloads > 0 AND gethitratio < 0.95,Insufficient plan cache maintenance
+PERF-SQL-CE-003-RC01,PERF,medium,status = 'DISABLED',Insufficient VACUUM frequency
+PERF-SQL-CE-003-RC05,PERF,medium,pct_used > 85,Expired transaction ID wraparound protection
+PERF-SQL-CE-003-RC06,PERF,medium,chain_pct > 5,Missing or low fill factor
+PERF-SQL-CE-003-RC08,PERF,medium,message_lag > 10000,Logical replication slots retention
+PERF-SQL-CE-003-RC12,PERF,medium,value > 10000,Correlation between UPDATE patterns and table layout
+PERF-SQL-CE-003-RC13,PERF,medium,avg_wait_ms > 10,Inefficient VACUUM cleanup due to pinned buffers
+PERF-SQL-CE-004-RC01,PERF,medium,avg_wait_ms > 5,Mutex contention on shared query cache lock
+PERF-SQL-CE-004-RC04,PERF,medium,gethitratio < 0.9,Cache hit ratio low due to heterogeneous queries
+PERF-SQL-CE-004-RC07,PERF,medium,Delete_Count_Max_Size > 100 OR Create_Count_Failure > 100,Query result set too large for cache
+PERF-SQL-CE-004-RC08,PERF,medium,reload_pct > 1.0,Cache fragmentation from disparate result sizes
+PERF-SQL-CE-004-RC09,PERF,medium,time_waited_ms > 60000,Overhead of cache lookup exceeds benefit
+PERF-SQL-CE-004-RC11,PERF,medium,"row_count > 0 AND max_avg_gets / NULLIF(min_avg_gets, 0) > 10",Bind variable caching expectations
+PERF-SQL-CE-004-RC12,PERF,medium,reload_pct > 5.0,Cache warmup challenges
+PERF-SQL-CE-005-RC01,PERF,medium,cf_ratio > 0.5,Random UUID v4 primary keys
+PERF-SQL-CE-005-RC06,PERF,medium,row_count > 0 AND avg_wait_ms > 10,High-concurrency inserts into narrow range
+PERF-SQL-CE-005-RC09,PERF,medium,cf_to_blocks_ratio > 5,High-concurrency GUID/UUID inserts
+PERF-SQL-CN-001-RC01,PERF,medium,any(status='ACTIVE' AND session_count > 50),Insufficient connection pool size configured relative to application concurrency and transaction dur
+PERF-SQL-CN-001-RC03,PERF,medium,hwm_pct > 70,Connection leaks where connections are acquired but not properly returned to the pool
+PERF-SQL-CN-001-RC08,PERF,medium,any(idle_seconds > 120 AND locked_mode > 2),"Database operations that acquire row/table locks, blocking other sessions"
+PERF-SQL-CN-001-RC12,PERF,medium,any(pct_of_total > 60),Third-party library or middleware maintaining its own connection pools that consume all available co
+PERF-SQL-CN-002-RC04,PERF,medium,row_count > 0 AND any(session_count > 5),Event listeners or callbacks maintaining references to connections without cleanup
+PERF-SQL-CN-002-RC05,PERF,medium,any(session_count > 20),Recursive functions or loops acquiring new connections without closing in all code paths
+PERF-SQL-CN-002-RC09,PERF,medium,current_pct > 60,Connection pooling configuration with missing or insufficient idle connection timeout settings
+PERF-SQL-CN-002-RC10,PERF,medium,leak_pct > 30,Application setting Connection object reference to null without calling close first
+PERF-SQL-CN-003-RC01,PERF,medium,logons_cumulative / user_commits > 0.5,"Application not implementing connection pooling, creating new connections for each request"
+PERF-SQL-CN-003-RC02,PERF,medium,logons_cumulative > 10000,"Connection pool with very short `maxLifetime` or `idleTimeout`, forcing frequent replacement"
+PERF-SQL-CN-003-RC04,PERF,medium,logons_per_minute > 10,"Serverless or containerized environments (Lambda, Cloud Functions) creating new connection per invoc"
+PERF-SQL-CN-003-RC06,PERF,medium,utilization_pct > 70,Each backend instance maintaining its own small connection pool when multiple instances exist
+PERF-SQL-CN-003-RC08,PERF,medium,logons_per_hour > user_sessions * 2,"Connection health checks running too frequently, causing disconnects and reconnects"
+PERF-SQL-CN-003-RC12,PERF,medium,logon_per_call_ratio > 0.1,Application opening connections just-in-time and closing immediately after one query
+PERF-SQL-CN-003-RC13,PERF,medium,hard_parse_pct > 20,"Prepared statement caching disabled, requiring new parse/bind/execute cycles per connection"
+PERF-SQL-CN-003-RC14,PERF,medium,row_count > 0 with many short-lived idle sessions from same application,ORM lazy-loading queries acquiring temporary connections instead of reusing transaction context
+PERF-SQL-CN-004-RC01,PERF,medium,current_utilization > limit_value * 85 / 100,Application's cumulative demand (pool size × number of instances) exceeds database max_connections s
+PERF-SQL-CN-004-RC02,PERF,medium,row_count > 0 with spikes in connection creation,"Cascading connection attempts after initial pool exhaustion, creating ""connection storms"""
+PERF-SQL-CN-004-RC03,PERF,medium,total_user_sessions / session_limit > 0.7,"Multiple application services or microservices each maintaining their own pools, multiplying demand"
+PERF-SQL-CN-004-RC04,PERF,medium,spfile_value > running_value,"Database not restarted after increasing max_connections parameter, so old limit still applies"
+PERF-SQL-CN-004-RC05,PERF,medium,non-APPLICATION sessions consume > 20 of total,"Administrative connections (backup processes, monitoring tools, DBA sessions) consuming slots needed"
+PERF-SQL-CN-004-RC06,PERF,medium,row_count > 0 with significant Data Guard process count,Replication slaves or standby databases holding connection slots that should not count against limit
+PERF-SQL-CN-004-RC07,PERF,medium,row_count > 0 with very old sessions from machines that may be decommissioned,Connections from previous application instances not cleaned up after deployment/rollback
+PERF-SQL-CN-004-RC08,PERF,medium,connections from machines or service names associated with test/dev environments,Test or development environments using same database and connection pool credentials
+PERF-SQL-CN-004-RC10,PERF,medium,single machine/program combination has disproportionately many connections,Client-side driver connection pooling creating separate pools per thread instead of sharing
+PERF-SQL-CN-004-RC11,PERF,medium,processes_limit > physical_memory_mb / 5 OR processes_limit > num_cpus * 50,Database configuration allowing unlimited connections while physical resources cannot support them
+PERF-SQL-CN-004-RC13,PERF,medium,FREE_MEMORY_BYTES / PHYSICAL_MEMORY_BYTES < 0.05,Memory constraints preventing database from allocating resources for new connections
+PERF-SQL-CN-004-RC14,PERF,medium,row_count > 0 with timeout errors from specific sources,"Firewall or network ACL changes silently blocking some connections without error, forcing new attemp"
+PERF-SQL-CPU-001-RC02,PERF,medium,row_count > 0 with high exec_per_sec and significant total CPU,Frequent execution of expensive queries
+PERF-SQL-CPU-001-RC03,PERF,medium,row_count > 0 with very high gets_per_exec,Excessive logical reads (full table scans)
+PERF-SQL-CPU-001-RC04,PERF,medium,row_count > 0 with filter_predicates present (columns that should be indexed),Missing indexes on frequently queried columns
+PERF-SQL-CPU-001-RC06,PERF,medium,is_bind_sensitive = 'Y',Parameter sniffing causing plan regression
+PERF-SQL-CPU-001-RC10,PERF,medium,value > 1000000,Scalar and multi-statement table-valued functions in queries
+PERF-SQL-CPU-001-RC13,PERF,medium,value > 10,Deadlock detection overhead in high-concurrency scenarios
+PERF-SQL-CPU-001-RC14,PERF,medium,cache_hit_percentage < 90 OR over_allocation_count > 0,Memory spilling to disk (sort/hash spill)
+PERF-SQL-CPU-001-RC15,PERF,medium,FREE_MEMORY_BYTES / PHYSICAL_MEMORY_BYTES < 0.05,Insufficient memory causing page faults and swapping
+PERF-SQL-CPU-001-RC16,PERF,medium,chain_pct > 5,Heavily fragmented indexes and tables
+PERF-SQL-CPU-001-RC17,PERF,medium,bloat_pct > 50,Table and index bloat from dead tuples
+PERF-SQL-CPU-001-RC19,PERF,medium,total_waits > 100000,High transaction volume with inefficient transaction handling
+PERF-SQL-CPU-001-RC22,PERF,medium,BUSY_TIME / (BUSY_TIME + IDLE_TIME) > 0.85,Inadequate CPU resources relative to workload
+PERF-SQL-CPU-002-RC01,PERF,medium,hard_parse_pct > 30,Non-parameterized ad-hoc queries
+PERF-SQL-CPU-002-RC02,PERF,medium,total_shared_mb > 50,Dynamic SQL with concatenated variable values
+PERF-SQL-CPU-002-RC07,PERF,medium,any_value is_bind_sensitive = 'Y',Stored procedure recompilation due to parameter sniffing
+PERF-SQL-CPU-002-RC12,PERF,medium,any_value hit_ratio_pct < 95 OR any_value reloads > 1000,Plan cache pressure and plan aging
+PERF-SQL-CPU-003-RC04,PERF,medium,parallel_min_time_threshold < 10 OR parallel_degree_policy = 'AUTO',Parallel query cost threshold set too low
+PERF-SQL-CPU-003-RC05,PERF,medium,parallel_max_servers > cpu_count * 2,MAXDOP (Max Degree of Parallelism) too high
+PERF-SQL-CPU-003-RC06,PERF,medium,cpu_count value seems high relative to expected physical cores,Hyper-threading causing inefficient thread scheduling
+PERF-SQL-CPU-003-RC07,PERF,medium,over_allocation_count > 0 OR cache_hit_percentage < 85,Memory contention under parallel execution
+PERF-SQL-CPU-003-RC08,PERF,medium,miss_ratio > 1,Buffer pool latch contention from many parallel threads
+PERF-SQL-CPU-003-RC09,PERF,medium,total_waits > 1000,Parallel sort exceeding available work memory
+PERF-SQL-CPU-003-RC10,PERF,medium,partition_start = '1' AND partition_stop indicates all partitions,Inefficient partition elimination in parallel scans
+PERF-SQL-CPU-003-RC11,PERF,medium,"max_wait_micro / NULLIF(min_wait_micro, 0) > 10",Parallel hash join with skewed join key distribution
+PERF-SQL-CPU-003-RC12,PERF,medium,row_count > 0 AND histogram = 'FREQUENCY' or 'TOP-FREQUENCY',Row distribution skew in parallel aggregations
+PERF-SQL-CPU-003-RC13,PERF,medium,time_waited_secs > 10,Overhead of parallel merge/gather operations
+PERF-SQL-CPU-003-RC14,PERF,medium,SYS_TIME / (SYS_TIME + USER_TIME) > 0.3,Context switches from over-subscription of threads
+PERF-SQL-CPU-003-RC15,PERF,medium,cf_ratio > 0.5 AND blevel > 3,Parallel index scan with fragmentation
+PERF-SQL-CPU-003-RC16,PERF,medium,avg_wait_ms > 10,Insufficient readahead queue for parallel scans
+PERF-SQL-CPU-003-RC17,PERF,medium,cardinality > 10000,Parallel nested loop join with high iteration count
+PERF-SQL-CPU-003-RC19,PERF,medium,NUM_CPU_SOCKETS > 1,Parallel execution on single-socket NUMA systems
+PERF-SQL-CPU-003-RC20,PERF,medium,send_count > 3,Excessive exchange (shuffle) between parallel workers
+PERF-SQL-CPU-003-RC21,PERF,medium,avg_wait_ms > 100,Parallel worker process startup and initialization cost
+PERF-SQL-CPU-003-RC22,PERF,medium,total_waits > 10000,CPU cache efficiency loss with parallelism
+PERF-SQL-CPU-004-RC01,PERF,medium,stale_table_count > 10,AUTO_UPDATE_STATISTICS disabled or running synchronously
+PERF-SQL-CPU-004-RC02,PERF,medium,stale_count > 20,Insufficient AUTO_UPDATE_STATISTICS threshold
+PERF-SQL-CPU-004-RC03,PERF,medium,row_count > 0 AND change_pct > 50,Statistics not updated after large bulk operations
+PERF-SQL-CPU-004-RC07,PERF,medium,row_count > 0 AND stale or never analyzed,Stale multi-column statistics
+PERF-SQL-CPU-004-RC11,PERF,medium,row_count > 0 AND delete_pct > 20,Statistics not refreshed after data cleansing operations
+PERF-SQL-CPU-004-RC12,PERF,medium,incremental = 'FALSE' for large partitioned tables,Incremental statistics not enabled for partitioned tables
+PERF-SQL-CPU-004-RC16,PERF,medium,value returned,Statistics default assumptions for unknown values
+PERF-SQL-CPU-004-RC22,PERF,medium,row_count > 0 AND any stale_stats = 'YES',Temporal tables (system-versioned tables) with stale statistics
+PERF-SQL-IO-001-RC01,PERF,medium,any avg_read_ms > 20,Insufficient disk I/O throughput (IOPS)
+PERF-SQL-IO-001-RC02,PERF,medium,log file parallel write avg_wait_sec > 0.005,Slow or misconfigured RAID array
+PERF-SQL-IO-001-RC03,PERF,medium,redo write time / redo writes > 5,Absence of battery-backed write cache (BBU)
+PERF-SQL-IO-001-RC04,PERF,medium,any servicetime values are elevated,Storage controller bottleneck
+PERF-SQL-IO-001-RC06,PERF,medium,sequential_read_pct > 80,High demand for random I/O operations
+PERF-SQL-IO-001-RC07,PERF,medium,row_count > 0 AND avg_wait_sec > 0.010,Mechanical hard disk drives (HDDs) under load
+PERF-SQL-IO-001-RC08,PERF,medium,disk_asynch_io = 'FALSE' OR filesystemio_options != 'SETALL',Inadequate disk queue depth and request scheduling
+PERF-SQL-IO-001-RC11,PERF,medium,db_file_multiblock_read_count is very low,Insufficient disk prefetching or read-ahead strategy
+PERF-SQL-IO-001-RC12,PERF,medium,slow_files / total_files > 0.5,"Storage interconnect saturation (Fibre Channel, iSCSI, NFS latency)"
+PERF-SQL-IO-001-RC13,PERF,medium,row_count > 0 AND latency > 10,Memory pressure on the storage subsystem
+PERF-SQL-IO-001-RC14,PERF,medium,log file parallel write avg_wait_sec > 0.005,Disk write cache disabled or in write-through mode
+PERF-SQL-IO-002-RC01,PERF,medium,total_waits > 100000 AND avg_wait_sec > 0.005,High transaction commit rate
+PERF-SQL-IO-002-RC02,PERF,medium,log file parallel write avg_wait_sec > 0.005,Single log file on shared storage
+PERF-SQL-IO-002-RC03,PERF,medium,ms_per_write > 5,Slow log write performance
+PERF-SQL-IO-002-RC04,PERF,medium,any event = 'log buffer space' AND total_waits > 100,Insufficient redo/transaction log buffer size
+PERF-SQL-IO-002-RC05,PERF,medium,avg_wait_ms > 5,Synchronous log flush settings
+PERF-SQL-IO-002-RC06,PERF,medium,miss_pct > 1,Lock contention on log allocation structures
+PERF-SQL-IO-002-RC07,PERF,medium,total_waits > 100,Log buffer allocation retries
+PERF-SQL-IO-002-RC11,PERF,medium,avg_wait_ms > 5,Log writer process throttled
+PERF-SQL-IO-002-RC12,PERF,medium,miss_pct > 1,Log cache line bouncing on multi-socket systems
+PERF-SQL-IO-002-RC14,PERF,medium,commits_per_write < 2,Group commit not functioning efficiently
+PERF-SQL-IO-002-RC15,PERF,medium,total_waits > 10,Checkpoint or recovery process blocking log writes
+PERF-SQL-IO-003-RC03,PERF,medium,target_mttr < 30,Checkpoint completion target too aggressive
+PERF-SQL-IO-003-RC06,PERF,medium,avg_wait_ms > 10,Full page writes enabled during checkpoint
+PERF-SQL-IO-003-RC08,PERF,medium,buffer_cache_hit_ratio < 90,Database working set larger than available RAM
+PERF-SQL-IO-003-RC10,PERF,medium,row_count > 0 AND avg_wait_ms > 50,Lock/latch contention during checkpoint
+PERF-SQL-IO-003-RC11,PERF,medium,fast_start_mttr_target < 60 AND fast_start_mttr_target > 0,Database recovery time objective (RTO) tuned too aggressively
+PERF-SQL-IO-003-RC12,PERF,medium,TOTAL_WAITS > 10,Synchronous checkpoint execution
+PERF-SQL-IO-003-RC13,PERF,medium,VALUE > 1,Multiple concurrent checkpoints
+PERF-SQL-IO-003-RC14,PERF,medium,avg_wait_ms > 20,Insufficient I/O parallelism during checkpoint
+PERF-SQL-IO-003-RC15,PERF,medium,avg_write_ms > 20,Storage subsystem unable to handle sustained I/O rate
+PERF-SQL-IO-004-RC01,PERF,medium,file_count < 4,Insufficient temporary workspace data files
+PERF-SQL-IO-004-RC08,PERF,medium,gtt_count > 20,Global temporary table (##temp) overuse
+PERF-SQL-IO-004-RC10,PERF,medium,sorts_disk > 100 OR multipass > 0,Sort and hash aggregate operations spilling
+PERF-SQL-IO-004-RC12,PERF,medium,over_alloc_count > 0 OR allocated_mb > target_mb * 0.9,Memory pressure forcing temporary workspace allocations
+PERF-SQL-IO-004-RC13,PERF,medium,row_count > 0 AND temp_mb > 500,Index creation or rebuild using temporary workspace
+PERF-SQL-IO-004-RC16,PERF,medium,any(name='data blocks consistent reads - undo records applied' AND value > 1000000),Version store for snapshot isolation
+PERF-SQL-IO-004-RC17,PERF,medium,max(physical_reads + physical_writes) > 3 * avg(physical_reads + physical_writes),Workload patterns causing uneven file load
+PERF-SQL-IO-004-RC18,PERF,medium,any(event='buffer busy waits' AND total_waits > 10000) OR any(event='enq: HW - contention' AND total_waits > 0),Allocation bitmap page updates not batched
+PERF-SQL-IX-001-RC03,PERF,medium,any(status = 'DISABLED') OR any(last_good_date < SYSDATE - 7),Stale table statistics
+PERF-SQL-IX-003-RC04,PERF,medium,"leaf_node_splits > 0 AND (leaf_node_splits - leaf_node_90_10_splits) / GREATEST(leaf_node_splits, 1) > 0.3",Mixed sequential and random insert patterns
+PERF-SQL-IX-003-RC12,PERF,medium,row_count > 0 with active index operations,Concurrent DML during index operations
+PERF-SQL-IX-004-RC04,PERF,medium,row_count > 0 with monitored but unused indexes,Narrow index subset of wider index
+PERF-SQL-IX-004-RC08,PERF,medium,row_count > 0 with old indexes that may be orphaned,Migration/replication creating orphaned duplicates
+PERF-SQL-IX-004-RC12,PERF,medium,row_count > 0 with secondary indexes on IOT PK columns,Clustered and nonclustered on same columns
+PERF-SQL-IX-005-RC02,PERF,medium,row_count > 0 with high avg_rows_per_value,Index on country/region codes
+PERF-SQL-IX-005-RC04,PERF,medium,row_count > 0 with dominant value covering >80% of rows,Index on status column with uneven distribution
+PERF-SQL-IX-005-RC05,PERF,medium,row_count > 0 with very high avg_rows_per_date,Date field with many identical values
+PERF-SQL-IX-005-RC06,PERF,medium,row_count > 0 with high density values,Index on sparse categorical data
+PERF-SQL-IX-005-RC07,PERF,medium,row_count > 0 with very low lead_selectivity_pct,Composite index with non-selective leading column
+PERF-SQL-IX-005-RC09,PERF,medium,selectivity_pct > 30,Outdated statistics masking low selectivity
+PERF-SQL-IX-006-RC01,PERF,medium,total_dml > 100000,Excessive indexes on write-heavy table
+PERF-SQL-IX-006-RC11,PERF,medium,indexes_per_table > 5,Lack of index maintenance policy
+PERF-SQL-IX-006-RC12,PERF,medium,extent_management = 'DICTIONARY' OR segment_space_management = 'MANUAL',Storage engine configuration not optimizing index overhead
+PERF-SQL-IX-007-RC07,PERF,medium,any_value parameter = 'NLS_CHARACTERSET' AND value LIKE '%UTF%',Collation and character set expansion
+PERF-SQL-IX-007-RC12,PERF,medium,any_value value > 10000,Fill factor not accounting for key width
+PERF-SQL-LC-001-RC12,PERF,medium,total_waits > 100,UPDATE within same transaction
+PERF-SQL-LC-001-RC13,PERF,medium,sum(deadlock_count) > 10,Incomplete transaction rollback handling
+PERF-SQL-LC-001-RC14,PERF,medium,total_waits > 50,Lock escalation threshold breach
+PERF-SQL-LC-002-RC02,PERF,medium,total_waits > 100,Unoptimized query with table scan
+PERF-SQL-LC-002-RC04,PERF,medium,undo_blocks > 10000,Excessive row count in single operation
+PERF-SQL-LC-002-RC06,PERF,medium,row_count > 0 AND lock_count > 0,Idle-in-transaction connections
+PERF-SQL-LC-002-RC07,PERF,medium,deadlock_count > 50,Deadlock detection overhead
+PERF-SQL-LC-002-RC08,PERF,medium,total_waits > 1000,High concurrency with sequential inserts
+PERF-SQL-LC-002-RC09,PERF,medium,total_waits > 100,Metadata lock contention
+PERF-SQL-LC-002-RC11,PERF,medium,lock_wait_pct > 20,Connection pool exhaustion
+PERF-SQL-LC-002-RC13,PERF,medium,peak_pct > 80,Insufficient internal lock structures
+PERF-SQL-LC-003-RC02,PERF,medium,undo_blocks > 5000 AND lock_count > 5,Large transaction scope
+PERF-SQL-LC-003-RC03,PERF,medium,total_waits > 100,Missing indexes on modification queries
+PERF-SQL-LC-003-RC04,PERF,medium,total_waits > 100,Lock escalation to table level
+PERF-SQL-LC-003-RC08,PERF,medium,total_waits > min_waits,Sequential key inserts (hot page)
+PERF-SQL-LC-004-RC01,PERF,medium,total_waits > min_waits,High-volume sequential inserts
+PERF-SQL-LC-004-RC03,PERF,medium,total_waits > 100,Insufficient buffer pool memory
+PERF-SQL-LC-004-RC05,PERF,medium,row_count > 0 AND miss_pct > 1,Large number of logical processors without NUMA affinity
+PERF-SQL-LC-004-RC06,PERF,medium,row_count > 0 AND significant waits on temp events,Temporary workspace metadata contention
+PERF-SQL-LC-004-RC07,PERF,medium,avg_wait_secs > 0.02 for any event,I/O subsystem performance issues
+PERF-SQL-LC-004-RC11,PERF,medium,leaf node 90-10 splits is close to total leaf node splits,Clustered index on sequential column
+PERF-SQL-LC-004-RC13,PERF,medium,row_count > 0 AND any miss_pct > 1,Latch spin-lock exhaustion
+PERF-SQL-LC-004-RC14,PERF,medium,latch waits and gc waits are high,NUMA architecture imbalance
+PERF-SQL-LC-005-RC10,PERF,medium,row_count > 0 AND time_waited_sec > 10,Lock escalation blocking forward progress
+PERF-SQL-MEM-001-RC01,PERF,medium,over allocation count > 0 OR cache hit percentage < 80 OR buffer_cache_hit_pct < 90,Insufficient RAM Allocation
+PERF-SQL-MEM-001-RC02,PERF,medium,hit_ratio_pct < 90,Undersized Buffer Pool
+PERF-SQL-MEM-001-RC03,PERF,medium,total_pga_mb > 4096,Excessive Concurrent Connections
+PERF-SQL-MEM-001-RC11,PERF,medium,undo_mb > 100,Long-Running Transactions
+PERF-SQL-MEM-002-RC03,PERF,medium,is_bind_sensitive = 'Y',Parameter Sniffing
+PERF-SQL-MEM-002-RC08,PERF,medium,row_count > 0 AND DEGREE > 8,Excessive Parallelism Degree
+PERF-SQL-MEM-002-RC15,PERF,medium,ESTD_PGA_CACHE_HIT_PERCENTAGE < 90 OR ESTD_OVERALLOC_COUNT > 0,Bounded Sort/Hash Configuration
+PERF-SQL-MEM-003-RC01,PERF,medium,sga_pct_of_physical < 40,Insufficient RAM Allocation
+PERF-SQL-MEM-003-RC02,PERF,medium,buffer_cache_hit_ratio < 90,Undersized Buffer Pool Configuration
+PERF-SQL-MEM-003-RC03,PERF,medium,"phys_reads / NULLIF(logical_reads, 0) > 0.15",Table Working Dataset Exceeds Buffer Pool Size
+PERF-SQL-MEM-003-RC07,PERF,medium,TOTAL_WAITS > 100,High DML Activity
+PERF-SQL-MEM-003-RC11,PERF,medium,"scan_blocks / NULLIF(total_gets, 0) > 0.3",Scan-Intensive Workload
+PERF-SQL-MEM-003-RC12,PERF,medium,any(gtt_count > 20),Temporary Table Proliferation
+PERF-SQL-MEM-003-RC13,PERF,medium,cache_hit_ratio < 90,Query Results Displacing Cache
+PERF-SQL-MEM-003-RC14,PERF,medium,any(total_waits > 10000),Concurrent Competing Queries
+PERF-SQL-MEM-003-RC15,PERF,medium,scattered_read_waits > sequential_read_waits * 2,Readahead Prefetch Too Aggressive
+PERF-SQL-MEM-004-RC02,PERF,medium,any(name='over allocation count' AND value > 0),Stale or Outdated Statistics
+PERF-SQL-PL-001-RC01,PERF,medium,peak_pct > 80 OR peak_pct < 5,Misconfigured Global Max Parallelism
+PERF-SQL-PL-001-RC03,PERF,medium,any estimate_ratio > 10,Inaccurate Cardinality Estimation
+PERF-SQL-PL-001-RC04,PERF,medium,cpu_count > cores OR max_servers > cores * 4,Virtualization/Container Resource Overcommitment
+PERF-SQL-PL-001-RC05,PERF,medium,any avg_wait_ms > 20,IO Subsystem Saturation
+PERF-SQL-PL-001-RC10,PERF,medium,any max_utilization > limit_value * 0.9,OS Thread/Process Limit Exhaustion
+PERF-SQL-PL-002-RC02,PERF,medium,any size_ratio > 5,Partitioning Skew
+PERF-SQL-PL-002-RC09,PERF,medium,high wait times for PX Deq events,Start-up Latency
+PERF-SQL-PL-003-RC01,PERF,medium,downgraded operations count is significant,Global Thread Pool Exhaustion
+PERF-SQL-PL-003-RC03,PERF,medium,row_count > 0 with deep blocking chains or many blocked sessions,Blocking Chains
+PERF-SQL-PL-003-RC04,PERF,medium,peak minute has > 50 connections,Connection Storms
+PERF-SQL-PL-003-RC05,PERF,medium,FREE_MEMORY_BYTES < PHYSICAL_MEMORY_BYTES * 0.05,Memory Pressure
+PERF-SQL-PL-003-RC07,PERF,medium,enqueue deadlocks value > 10,Deadlocks
+PERF-SQL-PL-003-RC08,PERF,medium,row_count > 0 with PX servers idle but still allocated,Sub-optimal Thread Release
+PERF-SQL-PL-004-RC01,PERF,medium,onepass + multipass > optimal * 0.05,Insufficient Memory Grant
+PERF-SQL-PL-004-RC02,PERF,medium,row_count > 0 with large tables having stale statistics,Outdated Statistics
+PERF-SQL-PL-004-RC03,PERF,medium,significant variance in pga_mb within same qcsid group,Data Skew (Memory Imbalance)
+PERF-SQL-PL-004-RC04,PERF,medium,estd_overalloc_count > 0 at current target factor (1.0),Fragmentation of Sort/Hash Memory
+PERF-SQL-PL-004-RC05,PERF,medium,avg_wait_ms > 10,Temporary workspace latency
+PERF-SQL-PL-004-RC06,PERF,medium,row_count > 0 with high oversize_ratio,Incorrect Data Type Sizes
+PERF-SQL-PL-004-RC07,PERF,medium,cache hit percentage < 90 OR over allocation count > 0 OR global memory bound is very small,"Lack of ""Available"" Memory"
+PERF-SQL-PL-004-RC08,PERF,medium,avg_wait_ms for temp operations is high and PX Deq Credit is significant,Serialization of Spill IO
+PERF-SQL-QE-001-RC01,PERF,medium,row_count > 0 with high buffer_gets per execution,Missing or poorly designed indexes
+PERF-SQL-QE-001-RC03,PERF,medium,Host CPU > 80 OR Database Wait Time Ratio > 50 OR Average Active Sessions > 4 * 2,Insufficient hardware resources
+PERF-SQL-QE-001-RC14,PERF,medium,buffer_cache_hit_ratio < 95,Page cache misses
+PERF-SQL-QE-003-RC08,PERF,medium,any_value pname = 'CPUSPEEDNW' AND pval1 IS NULL,Missing or outdated system statistics
+PERF-SQL-QE-004-RC01,PERF,medium,row_count > 0 AND some cursors have is_bind_aware = 'N',Stored procedure first compiled with unrepresentative parameter values
+PERF-SQL-QE-004-RC03,PERF,medium,different join operations for same sql_id,Optimizer selects different join strategy for different selectivity
+PERF-SQL-QE-004-RC04,PERF,medium,same sql_id has both INDEX and TABLE ACCESS FULL plans,Index seek optimal for one value but scan optimal for another
+PERF-SQL-QE-004-RC05,PERF,medium,number_passes > 1,"Memory grant calculated once, insufficient for diverse parameters"
+PERF-SQL-QE-004-RC07,PERF,medium,estimate_ratio > 10 OR estimate_ratio < 0.1,Optimizer cost threshold misjudgment
+PERF-SQL-QE-004-RC08,PERF,medium,optimizer_adaptive_plans = 'FALSE' OR optimizer_adaptive_statistics = 'FALSE',Adaptive query execution disabled
+PERF-SQL-QE-004-RC10,PERF,medium,one_exec_cursors / total_cursors > 0.5,Ad-hoc query with literal values compiled differently
+PERF-SQL-QE-004-RC14,PERF,medium,single_exec_pct > 50,Dynamic SQL not using sp_executesql
+PERF-SQL-QE-005-RC06,PERF,medium,NLS parameters returned,Collation mismatch forcing conversion
+PERF-SQL-QE-006-RC03,PERF,medium,row_count > 0 AND gets_per_exec is much higher than rows_per_exec,Scalar subquery with no optimization
+PERF-SQL-QE-008-RC05,PERF,medium,estd_overalloc_count > 0,Undersized work_mem or sort_buffer_size
+PERF-SQL-QE-008-RC14,PERF,medium,pct_used > 80,Uncontrolled parallel degree allocation
+PERF-SQL-TX-001-RC09,PERF,medium,avg_wait_ms > 50,Network Latency/Bandwidth
+PERF-SQL-TX-002-RC02,PERF,medium,Redo_Generated_Per_Sec > 20971520,High Volume Data Load
+PERF-SQL-TX-002-RC03,PERF,medium,unbackedup_logs > 50 AND total_mb > 5120,Infrequent Log Backups
+PERF-SQL-TX-002-RC04,PERF,medium,unapplied_logs > 100,Replication/Mirroring Lag
+PERF-SQL-TX-002-RC08,PERF,medium,any(avg_write_time_cs > 5),Disk I/O Bottleneck
+PERF-SQL-TX-002-RC09,PERF,medium,any(size_mb < 200),Auto-Growth Configuration
+PERF-SQL-TX-003-RC05,PERF,medium,hwm_pct > 60 AND current_utilization > max_utilization * 0.7,Connection Pool Leak
+PERF-SQL-TX-004-RC01,PERF,medium,any(value > 0),Deadlocks
+PERF-SQL-TX-004-RC05,PERF,medium,rollback_pct > 10,Application Validation Logic
+PERF-SQL-TX-004-RC09,PERF,medium,resource_manager_plan IS NOT NULL AND resource_manager_plan != '',Query Governor Limits
+PERF-SQL-VS-001-RC01,PERF,medium,any tx_age_min > 60,Long-running transactions holding old transaction IDs
+PERF-SQL-VS-001-RC10,PERF,medium,used_pct > 80,Temporary tables not cleaned up
+PERF-SQL-VS-002-RC08,PERF,medium,row_count > 0 with disproportionately large LOB segments,Bulk INSERT/UPDATE/DELETE cycles without intervening VACUUM
+PERF-SQL-VS-002-RC14,PERF,medium,row_count > 0 with many partitions and large total LOB size,Too many active partitions with TOAST columns
+SEC-SQL-ACC-010-RC09,SEC,medium,"isolation_level IN ('SERIALIZABLE', 'REPEATABLE-READ')",Data exfiltration patterns in transactions
+SEC-SQL-ACC-010-RC11,SEC,medium,lock_wait_timeout_sec > 50,Schema reconnaissance activity
+SEC-SQL-ACC-010-RC12,SEC,medium,wait_seconds > 50,Dormant account suddenly active
+SEC-SQL-AU-001-RC01,SEC,medium,PASSWORD_VERIFY_FUNCTION = 'NULL' OR FAILED_LOGIN_ATTEMPTS = 'UNLIMITED',Installation defaults not changed
+SEC-SQL-AU-001-RC04,SEC,medium,SUM(issue_count) > 2,Lack of post-deployment hardening checklist
+SEC-SQL-AU-001-RC06,SEC,medium,SUM(has_issue) > 0,Incomplete migration procedures
+SEC-SQL-AU-001-RC09,SEC,medium,any_value authentication_type = 'PASSWORD' AND account_count > 5,No integration with identity provisioning
+SEC-SQL-AU-001-RC10,SEC,medium,any_value sys_priv_count + role_count > 10,Account privilege escalation over time
+SEC-SQL-AU-003-RC01,SEC,medium,any_value resource_name = 'PASSWORD_LIFE_TIME' AND limit = 'UNLIMITED',Default configuration never modified
+SEC-SQL-AU-003-RC02,SEC,medium,any_value limit = 'NULL',Complexity enforcement disabled intentionally
+SEC-SQL-AU-003-RC05,SEC,medium,status != 'VALID' OR row_count = 0,Complexity vs. length tradeoff avoided
+SEC-SQL-AU-003-RC07,SEC,medium,PASSWORD_VERIFY_FUNCTION = 'NULL' OR PASSWORD_LIFE_TIME = 'UNLIMITED' OR FAILED_LOGIN_ATTEMPTS = 'UNLIMITED',User friction avoidance
+SEC-SQL-AU-003-RC09,SEC,medium,multiple profiles with different PASSWORD_VERIFY_FUNCTION or PASSWORD_LIFE_TIME,No centralized policy definition
+SEC-SQL-AU-003-RC11,SEC,medium,AUDIT_TRAIL = 'NONE' OR no audit policy for login,Lack of monitoring tools
+SEC-SQL-AU-004-RC02,SEC,medium,value = 'TRUE',Oracle REMOTE_OS_ROLES enabled
+SEC-SQL-AU-004-RC05,SEC,medium,remote_os_authent = 'TRUE',OS authentication module delegation
+SEC-SQL-AU-004-RC06,SEC,medium,authentication includes kerberos but encryption is not REQUIRED,Kerberos/SSPI authentication without encryption
+SEC-SQL-AU-004-RC08,SEC,medium,remote_os_authent = 'TRUE',No validation of OS identity
+SEC-SQL-AU-004-RC10,SEC,medium,ext_auth_users > 0,Assume-inside-firewall security model
+SEC-SQL-AU-004-RC12,SEC,medium,no LOGON audit policy enabled OR audit_trail = 'NONE',No OS authentication logging
+SEC-SQL-AU-005-RC04,SEC,medium,multiple authentication_type values exist,Incomplete migration
+SEC-SQL-AU-005-RC10,SEC,medium,PASSWORD_VERIFY_FUNCTION is NULL or DEFAULT with weak verification,Lateral movement not considered
+SEC-SQL-AU-005-RC11,SEC,medium,row_count > 0 OR row_count = 0 with kerberos params set,Kerberos delegation configuration complexity
+SEC-SQL-AU-005-RC13,SEC,medium,row_count > 0 AND comprehensive policies enabled,No automated compliance scanning
+SEC-SQL-AU-006-RC01,SEC,medium,row_count > 0 AND some accounts have NULL or very old last_login,No activity monitoring
+SEC-SQL-AU-006-RC08,SEC,medium,ldap_directory_access = 'NONE' OR row_count = 0,HR/Identity integration absent
+SEC-SQL-AU-006-RC14,SEC,medium,audit_trail = 'NONE' OR audit_sys_operations = 'FALSE',Audit trails insufficient
+SEC-SQL-AU-007-RC07,SEC,medium,row_count = 0 OR any encryption = 'REJECTED',Configuration file management tools
+SEC-SQL-AU-007-RC09,SEC,medium,remote_login_passwordfile = 'NONE',Recovery procedure reliance
+SEC-SQL-AU-007-RC11,SEC,medium,unique_clients > 5,Single-node assumption
+SEC-SQL-AU-007-RC12,SEC,medium,any account_status LIKE '%LOCKED%' OR account_status LIKE '%EXPIRED%',Administrator password forgotten or locked
+SEC-SQL-AUD-001-RC01,SEC,medium,value = 'NONE',Global logging switch is disabled
+SEC-SQL-AUD-001-RC06,SEC,medium,enabled_policies < 3,Performance-based disablement
+SEC-SQL-AUD-001-RC10,SEC,medium,account_status != 'OPEN',Plugin initialization failure
+SEC-SQL-AUD-002-RC01,SEC,medium,retention_days < 90,Aggressive rotation configuration
+SEC-SQL-AUD-002-RC02,SEC,medium,pct_used > 85,Insufficient disk space
+SEC-SQL-AUD-002-RC04,SEC,medium,retention_days < 90,Default retention policies
+SEC-SQL-AUD-002-RC06,SEC,medium,row_count = 0 OR status = 'FAILED',"Misconfigured ""Purge"" jobs"
+SEC-SQL-AUD-002-RC07,SEC,medium,size_mb > 2048,File system quotas
+SEC-SQL-AUD-002-RC10,SEC,medium,record_count = 0 OR oldest_record > SYSDATE - 90,Manual deletion by admins
+SEC-SQL-AUD-003-RC01,SEC,medium,audit_trail LIKE '%OS%' OR audit_trail LIKE '%XML%',Insecure file permissions
+SEC-SQL-AUD-003-RC03,SEC,medium,"audit_trail IN ('OS', 'XML', 'XML,EXTENDED') OR audit_sys_operations = 'TRUE'",Lack of File Integrity Monitoring (FIM)
+SEC-SQL-AUD-003-RC04,SEC,medium,"audit_trail IN ('OS', 'XML', 'XML,EXTENDED')",Service account ownership
+SEC-SQL-AUD-003-RC05,SEC,medium,"audit_mode IN ('OS', 'XML', 'XML,EXTENDED')","Missing ""Append-Only"" attributes"
+SEC-SQL-AUD-003-RC06,SEC,medium,audit_syslog_level IS NULL OR audit_syslog_level = '',Audit logs not shipped remotely
+SEC-SQL-AUD-004-RC02,SEC,medium,FAILURE = 'NO' OR row_count = 0,"""Successful Logins Only"" filter"
+SEC-SQL-AUD-004-RC03,SEC,medium,sessions_audited = 0,Connection string errors
+SEC-SQL-AUD-005-RC02,SEC,medium,"value IN ('NONE', 'OS')",Granularity settings
+SEC-SQL-AUD-005-RC05,SEC,medium,any(audit_status = 'NOT_AUDITED'),Deployment via Scripts
+SEC-SQL-AUD-005-RC06,SEC,medium,any(audit_status = 'NOT_AUDITED'),Temporary Table Exclusion
+SEC-SQL-AUD-005-RC08,SEC,medium,"any(name='audit_trail' AND value IN ('DB', 'OS', 'NONE'))",Statement Truncation
+SEC-SQL-AUD-011-RC03,SEC,medium,value_check,Audit or log table truncated or dropped
+SEC-SQL-AZ-001-RC03,SEC,medium,row_count > :public_threshold,Developer environments influence production practices
+SEC-SQL-AZ-001-RC10,SEC,medium,any(session_privs > 0 AND object_count > 10),Legacy applications with hardcoded privilege assumptions
+SEC-SQL-AZ-001-RC14,SEC,medium,any(sys_priv_count > 5 OR role_count > 3),Shared service and application accounts
+SEC-SQL-AZ-002-RC03,SEC,medium,custom_role_count < 3,Temporary workarounds becoming permanent
+SEC-SQL-AZ-002-RC04,SEC,medium,total_public_grants > 50,Legacy database practices
+SEC-SQL-AZ-003-RC04,SEC,medium,all(authentication_type = 'DATABASE'),Lack of integration between HR systems and database access
+SEC-SQL-AZ-003-RC06,SEC,medium,row_count > 0 with service-type account names,Service and application accounts without ownership tracking
+SEC-SQL-AZ-003-RC09,SEC,medium,large number of total_accounts relative to expected user base,Cross-database and application account complexity
+SEC-SQL-AZ-003-RC10,SEC,medium,row_count > 0 with very old accounts still active,Legacy account creation without documentation
+SEC-SQL-AZ-003-RC12,SEC,medium,row_count > 0 with many users having DBA-level roles,Lack of privileged access management (PAM) systems
+SEC-SQL-AZ-004-RC03,SEC,medium,row_count > 0 with broad directory paths or many grantees,Business intelligence and reporting tool requirements
+SEC-SQL-AZ-004-RC05,SEC,medium,row_count > 0 with grants to non-admin users,Default configuration not hardened during installation
+SEC-SQL-AZ-004-RC06,SEC,medium,row_count > 0 with application/developer accounts having file access,Developer convenience during development
+SEC-SQL-AZ-004-RC07,SEC,medium,row_count > 0 with grants to individual DBA or developer accounts,Troubleshooting and ad-hoc data extraction
+SEC-SQL-AZ-004-RC09,SEC,medium,row_count > 0 with many grants across accounts,Historical privilege accumulation
+SEC-SQL-AZ-005-RC08,SEC,medium,audited_objects = 0,Lack of audit or monitoring of cross-database access
+SEC-SQL-AZ-005-RC09,SEC,medium,SUM(count) > 3,Testing configurations carried forward to production
+SEC-SQL-CFG-003-RC09,SEC,medium,custom_schemas > 20,Documentation Failures
+SEC-SQL-CFG-003-RC14,SEC,medium,CDB configuration identified,Multi-Tenant Instance Management
+SEC-SQL-CFG-004-RC01,SEC,medium,JAVAVM component present,Application Code Execution Requirement
+SEC-SQL-CFG-004-RC02,SEC,medium,insecure values detected,Performance Optimization
+SEC-SQL-CFG-004-RC03,SEC,medium,row_count > 0 AND sys_privs is high,Third-Party Tool Dependencies
+SEC-SQL-CFG-004-RC12,SEC,medium,debug or trace parameters enabled,Insufficient Configuration Segregation
+SEC-SQL-CFG-004-RC13,SEC,medium,Unified Auditing is TRUE,Monitoring Gaps
+SEC-SQL-CFG-006-RC10,SEC,medium,any age_days > 365,Long-Lived Credentials
+SEC-SQL-ENC-001-RC03,SEC,medium,value = 'ACCEPTED' OR row_count = 0,Backward Compatibility Requirements
+SEC-SQL-ENC-001-RC06,SEC,medium,row_count = 0 OR isdefault = 'TRUE',Lack of DBA Encryption Knowledge
+SEC-SQL-ENC-001-RC07,SEC,medium,status != 'OPEN' OR row_count = 0,Certificate Management Complexity
+SEC-SQL-ENC-001-RC09,SEC,medium,encryption_params = 0,Network Architecture Assumptions
+SEC-SQL-ENC-002-RC01,SEC,medium,SSL_VERSION includes 1.0 or 1.1,Legacy Application Dependency on TLS 1.0/1.1
+SEC-SQL-ENC-002-RC07,SEC,medium,NETWORK_SERVICE_BANNER NOT LIKE '%SSL%' AND NETWORK_SERVICE_BANNER NOT LIKE '%TLS%',Load Balancer and Infrastructure TLS Settings
+SEC-SQL-ENC-002-RC08,SEC,medium,ssl_sessions = 0,Lack of TLS 1.2 Configuration Knowledge
+SEC-SQL-ENC-002-RC10,SEC,medium,SSL_VERSION includes multiple versions,Intentional Compatibility Decisions
+SEC-SQL-ENC-002-RC12,SEC,medium,VERSION < '12.1',Database Version Limitations
+SEC-SQL-ENC-003-RC03,SEC,medium,CURRENTLY_USED = 'FALSE' OR row_count = 0,Missing License Entitlements
+SEC-SQL-ENC-003-RC04,SEC,medium,STATUS != 'OPEN' OR row_count = 0,Key Management System Not Available
+SEC-SQL-ENC-003-RC12,SEC,medium,any(status = 'NOT_AVAILABLE' OR status = 'CLOSED'),Cloud Database Settings
+SEC-SQL-ENC-003-RC13,SEC,medium,"any(status IN ('NOT_AVAILABLE', 'CLOSED', 'UNDEFINED'))",Development/Test Database Assumption
+SEC-SQL-ENC-003-RC15,SEC,medium,any(encrypted = 'YES') AND any(encrypted = 'NO'),Previous Failed Implementation Attempt
+SEC-SQL-ENC-004-RC01,SEC,medium,any(encrypted = 'NO'),Feature Not Enabled at Backup Time
+SEC-SQL-ENC-004-RC03,SEC,medium,any(backed_up = 'NO'),Key Management for Backups Not Established
+SEC-SQL-ENC-004-RC05,SEC,medium,any(encrypted = 'YES' AND avg_minutes > 120),Performance Impact on Backup Windows
+SEC-SQL-ENC-004-RC07,SEC,medium,backup_enc = 'BACKUP_NOT_ENCRYPTED',Regulatory Requirement Not Mapped to Backups
+SEC-SQL-ENC-004-RC10,SEC,medium,any(key_age_days > 365),Certificate and Key Expiration on Backups
+SEC-SQL-ENC-004-RC11,SEC,medium,"any(status IN ('NOT_CONFIGURED', 'ABSENT'))",Database Encryption Complexity Misunderstood
+SEC-SQL-ENC-004-RC16,SEC,medium,unencrypted > 0,Backup Scripts Written Before Encryption Features Existed
+SEC-SQL-ENC-005-RC08,SEC,medium,any value IS NULL OR any value = 'ACCEPTED',No Cipher Suite Hardening Standard
+SEC-SQL-ENC-005-RC09,SEC,medium,value IS NULL OR value LIKE '%RSA%',RSA Key Exchange Still Enabled
+SEC-SQL-ENC-005-RC11,SEC,medium,value NOT LIKE '%1.2%' OR value LIKE '%1.0%' OR value LIKE '%1.1%',TLS 1.2 Allows Weak Ciphers
+SEC-SQL-ENC-005-RC12,SEC,medium,key_age_days > 365,Key Rotation Policy Not Implemented
+SEC-SQL-ENC-005-RC15,SEC,medium,unencrypted_ts > 0,Compliance Requirements Misunderstood
+SEC-SQL-ENC-005-RC16,SEC,medium,encryption banner shows weak algorithms or no encryption,Vendor Default Cipher Suites Used Without Review
+SEC-SQL-INJ-001-RC03,SEC,medium,concatenation_usage > bind_variable_usage for any owner,Lack of awareness and training
+SEC-SQL-INJ-001-RC06,SEC,medium,row_count > 0 with high unsafe_objects count,Insufficient security code reviews
+SEC-SQL-INJ-001-RC08,SEC,medium,row_count > 0 with high dynamic_sql_lines,Complex business requirements
+SEC-SQL-INJ-001-RC10,SEC,medium,hard parse ratio (hard/total) > 0.3,ORM framework misuse
+SEC-SQL-INJ-001-RC11,SEC,medium,unsafe_objects > 10,Absence of security testing tools
+SEC-SQL-INJ-001-RC12,SEC,medium,row_count > 0 with wrapped third-party packages,Third-party library dependencies
+SEC-SQL-INJ-002-RC02,SEC,medium,row_count > 0 with very old Java objects,Backward compatibility requirements
+SEC-SQL-INJ-002-RC05,SEC,medium,row_count > 0 with high dependent_objects count,High barrier to refactoring
+SEC-SQL-INJ-002-RC08,SEC,medium,non_bind_sql_count > 5,Missing monitoring and enforcement
+SEC-SQL-INJ-002-RC09,SEC,medium,sql_firewall = 'FALSE' AND db_vault = 'FALSE' AND audit_trail = 'NONE',Assumption of network isolation
+SEC-SQL-INJ-002-RC10,SEC,medium,FAIL_count > 0,Security compliance misalignment
+SEC-SQL-INJ-002-RC13,SEC,medium,SUM(count) > 1,Knowledge loss and staff turnover
+SEC-SQL-INJ-002-RC16,SEC,medium,SUM(present) >= 3,Insufficient removal validation
+SEC-SQL-NET-001-RC07,SEC,medium,unique_hosts > 20,Missing Virtual Private Network (VPN) Requirements
+SEC-SQL-NET-001-RC08,SEC,medium,NO_count > 1,Cloud Provider Shared Responsibility Model Misunderstanding
+SEC-SQL-NET-001-RC10,SEC,medium,row_count = 0 OR host = '*',No Network Access Control List (NACL) Restrictions
+SEC-SQL-NET-001-RC11,SEC,medium,SUM(present) >= 3,Shadow IT / Unauthorized Deployments
+SEC-SQL-NET-001-RC12,SEC,medium,last_login IS NULL OR last_login < SYSDATE - 90,Temporary Access Left Permanently
+SEC-SQL-NET-001-RC14,SEC,medium,NOT_CONFIGURED_count >= 2,No Default-Deny Network Policy
+SEC-SQL-NET-002-RC06,SEC,medium,distinct_programs > 5,Application Connection String Hardcoding
+SEC-SQL-NET-002-RC14,SEC,medium,uptime_days > 365,Lack of Port Rotation Practices
+SEC-SQL-NET-003-RC01,SEC,medium,distinct_hosts > 20,Default Allow Firewall Posture
+SEC-SQL-NET-003-RC05,SEC,medium,host = '*' OR broad access patterns,External Data Source Integration
+SEC-SQL-NET-003-RC16,SEC,medium,host = '*' OR lower_port IS NULL,No Default-Deny Egress Policy
+SEC-SQL-PAT-001-RC01,SEC,medium,last patch older than 6 months,Lack of proactive EOL tracking and monitoring
+SEC-SQL-PAT-001-RC02,SEC,medium,created date suggests database has been running for years without major upgrade,Deferred major version upgrades due to technical complexity
+SEC-SQL-PAT-001-RC04,SEC,medium,version is significantly behind current LTS,Extended downtime requirements for migration
+SEC-SQL-PAT-001-RC06,SEC,medium,invalid_components > 0 OR custom_schemas > 20,Unfamiliar upgrade procedures and architectural changes
+SEC-SQL-PAT-001-RC07,SEC,medium,patch history available,Inadequate testing environments that mimic production
+SEC-SQL-PAT-001-RC08,SEC,medium,last patch is older than 120,Resource constraints and competing priorities
+SEC-SQL-PAT-001-RC10,SEC,medium,"complex configuration detected (RAC, CDB, etc.)",Loss of institutional knowledge
+SEC-SQL-PAT-001-RC12,SEC,medium,days_since_patch > 180,Incremental neglect over multiple release cycles
+SEC-SQL-PAT-001-RC14,SEC,medium,edition information returned,Vendor licensing and support service uncertainty
+SEC-SQL-PAT-002-RC01,SEC,medium,database properties returned,Incomplete asset discovery and inventory
+SEC-SQL-PAT-002-RC02,SEC,medium,days_since_last_cpu > 120,Extended CVE disclosure-to-patch timelines
+SEC-SQL-PAT-002-RC03,SEC,medium,configuration parameters identified,Inadequate testing environments and procedures
+SEC-SQL-PAT-002-RC04,SEC,medium,optimizer_features_enable or _fix_control is set,Fear of patch-induced breaking changes
+SEC-SQL-PAT-002-RC05,SEC,medium,irregular patch intervals,Long approval workflows and change control processes
+SEC-SQL-PAT-002-RC06,SEC,medium,configuration returned,Resource constraints and manual patching processes
+SEC-SQL-PAT-002-RC08,SEC,medium,platform information returned,Vendor patch delays for specific platforms or configurations
+SEC-SQL-PAT-002-RC09,SEC,medium,patch inventory available,Incompatible dependency chains
+SEC-SQL-PAT-002-RC10,SEC,medium,activity in all hours,Active database usage preventing maintenance windows
+SEC-SQL-PAT-002-RC11,SEC,medium,flashback_on = 'YES' AND log_mode = 'ARCHIVELOG',Lack of patch rollback and recovery procedures
+SEC-SQL-PAT-002-RC12,SEC,medium,patch history available for gap analysis,Critical patches for rarely-exploited vulnerabilities
+SEC-SQL-PAT-002-RC13,SEC,medium,any status != 'SUCCESS',Incomplete patches that bypass exploits
+SEC-SQL-PAT-002-RC14,SEC,medium,days_since_patch > 120,Delayed CVE scoring and analysis
+SEC-SQL-PRI-001-RC09,SEC,medium,status != 'OPEN' OR wallet_type = 'UNKNOWN',Key Management Complexity
+SEC-SQL-PRI-001-RC10,SEC,medium,version starts with 11 or earlier,Lack of Native Masking Features (Old Versions)
+SEC-SQL-PRI-001-RC11,SEC,medium,row_count = 0 OR value = 'OFF',Unsecured Backups/Snapshots
+SEC-SQL-PRI-002-RC03,SEC,medium,_trace_files_public = 'TRUE' OR sec_return_server_release_banner = 'TRUE',Verbose Error Logging
+SEC-SQL-PRI-002-RC04,SEC,medium,audit_record_count > 10000000,Audit Trail Over-Configuration
+SEC-SQL-PRI-002-RC06,SEC,medium,max_dump_file_size = 'UNLIMITED' OR _trace_files_public = 'TRUE',Crash Dumps and Core Files
+SEC-SQL-VS-001-RC14,SEC,medium,pdb_count > 3,Complexity in multi-cluster environments
+SEC-SQL-VS-002-RC02,SEC,medium,days_since_patch > 90,Outdated extensions with known vulnerabilities
+SEC-SQL-VS-003-RC06,SEC,medium,LIMIT = 'NULL' OR LIMIT IS NULL,Inadequate password verification functions
+SEC-SQL-VS-003-RC12,SEC,medium,any(authentication_type = 'PASSWORD' AND user_count > 10),Lack of integration with enterprise password management

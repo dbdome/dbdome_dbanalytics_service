@@ -1,0 +1,1138 @@
+{
+  "module": "supply_chain",
+  "area_code": "SCP",
+  "source": "PLANS/SUPPLY_CHAIN_DETECTION.md",
+  "vendors": [
+    "postgresql",
+    "sqlserver",
+    "oracle",
+    "mysql"
+  ],
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-SCP-001-RC01",
+      "issue": "SEC-SQL-SCP-001",
+      "name": "Schema DDL change outside the approved migration window",
+      "slug": "scp-ddl-outside-window",
+      "description": "A CREATE/ALTER landed out-of-window or from a non-deploy principal (MITRE T1505/T1195.002). Needs the dbx_ddl_audit feed.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "ddl",
+        "change-control",
+        "provenance"
+      ],
+      "risk_level": "high",
+      "resolution": "Enable DDL audit (event trigger / pgAudit), enforce a change window, and review any out-of-window DDL.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Schema DDL change outside the approved migration window"
+      },
+      "columns": [
+        "event_time",
+        "principal",
+        "command"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-002-RC01",
+      "issue": "SEC-SQL-SCP-002",
+      "name": "Hidden trigger created by a non-deploy principal",
+      "slug": "scp-trigger-nondeploy",
+      "description": "A trigger whose backing function owner is off the deploy allow-list, firing on ordinary writes (T1546/T1505.001).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "trigger",
+        "persistence"
+      ],
+      "risk_level": "high",
+      "resolution": "Review the trigger and its function; drop if unauthorised; restrict trigger creation to the deploy role.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Hidden trigger created by a non-deploy principal"
+      },
+      "columns": [
+        "schema",
+        "table_name",
+        "trigger_name",
+        "function_name",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, c.relname AS table_name, t.tgname AS trigger_name, p.proname AS function_name, r.rolname AS owner FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_proc p ON p.oid = t.tgfoid JOIN pg_roles r ON r.oid = p.proowner WHERE NOT t.tgisinternal AND n.nspname NOT IN ('pg_catalog','information_schema') AND r.rolname NOT IN ('postgres','ci_deploy','migrator') ORDER BY n.nspname, c.relname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-003-RC01",
+      "issue": "SEC-SQL-SCP-003",
+      "name": "Backdoored stored procedure/function by a non-deploy principal",
+      "slug": "scp-routine-nondeploy",
+      "description": "A routine authored outside change control by an off-allow-list owner (T1505.001).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "routine",
+        "persistence"
+      ],
+      "risk_level": "high",
+      "resolution": "Review the routine body and provenance; drop if unauthorised; lock routine creation to the deploy role.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backdoored stored procedure/function by a non-deploy principal"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner",
+        "language"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner, l.lanname AS language FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner JOIN pg_language l ON l.oid = p.prolang WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND r.rolname NOT IN ('postgres','ci_deploy','migrator') ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-004-RC01",
+      "issue": "SEC-SQL-SCP-004",
+      "name": "Untrusted procedural language or dangerous extension installed",
+      "slug": "scp-untrusted-pl-extension",
+      "description": "plpythonu/plperlu/plpython3u/plsh, or dblink/http/file_fdw installed \u2014 host-code-execution surface (T1505; CIS).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "extension",
+        "untrusted-pl"
+      ],
+      "risk_level": "high",
+      "resolution": "Remove the untrusted language/extension if not required; restrict who can CREATE EXTENSION.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Untrusted procedural language or dangerous extension installed"
+      },
+      "columns": [
+        "kind",
+        "name"
+      ],
+      "detect": {
+        "postgresql": "SELECT 'language' AS kind, lanname AS name FROM pg_language WHERE lanname IN ('plpythonu','plperlu','plpython3u','plsh') OR (lanispl AND NOT lanpltrusted) UNION ALL SELECT 'extension', extname FROM pg_extension WHERE extname IN ('dblink','http','file_fdw','plsh','plpythonu','plperlu','plpython3u')",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-005-RC01",
+      "issue": "SEC-SQL-SCP-005",
+      "name": "Routine body references outbound network egress",
+      "slug": "scp-routine-egress",
+      "description": "Routine references dblink/http/UTL_HTTP/UTL_TCP/UTL_SMTP \u2014 outbound channel (T1041/T1505.001).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "egress",
+        "body-scan"
+      ],
+      "risk_level": "high",
+      "resolution": "Confirm whether the egress is a sanctioned integration; otherwise treat as a backdoor and remove.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Routine body references outbound network egress"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND p.prosrc ~* '(dblink|http_get|http_post|utl_http|utl_tcp|utl_smtp|pg_background)' ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-006-RC01",
+      "issue": "SEC-SQL-SCP-006",
+      "name": "Routine body references OS command execution",
+      "slug": "scp-routine-os-exec",
+      "description": "Routine references xp_cmdshell/sp_OACreate/COPY ... PROGRAM/os.system/DBMS_SCHEDULER (T1059/T1505.001).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "os-exec",
+        "body-scan"
+      ],
+      "risk_level": "high",
+      "resolution": "Treat as host-command capability; review and remove; restrict COPY PROGRAM and untrusted PLs.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Routine body references OS command execution"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND p.prosrc ~* '(xp_cmdshell|sp_oacreate|copy[^;]*program|os\\.system|subprocess|dbms_scheduler)' ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-007-RC01",
+      "issue": "SEC-SQL-SCP-007",
+      "name": "Time-bombed / logic-bomb routine",
+      "slug": "scp-logic-bomb",
+      "description": "A destructive action (DROP/TRUNCATE/DELETE) gated on a date/time comparison (T1485/T1546).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "logic-bomb",
+        "destruction"
+      ],
+      "risk_level": "high",
+      "resolution": "Inspect the routine; confirm it is not a sanctioned cleanup job; remove the time-gated destruction.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Time-bombed / logic-bomb routine"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND p.prosrc ~* '(drop\\s+table|truncate|delete\\s+from)' AND p.prosrc ~* '(current_date|current_timestamp|now\\(\\)|clock_timestamp|to_date|extract)' ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-008-RC01",
+      "issue": "SEC-SQL-SCP-008",
+      "name": "SECURITY DEFINER routine owned by a superuser",
+      "slug": "scp-secdef-superuser",
+      "description": "A definer-rights routine owned by a superuser \u2014 a standing privilege-escalation primitive (T1548).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "security-definer",
+        "privesc"
+      ],
+      "risk_level": "high",
+      "resolution": "Re-own to a least-privilege role, pin search_path, and review the body; revoke EXECUTE from PUBLIC.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SECURITY DEFINER routine owned by a superuser"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE p.prosecdef AND r.rolsuper AND n.nspname NOT IN ('pg_catalog','information_schema') ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-009-RC01",
+      "issue": "SEC-SQL-SCP-009",
+      "name": "Event / DDL / logon trigger installed for persistence",
+      "slug": "scp-event-trigger",
+      "description": "An event trigger that fires on every login or DDL event \u2014 a persistence foothold (T1546).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "event-trigger",
+        "persistence"
+      ],
+      "risk_level": "high",
+      "resolution": "Review each event trigger and its function; drop unauthorised ones; restrict event-trigger creation.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Event / DDL / logon trigger installed for persistence"
+      },
+      "columns": [
+        "event_trigger",
+        "event",
+        "owner",
+        "enabled"
+      ],
+      "detect": {
+        "postgresql": "SELECT e.evtname AS event_trigger, e.evtevent AS event, r.rolname AS owner, e.evtenabled AS enabled FROM pg_event_trigger e JOIN pg_roles r ON r.oid = e.evtowner ORDER BY e.evtname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-010-RC01",
+      "issue": "SEC-SQL-SCP-010",
+      "name": "Malicious migration performing non-schema actions from CI/CD",
+      "slug": "scp-migration-nonschema",
+      "description": "A migration that creates roles, GRANTs, or alters config (T1195.002). Needs the dbx_ddl_audit feed.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "ci-cd",
+        "migration"
+      ],
+      "risk_level": "high",
+      "resolution": "Audit CI/CD migrations for role/grant/config statements; require review for non-schema DDL.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Malicious migration performing non-schema actions from CI/CD"
+      },
+      "columns": [
+        "event_time",
+        "principal",
+        "command"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-011-RC01",
+      "issue": "SEC-SQL-SCP-011",
+      "name": "Untrusted compiled extension, CLR assembly, Java, or UDF",
+      "slug": "scp-compiled-code",
+      "description": "Native/compiled code loaded into the engine \u2014 C function (PostgreSQL), UNSAFE CLR, Oracle Java, mysql.func (T1554/T1505).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "native-code",
+        "udf"
+      ],
+      "risk_level": "high",
+      "resolution": "Verify provenance of compiled code; remove untrusted C functions; restrict who can create them.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Untrusted compiled extension, CLR assembly, Java, or UDF"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_language l ON l.oid = p.prolang JOIN pg_roles r ON r.oid = p.proowner WHERE l.lanname = 'c' AND n.nspname NOT IN ('pg_catalog','information_schema') ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-012-RC01",
+      "issue": "SEC-SQL-SCP-012",
+      "name": "ALTER DEFAULT PRIVILEGES auto-grant persistence",
+      "slug": "scp-default-privileges",
+      "description": "A standing default-ACL rule that re-grants on every future object (T1098). PostgreSQL-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "default-privileges",
+        "persistence"
+      ],
+      "risk_level": "high",
+      "resolution": "Review pg_default_acl rules; revoke any that auto-grant to non-deploy principals.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "ALTER DEFAULT PRIVILEGES auto-grant persistence"
+      },
+      "columns": [
+        "schema",
+        "object_type",
+        "grantor",
+        "acl"
+      ],
+      "detect": {
+        "postgresql": "SELECT COALESCE(n.nspname,'(global)') AS schema, d.defaclobjtype AS object_type, pg_get_userbyid(d.defaclrole) AS grantor, d.defaclacl::text AS acl FROM pg_default_acl d LEFT JOIN pg_namespace n ON n.oid = d.defaclnamespace",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-013-RC01",
+      "issue": "SEC-SQL-SCP-013",
+      "name": "Trigger or routine planted on an authentication / system object",
+      "slug": "scp-auth-object-trigger",
+      "description": "Positioned to harvest credentials or re-grant access (T1546/T1556). Vendor-specific (system-object triggers).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "auth-object",
+        "credential-harvest"
+      ],
+      "risk_level": "high",
+      "resolution": "Identify triggers/routines on auth/system objects; remove; lock down system schema.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Trigger or routine planted on an authentication / system object"
+      },
+      "columns": [
+        "schema",
+        "object_name",
+        "kind"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-014-RC01",
+      "issue": "SEC-SQL-SCP-014",
+      "name": "Trusted routine tampered while preserving its signature",
+      "slug": "scp-routine-tamper",
+      "description": "Body-hash drift from baseline with identity unchanged \u2014 the supply-chain replace (T1554). Needs dbx_routine_baseline.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "tamper",
+        "baseline-drift"
+      ],
+      "risk_level": "high",
+      "resolution": "Diff routine bodies against the reviewed baseline; restore from source control; investigate the change.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Trusted routine tampered while preserving its signature"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "baseline_hash",
+        "current_hash"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-015-RC01",
+      "issue": "SEC-SQL-SCP-015",
+      "name": "Poisoned DB-driver / package",
+      "slug": "scp-poisoned-driver",
+      "description": "An unexpected client running privileged DDL on first connection \u2014 DB-side fingerprint of a trojanized driver (T1195.001). Behavioral.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "poisoned-driver",
+        "first-connection"
+      ],
+      "risk_level": "high",
+      "resolution": "Correlate first-connection privileged DDL with client/app fingerprints; pin trusted driver versions.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Poisoned DB-driver / package"
+      },
+      "columns": [
+        "client",
+        "principal",
+        "command"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-016-RC01",
+      "issue": "SEC-SQL-SCP-016",
+      "name": "Backdoor superuser role or login created",
+      "slug": "scp-backdoor-superuser",
+      "description": "A privileged principal off the administrative allow-list \u2014 rolsuper/rolcreaterole/rolbypassrls (T1136/T1098).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "backdoor-account",
+        "privesc"
+      ],
+      "risk_level": "high",
+      "resolution": "Verify each privileged role against the admin allow-list; drop/disable unauthorised ones.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backdoor superuser role or login created"
+      },
+      "columns": [
+        "rolname",
+        "rolsuper",
+        "rolcreaterole",
+        "rolbypassrls",
+        "rolcanlogin"
+      ],
+      "detect": {
+        "postgresql": "SELECT rolname, rolsuper, rolcreaterole, rolbypassrls, rolcanlogin FROM pg_roles WHERE (rolsuper OR rolcreaterole OR rolbypassrls) AND rolname NOT IN ('postgres','ci_deploy','migrator') ORDER BY rolname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-017-RC01",
+      "issue": "SEC-SQL-SCP-017",
+      "name": "Migration-window evasion via object-inventory drift",
+      "slug": "scp-inventory-drift",
+      "description": "Reconciles live catalog vs deploy baseline to catch create-and-drop / back-dated objects. Needs dbx_object_baseline.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "inventory-drift",
+        "baseline"
+      ],
+      "risk_level": "high",
+      "resolution": "Maintain an object-inventory baseline; investigate any drift not tied to an approved migration.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Migration-window evasion via object-inventory drift"
+      },
+      "columns": [
+        "object_name",
+        "drift"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-018-RC01",
+      "issue": "SEC-SQL-SCP-018",
+      "name": "Owner-spoofing \u2014 backdoor authored as the deploy role",
+      "slug": "scp-owner-spoof-body",
+      "description": "Scans routine bodies for backdoor signatures regardless of owner (closes the SCP-002/003 owner-check evasion).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "owner-spoof",
+        "body-scan"
+      ],
+      "risk_level": "high",
+      "resolution": "Body-signature match ignores owner; review every hit even if owned by the deploy role.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Owner-spoofing \u2014 backdoor authored as the deploy role"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND p.prosrc ~* '(xp_cmdshell|copy[^;]*program|dblink|alter\\s+role|create\\s+role|grant\\s+)' ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-019-RC01",
+      "issue": "SEC-SQL-SCP-019",
+      "name": "Extension-install evasion via trust-flag flip or disabled audit",
+      "slug": "scp-trust-flag-flip",
+      "description": "An untrusted PL re-flagged lanpltrusted=true, or a DDL-audit event trigger left disabled.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "trust-flag",
+        "audit-disable"
+      ],
+      "risk_level": "high",
+      "resolution": "Reset the language trust flag; re-enable the disabled DDL-audit event trigger; investigate who changed it.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Extension-install evasion via trust-flag flip or disabled audit"
+      },
+      "columns": [
+        "issue",
+        "detail"
+      ],
+      "detect": {
+        "postgresql": "SELECT 'trusted_flag_flip' AS issue, lanname AS detail FROM pg_language WHERE lanname IN ('plpythonu','plperlu','plpython3u','plsh') AND lanpltrusted UNION ALL SELECT 'disabled_event_trigger', evtname FROM pg_event_trigger WHERE evtenabled = 'D'",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-020-RC01",
+      "issue": "SEC-SQL-SCP-020",
+      "name": "Egress evasion via indirection (FDW / dblink / nested call)",
+      "slug": "scp-egress-indirection",
+      "description": "Network reach laundered through a foreign-data-wrapper or database link rather than a direct http call (T1041).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "egress",
+        "fdw",
+        "indirection"
+      ],
+      "risk_level": "high",
+      "resolution": "Inventory foreign servers/wrappers; confirm each endpoint is sanctioned; drop unknown ones.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Egress evasion via indirection (FDW / dblink / nested call)"
+      },
+      "columns": [
+        "foreign_server",
+        "wrapper",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT s.srvname AS foreign_server, w.fdwname AS wrapper, pg_get_userbyid(s.srvowner) AS owner FROM pg_foreign_server s JOIN pg_foreign_data_wrapper w ON w.oid = s.srvfdw ORDER BY s.srvname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-021-RC01",
+      "issue": "SEC-SQL-SCP-021",
+      "name": "xp_cmdshell via wrapper or transient re-enable",
+      "slug": "scp-xpcmdshell-wrapper",
+      "description": "SQL Server module bodies invoking xp_cmdshell under a non-xp_/sp_ wrapper name. SQL Server-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "xp-cmdshell",
+        "sqlserver"
+      ],
+      "risk_level": "high",
+      "resolution": "Scan SQL Server module definitions for wrapped xp_cmdshell; disable the feature; remove wrappers.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "xp_cmdshell via wrapper or transient re-enable"
+      },
+      "columns": [
+        "schema_name",
+        "object_name",
+        "type_desc"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": "SELECT s.name AS schema_name, o.name AS object_name, o.type_desc FROM sys.sql_modules m JOIN sys.objects o ON o.object_id = m.object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE m.definition LIKE '%xp_cmdshell%' AND o.is_ms_shipped = 0 AND o.name NOT LIKE 'xp[_]%' AND o.name NOT LIKE 'sp[_]%'",
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-022-RC01",
+      "issue": "SEC-SQL-SCP-022",
+      "name": "Obfuscated logic-bomb \u2014 trigger date from a config table",
+      "slug": "scp-logic-bomb-config",
+      "description": "Select-then-destroy where the detonation condition is read from a config table or computed at runtime (closes SCP-007 literal-date gap).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "logic-bomb",
+        "obfuscation"
+      ],
+      "risk_level": "high",
+      "resolution": "Trace runtime-computed destruction conditions; review routines that read a value then DROP/DELETE.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Obfuscated logic-bomb \u2014 trigger date from a config table"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-023-RC01",
+      "issue": "SEC-SQL-SCP-023",
+      "name": "Encrypted or wrapped routine body",
+      "slug": "scp-encrypted-routine",
+      "description": "Routine created WITH ENCRYPTION (SQL Server) or wrapped PL/SQL (Oracle) defeats all body scans. Concealment is the finding (T1027). Vendor-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "encrypted-body",
+        "obfuscation"
+      ],
+      "risk_level": "high",
+      "resolution": "On application routines, treat deliberate concealment as suspicious; obtain and review the source.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Encrypted or wrapped routine body"
+      },
+      "columns": [
+        "schema_name",
+        "object_name",
+        "type_desc",
+        "owner",
+        "name",
+        "type"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": "SELECT s.name AS schema_name, o.name AS object_name, o.type_desc FROM sys.objects o JOIN sys.schemas s ON s.schema_id = o.schema_id LEFT JOIN sys.sql_modules m ON m.object_id = o.object_id WHERE o.is_ms_shipped = 0 AND o.type IN ('P','FN','TF','IF','V','TR') AND m.object_id IS NULL",
+        "oracle": "SELECT owner, name, type FROM dba_source WHERE line = 1 AND UPPER(text) LIKE '%WRAPPED%' AND owner NOT IN ('SYS','SYSTEM','SYSAUX')",
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-024-RC01",
+      "issue": "SEC-SQL-SCP-024",
+      "name": "Obfuscated dynamic-execution payload",
+      "slug": "scp-obfuscated-execute",
+      "description": "A routine assembling its statement at runtime via decode(base64)/convert_from/chr()/translate()/|| into EXECUTE (T1027/T1140).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "obfuscation",
+        "dynamic-sql"
+      ],
+      "risk_level": "high",
+      "resolution": "Review routines combining EXECUTE with decode/convert_from/chr/translate; de-obfuscate and assess.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Obfuscated dynamic-execution payload"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND p.prosrc ~* 'execute' AND p.prosrc ~* '(decode\\(|convert_from|chr\\(|translate\\(|encode\\()' ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-025-RC01",
+      "issue": "SEC-SQL-SCP-025",
+      "name": "SECURITY DEFINER without a pinned search_path",
+      "slug": "scp-secdef-no-searchpath",
+      "description": "A definer-rights routine with no search_path pinned \u2014 hijackable by any caller regardless of owner (T1548).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "security-definer",
+        "search-path"
+      ],
+      "risk_level": "high",
+      "resolution": "Pin a safe search_path on every SECURITY DEFINER routine; revoke EXECUTE from PUBLIC where possible.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SECURITY DEFINER without a pinned search_path"
+      },
+      "columns": [
+        "schema",
+        "routine",
+        "owner"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, p.proname AS routine, r.rolname AS owner FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_roles r ON r.oid = p.proowner WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog','information_schema') AND (p.proconfig IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c ILIKE 'search_path=%')) ORDER BY n.nspname, p.proname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-026-RC01",
+      "issue": "SEC-SQL-SCP-026",
+      "name": "Privilege backdoor via role membership",
+      "slug": "scp-priv-role-membership",
+      "description": "A principal made a member of pg_read_all_data / pg_execute_server_program / rds_superuser etc. \u2014 no rolsuper flag, so SCP-016 misses it (T1098).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "role-membership",
+        "privesc"
+      ],
+      "risk_level": "high",
+      "resolution": "Review membership in powerful default roles; revoke from principals that don't need it.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Privilege backdoor via role membership"
+      },
+      "columns": [
+        "member",
+        "granted_role"
+      ],
+      "detect": {
+        "postgresql": "SELECT m.rolname AS member, gr.rolname AS granted_role FROM pg_auth_members am JOIN pg_roles m ON m.oid = am.member JOIN pg_roles gr ON gr.oid = am.roleid WHERE gr.rolname IN ('pg_read_all_data','pg_write_all_data','pg_execute_server_program','pg_read_server_files','pg_write_server_files','rds_superuser') ORDER BY gr.rolname, m.rolname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-027-RC01",
+      "issue": "SEC-SQL-SCP-027",
+      "name": "Connection-time persistence via preload libraries / GUCs",
+      "slug": "scp-preload-persistence",
+      "description": "A malicious *_preload_libraries setting loads attacker code on every connection \u2014 no object to find (T1546/T1574).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "preload",
+        "persistence",
+        "guc"
+      ],
+      "risk_level": "high",
+      "resolution": "Review preload-library settings; remove unknown libraries; restrict ALTER SYSTEM / superuser GUC changes.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Connection-time persistence via preload libraries / GUCs"
+      },
+      "columns": [
+        "name",
+        "setting"
+      ],
+      "detect": {
+        "postgresql": "SELECT name, setting FROM pg_settings WHERE name IN ('shared_preload_libraries','session_preload_libraries','local_preload_libraries') AND setting <> ''",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-028-RC01",
+      "issue": "SEC-SQL-SCP-028",
+      "name": "Routine & trigger inventory drift",
+      "slug": "scp-routine-inventory-drift",
+      "description": "A function/trigger present in the live catalog but absent from the deploy baseline (evades owner checks). Needs dbx_routine_inventory_baseline.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "inventory-drift",
+        "baseline"
+      ],
+      "risk_level": "high",
+      "resolution": "Maintain a routine/trigger inventory baseline; investigate any object not in it.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Routine & trigger inventory drift"
+      },
+      "columns": [
+        "object_name",
+        "kind"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-029-RC01",
+      "issue": "SEC-SQL-SCP-029",
+      "name": "High-privilege DEFINER routine in an app schema (MySQL/MariaDB)",
+      "slug": "scp-mysql-definer",
+      "description": "A routine SQL SECURITY DEFINER with DEFINER=root/admin/mysql.sys living in an app schema (T1548). MySQL/MariaDB-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "security-definer",
+        "mysql"
+      ],
+      "risk_level": "high",
+      "resolution": "Re-define routines to a least-privilege account; avoid root/admin DEFINER in application schemas.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "High-privilege DEFINER routine in an app schema (MySQL/MariaDB)"
+      },
+      "columns": [
+        "schema_name",
+        "routine_name",
+        "definer",
+        "security_type"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT routine_schema AS schema_name, routine_name, definer, security_type FROM information_schema.routines WHERE security_type = 'DEFINER' AND definer REGEXP '^(root|admin|mysql.sys)@' AND routine_schema NOT IN ('sys','mysql','performance_schema','information_schema')"
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-030-RC01",
+      "issue": "SEC-SQL-SCP-030",
+      "name": "SQL Server startup-procedure persistence",
+      "slug": "scp-mssql-startup-proc",
+      "description": "A procedure flagged via sp_procoption 'startup' auto-runs on every instance restart (T1505.001). SQL Server-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "startup-proc",
+        "sqlserver"
+      ],
+      "risk_level": "high",
+      "resolution": "List ExecIsStartup procedures; disable any not sanctioned; restrict sp_procoption.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server startup-procedure persistence"
+      },
+      "columns": [
+        "schema_name",
+        "procedure_name"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": "SELECT s.name AS schema_name, o.name AS procedure_name FROM sys.procedures p JOIN sys.objects o ON o.object_id = p.object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE OBJECTPROPERTY(p.object_id, 'ExecIsStartUp') = 1",
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-031-RC01",
+      "issue": "SEC-SQL-SCP-031",
+      "name": "PostgreSQL command-executing GUC",
+      "slug": "scp-command-guc",
+      "description": "A shell payload in archive_command/restore_command/etc. runs as the server OS user (T1059/T1546).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "guc",
+        "os-exec"
+      ],
+      "risk_level": "high",
+      "resolution": "Review archive/recovery command GUCs; remove shell payloads; restrict ALTER SYSTEM.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL command-executing GUC"
+      },
+      "columns": [
+        "name",
+        "setting"
+      ],
+      "detect": {
+        "postgresql": "SELECT name, setting FROM pg_settings WHERE name IN ('archive_command','restore_command','archive_cleanup_command','recovery_end_command','ssl_passphrase_command') AND setting <> ''",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-032-RC01",
+      "issue": "SEC-SQL-SCP-032",
+      "name": "Self-healing event trigger",
+      "slug": "scp-self-healing-trigger",
+      "description": "An event-trigger function that re-CREATEs the backdoor when dropped \u2014 can be deploy-owned (evades owner filters).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "event-trigger",
+        "self-heal"
+      ],
+      "risk_level": "high",
+      "resolution": "Inspect event-trigger function bodies for re-plant DDL; remove the trigger and the object it recreates.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Self-healing event trigger"
+      },
+      "columns": [
+        "event_trigger",
+        "function"
+      ],
+      "detect": {
+        "postgresql": "SELECT e.evtname AS event_trigger, p.proname AS function FROM pg_event_trigger e JOIN pg_proc p ON p.oid = e.evtfoid WHERE p.prosrc ~* 'create\\s+(or\\s+replace\\s+)?(function|trigger|role|extension|event\\s+trigger)' ORDER BY e.evtname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-033-RC01",
+      "issue": "SEC-SQL-SCP-033",
+      "name": "MySQL/MariaDB init_connect / init_file",
+      "slug": "scp-mysql-init",
+      "description": "SQL auto-run on every connection or at startup via server variables \u2014 no schema object (T1546). MySQL/MariaDB-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "init-connect",
+        "mysql"
+      ],
+      "risk_level": "high",
+      "resolution": "Review init_connect / init_file values; clear unauthorised payloads; restrict SUPER/SYSTEM_VARIABLES_ADMIN.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL/MariaDB init_connect / init_file"
+      },
+      "columns": [
+        "variable_name",
+        "variable_value"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": "SELECT variable_name, variable_value FROM performance_schema.global_variables WHERE variable_name IN ('init_connect','init_file') AND variable_value <> ''"
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-034-RC01",
+      "issue": "SEC-SQL-SCP-034",
+      "name": "Oracle Scheduler-job persistence / time-bomb",
+      "slug": "scp-oracle-scheduler",
+      "description": "A dba_scheduler_jobs entry with job_type=EXECUTABLE or dangerous job_action, optionally future-dated (T1053/T1059). Oracle-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "scheduler",
+        "oracle"
+      ],
+      "risk_level": "high",
+      "resolution": "Review scheduler jobs for EXECUTABLE/OS actions and future start dates; disable unauthorised jobs.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle Scheduler-job persistence / time-bomb"
+      },
+      "columns": [
+        "owner",
+        "job_name",
+        "job_type",
+        "job_action",
+        "start_date"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": "SELECT owner, job_name, job_type, job_action, TO_CHAR(start_date) AS start_date FROM dba_scheduler_jobs WHERE owner NOT IN ('SYS','SYSTEM') AND (job_type = 'EXECUTABLE' OR REGEXP_LIKE(UPPER(job_action), 'HOST|DBMS_SCHEDULER|EXTERNAL'))",
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-035-RC01",
+      "issue": "SEC-SQL-SCP-035",
+      "name": "Outbound foreign server / data wrapper",
+      "slug": "scp-foreign-egress",
+      "description": "A foreign-data-wrapper server + user mapping (and foreign tables) to an off-allow-list endpoint \u2014 standing egress (T1041).",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "fdw",
+        "egress"
+      ],
+      "risk_level": "high",
+      "resolution": "Inventory foreign tables and their servers; confirm endpoints; drop unsanctioned foreign tables.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Outbound foreign server / data wrapper"
+      },
+      "columns": [
+        "schema",
+        "foreign_table",
+        "foreign_server"
+      ],
+      "detect": {
+        "postgresql": "SELECT n.nspname AS schema, c.relname AS foreign_table, s.srvname AS foreign_server FROM pg_foreign_table ft JOIN pg_class c ON c.oid = ft.ftrelid JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_foreign_server s ON s.oid = ft.ftserver ORDER BY n.nspname, c.relname",
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-SCP-036-RC01",
+      "issue": "SEC-SQL-SCP-036",
+      "name": "SQL Server Agent CmdExec / PowerShell job",
+      "slug": "scp-mssql-agent-job",
+      "description": "An Agent job step using CmdExec/PowerShell/ActiveScripting/SSIS runs OS commands on a schedule without xp_cmdshell (T1053.005/T1059). SQL Server-specific.",
+      "topics": [
+        "supply-chain",
+        "schema-persistence",
+        "scp",
+        "agent-job",
+        "sqlserver",
+        "os-exec"
+      ],
+      "risk_level": "high",
+      "resolution": "Review SQL Server Agent job steps for CmdExec/PowerShell subsystems; remove unauthorised jobs.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server Agent CmdExec / PowerShell job"
+      },
+      "columns": [
+        "job_name",
+        "step_name",
+        "subsystem",
+        "command"
+      ],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": "SELECT j.name AS job_name, st.step_name, st.subsystem, st.command FROM msdb.dbo.sysjobs j JOIN msdb.dbo.sysjobsteps st ON st.job_id = j.job_id WHERE st.subsystem IN ('CmdExec','PowerShell','ActiveScripting','SSIS')",
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

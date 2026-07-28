@@ -1,0 +1,3950 @@
+{
+  "module": "worms",
+  "area_code": "WRM",
+  "source": "C:/dev/PLANS/WORMS_DETECTION(1).md",
+  "vendors": [
+    "postgresql",
+    "sqlserver",
+    "oracle",
+    "mysql"
+  ],
+  "_coverage_note": "164 root causes parsed from the doc's enumerated detections; detection SQL is TODO (fill specs or generate from the knowledge JSON). The module's JSON may list more RCs than the prose enumerates.",
+  "root_causes": [
+    {
+      "rc": "SEC-SQL-WRM-001-RC01",
+      "issue": "SEC-SQL-WRM-001",
+      "name": "SQL Slammer / UDP-1434 scan signature",
+      "slug": "wrm-001-sql-slammer-udp-1434-scan-signature",
+      "description": "the 376-byte buffer-overflow probe that took down the internet in 2003 is still the most-scanned UDP packet on the public internet. SQL Browser exposed to untrusted networks remains exploitable on unpatched legacy instances.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Slammer / UDP-1434 scan signature"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-002-RC01",
+      "issue": "SEC-SQL-WRM-002",
+      "name": "Voyager Alpha Force / SQLSpida pattern",
+      "slug": "wrm-002-voyager-alpha-force-sqlspida-pattern",
+      "description": "`sa` brute-force-and-spread MSSQL worm pattern. Persists in modern MrbMiner, Vollgar, BlueSky-affiliate campaigns.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Voyager Alpha Force / SQLSpida pattern"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-003-RC01",
+      "issue": "SEC-SQL-WRM-003",
+      "name": "PostgreSQL brute-force worm (PgMiner pattern)",
+      "slug": "wrm-003-postgresql-brute-force-worm-pgminer-pattern",
+      "description": "Trend Micro 2020 + ongoing. Internet-exposed Postgres \u2192 `postgres` brute-force \u2192 outbound TCP/5432 scan from victim host.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL brute-force worm (PgMiner pattern)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-004-RC01",
+      "issue": "SEC-SQL-WRM-004",
+      "name": "MySQL brute-force worm",
+      "slug": "wrm-004-mysql-brute-force-worm",
+      "description": "Vollgar (Guardicore, 3000+ infections/day at peak), Sysrv-hello MySQL module. Failed `root` logins from many sources \u2192 success \u2192 outbound TCP/3306 scan.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL brute-force worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-005-RC01",
+      "issue": "SEC-SQL-WRM-005",
+      "name": "SQL Server Agent job worm persistence",
+      "slug": "wrm-005-sql-server-agent-job-worm-persistence",
+      "description": "`msdb.dbo.sysjobsteps` carrying `powershell -enc <base64>` loaders, named to look like maintenance jobs.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server Agent job worm persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-006-RC01",
+      "issue": "SEC-SQL-WRM-006",
+      "name": "SQL Server CLR assembly worm payload",
+      "slug": "wrm-006-sql-server-clr-assembly-worm-payload",
+      "description": "`UNSAFE` / `EXTERNAL_ACCESS` assemblies. Skip-2.0 (Winnti) and Maggie pattern.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server CLR assembly worm payload"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-007-RC01",
+      "issue": "SEC-SQL-WRM-007",
+      "name": "Extended stored procedure DLL worm dropper",
+      "slug": "wrm-007-extended-stored-procedure-dll-worm-dropper",
+      "description": "`xp_*` procs whose backing DLL is outside the SQL Server install path.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Extended stored procedure DLL worm dropper"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-008-RC01",
+      "issue": "SEC-SQL-WRM-008",
+      "name": "PostgreSQL malicious extension worm (PG_MEM pattern)",
+      "slug": "wrm-008-postgresql-malicious-extension-worm-pg-mem-pattern",
+      "description": "Aqua Nautilus, 1500+ compromised servers by April 2025. Fileless extension that mines + scans for next PostgreSQL victim.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL malicious extension worm (PG_MEM pattern)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-009-RC01",
+      "issue": "SEC-SQL-WRM-009",
+      "name": "PostgreSQL `pg_cron` worm persistence",
+      "slug": "wrm-009-postgresql-pg-cron-worm-persistence",
+      "description": "cron job whose body invokes `COPY FROM PROGRAM` or `dblink`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL `pg_cron` worm persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-010-RC01",
+      "issue": "SEC-SQL-WRM-010",
+      "name": "MySQL/MariaDB `lib_mysqludf_sys` worm UDF",
+      "slug": "wrm-010-mysql-mariadb-lib-mysqludf-sys-worm-udf",
+      "description": "`sys_exec()` UDF, no legitimate production placement.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL/MariaDB `lib_mysqludf_sys` worm UDF"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-011-RC01",
+      "issue": "SEC-SQL-WRM-011",
+      "name": "MySQL Event Scheduler worm persistence",
+      "slug": "wrm-011-mysql-event-scheduler-worm-persistence",
+      "description": "`information_schema.events` whose body calls UDFs or contains base64/curl/wget patterns.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL Event Scheduler worm persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-012-RC01",
+      "issue": "SEC-SQL-WRM-012",
+      "name": "Oracle DBMS_SCHEDULER external-job worm",
+      "slug": "wrm-012-oracle-dbms-scheduler-external-job-worm",
+      "description": "`job_type='EXECUTABLE'` jobs spawning cmd/powershell/bash.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle DBMS_SCHEDULER external-job worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-013-RC01",
+      "issue": "SEC-SQL-WRM-013",
+      "name": "Oracle Java stored-procedure worm",
+      "slug": "wrm-013-oracle-java-stored-procedure-worm",
+      "description": "Java class with broad `SocketPermission`/`FilePermission` grants.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle Java stored-procedure worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-014-RC01",
+      "issue": "SEC-SQL-WRM-014",
+      "name": "Linked-server worm propagation",
+      "slug": "wrm-014-linked-server-worm-propagation",
+      "description": "MSSQL worm pivots through existing linked-server definitions to neighbour MSSQL instances (Play ransomware affiliates' pattern).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Linked-server worm propagation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-015-RC01",
+      "issue": "SEC-SQL-WRM-015",
+      "name": "Service Broker worm channel",
+      "slug": "wrm-015-service-broker-worm-channel",
+      "description": "quiet C2 over in-database message queues.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Service Broker worm channel"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-016-RC01",
+      "issue": "SEC-SQL-WRM-016",
+      "name": "PostgreSQL logical-replication subscription worm",
+      "slug": "wrm-016-postgresql-logical-replication-subscription-worm",
+      "description": "attacker `CREATE SUBSCRIPTION` from their own host = covert C2 + future-update channel.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL logical-replication subscription worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-017-RC01",
+      "issue": "SEC-SQL-WRM-017",
+      "name": "PostgreSQL FDW / dblink worm pivot",
+      "slug": "wrm-017-postgresql-fdw-dblink-worm-pivot",
+      "description": "enumerate local foreign servers + execute SQL on neighbours.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL FDW / dblink worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-018-RC01",
+      "issue": "SEC-SQL-WRM-018",
+      "name": "MySQL FEDERATED engine worm pivot",
+      "slug": "wrm-018-mysql-federated-engine-worm-pivot",
+      "description": "`engine='FEDERATED'` tables with stored credentials pivot to remote MySQL.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL FEDERATED engine worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-019-RC01",
+      "issue": "SEC-SQL-WRM-019",
+      "name": "Oracle DBMS_PIPE worm channel",
+      "slug": "wrm-019-oracle-dbms-pipe-worm-channel",
+      "description": "in-instance covert message bus.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle DBMS_PIPE worm channel"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-020-RC01",
+      "issue": "SEC-SQL-WRM-020",
+      "name": "MongoDB add-replica worm pivot",
+      "slug": "wrm-020-mongodb-add-replica-worm-pivot",
+      "description": "`rs.add()` of attacker-controlled host = persistent read-replica that survives password rotation.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB add-replica worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-021-RC01",
+      "issue": "SEC-SQL-WRM-021",
+      "name": "xp_cmdshell-driven outbound worm sweep",
+      "slug": "wrm-021-xp-cmdshell-driven-outbound-worm-sweep",
+      "description": "`masscan` / `nmap` / `Invoke-PortScan` from MSSQL host process tree.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "xp_cmdshell-driven outbound worm sweep"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-022-RC01",
+      "issue": "SEC-SQL-WRM-022",
+      "name": "PostgreSQL COPY FROM PROGRAM worm dropper",
+      "slug": "wrm-022-postgresql-copy-from-program-worm-dropper",
+      "description": "canonical PostgreSQL host-side RCE.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL COPY FROM PROGRAM worm dropper"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-023-RC01",
+      "issue": "SEC-SQL-WRM-023",
+      "name": "Oracle UTL_HTTP / UTL_TCP worm beacon",
+      "slug": "wrm-023-oracle-utl-http-utl-tcp-worm-beacon",
+      "description": "outbound C2 from the DB process itself, bypassing host-side egress monitoring.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle UTL_HTTP / UTL_TCP worm beacon"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-024-RC01",
+      "issue": "SEC-SQL-WRM-024",
+      "name": "MongoDB `$where` / `$function` JavaScript worm payload",
+      "slug": "wrm-024-mongodb-where-function-javascript-worm-payload",
+      "description": "server-side JS, file I/O if `--noscripting` isn't set.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB `$where` / `$function` JavaScript worm payload"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-025-RC01",
+      "issue": "SEC-SQL-WRM-025",
+      "name": "Lemon_Duck",
+      "slug": "wrm-025-lemon-duck",
+      "description": "MSSQL xp_cmdshell + SMB/EternalBlue + WMI + linked-server fan-out.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Lemon_Duck"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-026-RC01",
+      "issue": "SEC-SQL-WRM-026",
+      "name": "Sysrv-hello",
+      "slug": "wrm-026-sysrv-hello",
+      "description": "Go-based cross-platform: Redis + MySQL + PostgreSQL + Tomcat + Jenkins + Confluence simultaneously.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Sysrv-hello"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-027-RC01",
+      "issue": "SEC-SQL-WRM-027",
+      "name": "DreamBus",
+      "slug": "wrm-027-dreambus",
+      "description": "Cado Security 2021-2026. Postgres + Redis + Hadoop YARN + Spark + Confluence + SaltStack + SSH.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DreamBus"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-028-RC01",
+      "issue": "SEC-SQL-WRM-028",
+      "name": "Kinsing",
+      "slug": "wrm-028-kinsing",
+      "description": "Aqua Nautilus 2020-2026. Exposed Docker + Postgres weak creds + Redis no-auth + Hadoop YARN + Confluence. Drops `kdevtmpfsi` + `kinsing`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Kinsing"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-029-RC01",
+      "issue": "SEC-SQL-WRM-029",
+      "name": "TeamTNT",
+      "slug": "wrm-029-teamtnt",
+      "description": "Cado / Trend Micro / Sysdig. Steals AWS/GCP credentials, pivots via the cloud control plane.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "TeamTNT"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-030-RC01",
+      "issue": "SEC-SQL-WRM-030",
+      "name": "8220 Gang",
+      "slug": "wrm-030-8220-gang",
+      "description": "Redis + Apache Druid + Confluence + Atlassian + PostgreSQL. Named for C2 port 8220.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "8220 Gang"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-031-RC01",
+      "issue": "SEC-SQL-WRM-031",
+      "name": "Outlaw / Shellbot",
+      "slug": "wrm-031-outlaw-shellbot",
+      "description": "Perl IRC botnet. SSH + Redis + MySQL brute-force, propagates from each victim.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Outlaw / Shellbot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-032-RC01",
+      "issue": "SEC-SQL-WRM-032",
+      "name": "Watchdog / Pro-Ocean",
+      "slug": "wrm-032-watchdog-pro-ocean",
+      "description": "Redis + Docker + Apache. Rootkit + cryptominer + masscan IPv4 sweep.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Watchdog / Pro-Ocean"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-033-RC01",
+      "issue": "SEC-SQL-WRM-033",
+      "name": "WannaMine / Adylkuzz",
+      "slug": "wrm-033-wannamine-adylkuzz",
+      "description": "EternalBlue (MS17-010) SMB + MSSQL pivot via xp_cmdshell.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "WannaMine / Adylkuzz"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-034-RC01",
+      "issue": "SEC-SQL-WRM-034",
+      "name": "Cryptominer host process in DB process tree",
+      "slug": "wrm-034-cryptominer-host-process-in-db-process-tree",
+      "description": "XMRig / kdevtmpfsi / kinsing / MinerGate / t-rex spawned by DB service account.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Cryptominer host process in DB process tree"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-035-RC01",
+      "issue": "SEC-SQL-WRM-035",
+      "name": "Outbound port-scanning from DB host",
+      "slug": "wrm-035-outbound-port-scanning-from-db-host",
+      "description": "masscan/zmap/nmap invocation + > 1000 TCP SYN/sec.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Outbound port-scanning from DB host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-036-RC01",
+      "issue": "SEC-SQL-WRM-036",
+      "name": "SSH key planting from DB host",
+      "slug": "wrm-036-ssh-key-planting-from-db-host",
+      "description": "`~/.ssh/authorized_keys` modified via `COPY FROM PROGRAM` / xp_cmdshell / sys_exec.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SSH key planting from DB host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-037-RC01",
+      "issue": "SEC-SQL-WRM-037",
+      "name": "Tor / I2P beacon from DB host",
+      "slug": "wrm-037-tor-i2p-beacon-from-db-host",
+      "description": ".onion / .i2p DNS resolution or Tor entry-node traffic.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Tor / I2P beacon from DB host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-038-RC01",
+      "issue": "SEC-SQL-WRM-038",
+      "name": "`/etc/crontab` planted via DB RCE",
+      "slug": "wrm-038-etc-crontab-planted-via-db-rce",
+      "description": "cron entry referencing curl/wget/bash loader.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "`/etc/crontab` planted via DB RCE"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-039-RC01",
+      "issue": "SEC-SQL-WRM-039",
+      "name": "K8s service-account token exfil + lateral",
+      "slug": "wrm-039-k8s-service-account-token-exfil-lateral",
+      "description": "DB-pod SA token used for Pod/Job/CronJob creates outside operator allow-list.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "K8s service-account token exfil + lateral"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-040-RC01",
+      "issue": "SEC-SQL-WRM-040",
+      "name": "MongoDB exposed-instance worm (Mongo Lock pattern)",
+      "slug": "wrm-040-mongodb-exposed-instance-worm-mongo-lock-pattern",
+      "description": "Mongo Lock / Cru3lty / Unistellar / 22BTC. Auth-off Mongo on TCP/27017 \u2192 wipe \u2192 ransom collection \u2192 scan.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoDB exposed-instance worm (Mongo Lock pattern)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-041-RC01",
+      "issue": "SEC-SQL-WRM-041",
+      "name": "CouchDB CVE-2017-12635 worm",
+      "slug": "wrm-041-couchdb-cve-2017-12635-worm",
+      "description": "JSON-parser inconsistency lets unauth attacker create admin user; mass-exploited 2017, still hits unpatched legacy.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "CouchDB CVE-2017-12635 worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-042-RC01",
+      "issue": "SEC-SQL-WRM-042",
+      "name": "Elasticsearch exposed-instance worm",
+      "slug": "wrm-042-elasticsearch-exposed-instance-worm",
+      "description": "ES on TCP/9200 without auth, identical dump-drop-ransom pattern to Mongo.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Elasticsearch exposed-instance worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-043-RC01",
+      "issue": "SEC-SQL-WRM-043",
+      "name": "Redis SLAVEOF / REPLICAOF worm",
+      "slug": "wrm-043-redis-slaveof-replicaof-worm",
+      "description": "canonical Redis-worm primitive: victim pulls attacker-controlled RDB file.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis SLAVEOF / REPLICAOF worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-044-RC01",
+      "issue": "SEC-SQL-WRM-044",
+      "name": "Redis CONFIG SET dbfilename worm payload write",
+      "slug": "wrm-044-redis-config-set-dbfilename-worm-payload-write",
+      "description": "rewrites dbfilename to `/var/spool/cron/root` or `~/.ssh/authorized_keys`, then BGSAVE writes payload.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis CONFIG SET dbfilename worm payload write"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-045-RC01",
+      "issue": "SEC-SQL-WRM-045",
+      "name": "Redis MODULE LOAD worm",
+      "slug": "wrm-045-redis-module-load-worm",
+      "description": "`.so` containing arbitrary native code dropped via SET binary + CONFIG SET dir + BGSAVE + MODULE LOAD.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis MODULE LOAD worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-046-RC01",
+      "issue": "SEC-SQL-WRM-046",
+      "name": "Memcached UDP amplification + worm",
+      "slug": "wrm-046-memcached-udp-amplification-worm",
+      "description": "Memcrashed 2018; still seen on unpatched legacy.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Memcached UDP amplification + worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-047-RC01",
+      "issue": "SEC-SQL-WRM-047",
+      "name": "etcd unauthed worm",
+      "slug": "wrm-047-etcd-unauthed-worm",
+      "description": "TCP/2379 with no client cert = arbitrary read+write to cluster state.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "etcd unauthed worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-048-RC01",
+      "issue": "SEC-SQL-WRM-048",
+      "name": "Apache Cassandra default-creds worm",
+      "slug": "wrm-048-apache-cassandra-default-creds-worm",
+      "description": "`cassandra/cassandra` superuser brute-force on TCP/9042.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Apache Cassandra default-creds worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-049-RC01",
+      "issue": "SEC-SQL-WRM-049",
+      "name": "Milvus exposed-port worm",
+      "slug": "wrm-049-milvus-exposed-port-worm",
+      "description": "default `root/Milvus` credentials on TCP/19530.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Milvus exposed-port worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-050-RC01",
+      "issue": "SEC-SQL-WRM-050",
+      "name": "Chroma April-2026 CVE worm",
+      "slug": "wrm-050-chroma-april-2026-cve-worm",
+      "description": "unpatched authentication-bypass.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Chroma April-2026 CVE worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-051-RC01",
+      "issue": "SEC-SQL-WRM-051",
+      "name": "Weaviate / Qdrant mass-scan worm",
+      "slug": "wrm-051-weaviate-qdrant-mass-scan-worm",
+      "description": "anonymous-access policy on TCP/8080 / TCP/6333.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Weaviate / Qdrant mass-scan worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-052-RC01",
+      "issue": "SEC-SQL-WRM-052",
+      "name": "Apache Solr \u2192 DB worm pivot",
+      "slug": "wrm-052-apache-solr-db-worm-pivot",
+      "description": "Solr RCE CVEs (CVE-2017-12629, CVE-2019-0193, CVE-2024-45216) \u2192 shell on Solr host \u2192 JDBC creds in configset \u2192 DB pivot.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Apache Solr \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-053-RC01",
+      "issue": "SEC-SQL-WRM-053",
+      "name": "Confluence \u2192 DB worm pivot",
+      "slug": "wrm-053-confluence-db-worm-pivot",
+      "description": "CVE-2022-26134 + CVE-2023-22515. Sysrv-hello, DreamBus, 8220 all include Confluence modules that read `confluence.cfg.xml` for DB password.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Confluence \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-054-RC01",
+      "issue": "SEC-SQL-WRM-054",
+      "name": "GitLab self-hosted \u2192 Postgres worm pivot",
+      "slug": "wrm-054-gitlab-self-hosted-postgres-worm-pivot",
+      "description": "CVE-2021-22205 ExifTool, CVE-2023-7028 password-reset. Reads `gitlab.rb` / `database.yml`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "GitLab self-hosted \u2192 Postgres worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-055-RC01",
+      "issue": "SEC-SQL-WRM-055",
+      "name": "Atlassian Jira \u2192 DB worm pivot",
+      "slug": "wrm-055-atlassian-jira-db-worm-pivot",
+      "description": "CVE-2022-0540, CVE-2023-22518 + Jira Server EOL. `dbconfig.xml` credential read.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Atlassian Jira \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-056-RC01",
+      "issue": "SEC-SQL-WRM-056",
+      "name": "Magento card-skimmer worm (DB-side)",
+      "slug": "wrm-056-magento-card-skimmer-worm-db-side",
+      "description": "Magento RCE (CVE-2022-24086) \u2192 JS skimmer into `core_config_data` + `cms_block`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Magento card-skimmer worm (DB-side)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-057-RC01",
+      "issue": "SEC-SQL-WRM-057",
+      "name": "WordPress plugin worm \u2192 MySQL persistence",
+      "slug": "wrm-057-wordpress-plugin-worm-mysql-persistence",
+      "description": "LiteSpeed Cache CVE-2024-50550, Bricks Builder CVE-2024-25600. Admin backdoors into `wp_users`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "WordPress plugin worm \u2192 MySQL persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-058-RC01",
+      "issue": "SEC-SQL-WRM-058",
+      "name": "Drupalgeddon SQLi worm family",
+      "slug": "wrm-058-drupalgeddon-sqli-worm-family",
+      "description": "CVE-2014-3704, CVE-2018-7600, CVE-2018-7602.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Drupalgeddon SQLi worm family"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-059-RC01",
+      "issue": "SEC-SQL-WRM-059",
+      "name": "Apache Spark JobSubmit \u2192 DB worm",
+      "slug": "wrm-059-apache-spark-jobsubmit-db-worm",
+      "description": "Standalone master REST on TCP/6066 without auth = job submission \u2192 backing DB pivot.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Apache Spark JobSubmit \u2192 DB worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-060-RC01",
+      "issue": "SEC-SQL-WRM-060",
+      "name": "Jenkins \u2192 DB worm pivot",
+      "slug": "wrm-060-jenkins-db-worm-pivot",
+      "description": "anonymous-read or CVE-2024-23897 file-read \u2192 `credentials.xml` \u2192 DB.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Jenkins \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-061-RC01",
+      "issue": "SEC-SQL-WRM-061",
+      "name": "Jupyter Notebook worm \u2192 DB modules",
+      "slug": "wrm-061-jupyter-notebook-worm-db-modules",
+      "description": "exposed Jupyter on TCP/8888 without token = arbitrary Python including psycopg2/pymongo/pymysql/redis.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Jupyter Notebook worm \u2192 DB modules"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-062-RC01",
+      "issue": "SEC-SQL-WRM-062",
+      "name": "ActiveMQ \u2192 DB worm pivot",
+      "slug": "wrm-062-activemq-db-worm-pivot",
+      "description": "CVE-2023-46604 OpenWire RCE exploited by Kinsing, HelloKitty, Andariel APT.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "ActiveMQ \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-063-RC01",
+      "issue": "SEC-SQL-WRM-063",
+      "name": "RapperBot SSH brute-force \u2192 DB pivot",
+      "slug": "wrm-063-rapperbot-ssh-brute-force-db-pivot",
+      "description": "Fortinet 2022-2026 ongoing. SSH brute \u2192 DB brute on same subnet.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "RapperBot SSH brute-force \u2192 DB pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-064-RC01",
+      "issue": "SEC-SQL-WRM-064",
+      "name": "HolesWarm Linux worm (MySQL module)",
+      "slug": "wrm-064-holeswarm-linux-worm-mysql-module",
+      "description": "Trend Micro 2021-2026. 20+ vulnerabilities exploited including MySQL weak creds.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "HolesWarm Linux worm (MySQL module)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-065-RC01",
+      "issue": "SEC-SQL-WRM-065",
+      "name": "HeadCrab Redis worm",
+      "slug": "wrm-065-headcrab-redis-worm",
+      "description": "Aqua Nautilus Feb 2023. First kernel-module Redis worm. 1200+ servers. SLAVEOF + MODULE LOAD + iptables/SELinux disabled + Tor C2.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "HeadCrab Redis worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-066-RC01",
+      "issue": "SEC-SQL-WRM-066",
+      "name": "Migo Redis worm",
+      "slug": "wrm-066-migo-redis-worm",
+      "description": "Cado Mar 2024. Go-language; disables Redis hardening (`protected-mode no`, `replica-read-only no`) BEFORE payload pull.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Migo Redis worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-067-RC01",
+      "issue": "SEC-SQL-WRM-067",
+      "name": "B1txor20 DNS-tunneling worm",
+      "slug": "wrm-067-b1txor20-dns-tunneling-worm",
+      "description": "Qihoo 360 2022-2025. Log4Shell + Redis no-auth + Hadoop YARN + SSH weak creds. C2 over DNS tunnel.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "B1txor20 DNS-tunneling worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-068-RC01",
+      "issue": "SEC-SQL-WRM-068",
+      "name": "Cetus worm (Confluence + DB)",
+      "slug": "wrm-068-cetus-worm-confluence-db",
+      "description": "Trend Micro 2021-2026. Containerized cryptominer + YARN propagation.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Cetus worm (Confluence + DB)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-069-RC01",
+      "issue": "SEC-SQL-WRM-069",
+      "name": "Hadooken Linux worm (WebLogic + DB)",
+      "slug": "wrm-069-hadooken-linux-worm-weblogic-db",
+      "description": "Aqua Nautilus Sep 2024. WebLogic \u2192 MySQL/PostgreSQL/Oracle pivot.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Hadooken Linux worm (WebLogic + DB)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-070-RC01",
+      "issue": "SEC-SQL-WRM-070",
+      "name": "Perfctl Linux worm",
+      "slug": "wrm-070-perfctl-linux-worm",
+      "description": "Aqua Nautilus Oct 2024. 20,000+ Linux server misconfigs including weak Postgres + Redis + Docker.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Perfctl Linux worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-071-RC01",
+      "issue": "SEC-SQL-WRM-071",
+      "name": "Doki / NGROK Docker \u2192 Postgres worm",
+      "slug": "wrm-071-doki-ngrok-docker-postgres-worm",
+      "description": "Intezer 2020-2025. Exposed Docker daemons + NGROK C2.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Doki / NGROK Docker \u2192 Postgres worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-072-RC01",
+      "issue": "SEC-SQL-WRM-072",
+      "name": "PostgreSQL `lo_import` / `lo_export` file-RW worm primitive",
+      "slug": "wrm-072-postgresql-lo-import-lo-export-file-rw-worm-primitive",
+      "description": "arbitrary filesystem read AND write from inside SQL.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL `lo_import` / `lo_export` file-RW worm primitive"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-073-RC01",
+      "issue": "SEC-SQL-WRM-073",
+      "name": "PostgreSQL `pg_largeobject` dropper",
+      "slug": "wrm-073-postgresql-pg-largeobject-dropper",
+      "description": "`lo_create` + `lo_put` + `lo_export` to assemble + drop binary on disk.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL `pg_largeobject` dropper"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-074-RC01",
+      "issue": "SEC-SQL-WRM-074",
+      "name": "PostgreSQL `postgresql.auto.conf` tampering worm",
+      "slug": "wrm-074-postgresql-postgresql-auto-conf-tampering-worm",
+      "description": "`ALTER SYSTEM SET log_destination=NULL` or `archive_command` redirection. Persists across restart.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL `postgresql.auto.conf` tampering worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-075-RC01",
+      "issue": "SEC-SQL-WRM-075",
+      "name": "SQL Server Reporting Services (SSRS) worm",
+      "slug": "wrm-075-sql-server-reporting-services-ssrs-worm",
+      "description": "CVE-2020-0618 deserialization \u2192 DB session from SSRS host.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server Reporting Services (SSRS) worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-076-RC01",
+      "issue": "SEC-SQL-WRM-076",
+      "name": "SQL Server Database Mail SMTP worm channel",
+      "slug": "wrm-076-sql-server-database-mail-smtp-worm-channel",
+      "description": "outbound-SMTP exfil via `sp_send_dbmail`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server Database Mail SMTP worm channel"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-077-RC01",
+      "issue": "SEC-SQL-WRM-077",
+      "name": "SQL Server OPENROWSET RCE worm primitive",
+      "slug": "wrm-077-sql-server-openrowset-rce-worm-primitive",
+      "description": "`OPENROWSET('SQLNCLI', \u2026)` + `xp_dirtree` + bulk-insert chain (even when xp_cmdshell is disabled).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server OPENROWSET RCE worm primitive"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-078-RC01",
+      "issue": "SEC-SQL-WRM-078",
+      "name": "MySQL LOAD_FILE worm file read",
+      "slug": "wrm-078-mysql-load-file-worm-file-read",
+      "description": "arbitrary host filesystem read.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL LOAD_FILE worm file read"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-079-RC01",
+      "issue": "SEC-SQL-WRM-079",
+      "name": "MySQL INTO DUMPFILE webshell drop",
+      "slug": "wrm-079-mysql-into-dumpfile-webshell-drop",
+      "description": "`SELECT \u2026 INTO DUMPFILE '/var/www/html/shell.php'`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MySQL INTO DUMPFILE webshell drop"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-080-RC01",
+      "issue": "SEC-SQL-WRM-080",
+      "name": "MariaDB Galera cluster replication abuse",
+      "slug": "wrm-080-mariadb-galera-cluster-replication-abuse",
+      "description": "`gcomm://` join lets attacker on port 4567/4568 ingest all data.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MariaDB Galera cluster replication abuse"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-081-RC01",
+      "issue": "SEC-SQL-WRM-081",
+      "name": "Oracle external-table file-RW worm",
+      "slug": "wrm-081-oracle-external-table-file-rw-worm",
+      "description": "`ORGANIZATION EXTERNAL` with `PREPROCESSOR` (CVE-2017-10202 era still relevant).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle external-table file-RW worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-082-RC01",
+      "issue": "SEC-SQL-WRM-082",
+      "name": "Oracle `JOB_QUEUE_PROCESSES` / init tampering worm",
+      "slug": "wrm-082-oracle-job-queue-processes-init-tampering-worm",
+      "description": "`ALTER SYSTEM` to disable controls.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Oracle `JOB_QUEUE_PROCESSES` / init tampering worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-083-RC01",
+      "issue": "SEC-SQL-WRM-083",
+      "name": "SAP HANA worm",
+      "slug": "wrm-083-sap-hana-worm",
+      "description": "default `SYSTEM/SYSTEM` credentials on TCP/30015/30041, CVE-2024-33006 file upload.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SAP HANA worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-084-RC01",
+      "issue": "SEC-SQL-WRM-084",
+      "name": "IBM Db2 `db2cmd` / fenced-mode worm",
+      "slug": "wrm-084-ibm-db2-db2cmd-fenced-mode-worm",
+      "description": "CVE-2024-37533, CVE-2024-45075 privesc into shell-spawning role.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "IBM Db2 `db2cmd` / fenced-mode worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-085-RC01",
+      "issue": "SEC-SQL-WRM-085",
+      "name": "Snowflake / Databricks credential-stuffing worm",
+      "slug": "wrm-085-snowflake-databricks-credential-stuffing-worm",
+      "description": "UNC5537-pattern. Infostealer-log creds \u2192 many-source stuffing.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Snowflake / Databricks credential-stuffing worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-086-RC01",
+      "issue": "SEC-SQL-WRM-086",
+      "name": "CockroachDB / TiDB / Yugabyte distributed-SQL worm",
+      "slug": "wrm-086-cockroachdb-tidb-yugabyte-distributed-sql-worm",
+      "description": "default open access on TCP/26257 / TCP/4000 / TCP/5433.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "CockroachDB / TiDB / Yugabyte distributed-SQL worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-087-RC01",
+      "issue": "SEC-SQL-WRM-087",
+      "name": "InfluxDB CVE-2023-43654 worm",
+      "slug": "wrm-087-influxdb-cve-2023-43654-worm",
+      "description": "unauth API + earlier auth-bypass chain.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "InfluxDB CVE-2023-43654 worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-088-RC01",
+      "issue": "SEC-SQL-WRM-088",
+      "name": "TimescaleDB / Citus extension worm",
+      "slug": "wrm-088-timescaledb-citus-extension-worm",
+      "description": "malicious extension hooks executing on every continuous-aggregate refresh.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "TimescaleDB / Citus extension worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-089-RC01",
+      "issue": "SEC-SQL-WRM-089",
+      "name": "Vertica MPP worm",
+      "slug": "wrm-089-vertica-mpp-worm",
+      "description": "default `dbadmin` / no password + CVE-2023-25053 + CVE-2024-21516.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Vertica MPP worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-090-RC01",
+      "issue": "SEC-SQL-WRM-090",
+      "name": "Greenplum `gpfdist` worm primitive",
+      "slug": "wrm-090-greenplum-gpfdist-worm-primitive",
+      "description": "external-table protocol abuse.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Greenplum `gpfdist` worm primitive"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-091-RC01",
+      "issue": "SEC-SQL-WRM-091",
+      "name": "PostgREST / Supabase / Hasura RPC worm function",
+      "slug": "wrm-091-postgrest-supabase-hasura-rpc-worm-function",
+      "description": "`SECURITY DEFINER` + `EXECUTE` + `||` concat = RLS-bypass injection.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgREST / Supabase / Hasura RPC worm function"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-092-RC01",
+      "issue": "SEC-SQL-WRM-092",
+      "name": "eBPF kernel uprobe DB credential sniff worm",
+      "slug": "wrm-092-ebpf-kernel-uprobe-db-credential-sniff-worm",
+      "description": "uprobe on `libpq.so` captures plaintext credentials before TLS. CVE-2026-43010.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "eBPF kernel uprobe DB credential sniff worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-093-RC01",
+      "issue": "SEC-SQL-WRM-093",
+      "name": "LD_PRELOAD shared-library hijack on DB process",
+      "slug": "wrm-093-ld-preload-shared-library-hijack-on-db-process",
+      "description": "Symbiote and HiddenWasp-pattern. Shim library intercepts every syscall.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "LD_PRELOAD shared-library hijack on DB process"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-094-RC01",
+      "issue": "SEC-SQL-WRM-094",
+      "name": "PAM module hijack on DB host",
+      "slug": "wrm-094-pam-module-hijack-on-db-host",
+      "description": "malicious PAM module in `/lib/x86_64-linux-gnu/security/` captures every SSH/local auth credential.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PAM module hijack on DB host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-095-RC01",
+      "issue": "SEC-SQL-WRM-095",
+      "name": "systemd service / timer planted by worm",
+      "slug": "wrm-095-systemd-service-timer-planted-by-worm",
+      "description": "`.service` + `.timer` pair in `/etc/systemd/system/` that re-downloads the loader.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "systemd service / timer planted by worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-096-RC01",
+      "issue": "SEC-SQL-WRM-096",
+      "name": "rc.local / `/etc/init.d` worm persistence",
+      "slug": "wrm-096-rc-local-etc-init-d-worm-persistence",
+      "description": "legacy Linux respawn channel.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "rc.local / `/etc/init.d` worm persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-097-RC01",
+      "issue": "SEC-SQL-WRM-097",
+      "name": "Container release-agent breakout from DB pod",
+      "slug": "wrm-097-container-release-agent-breakout-from-db-pod",
+      "description": "privileged DB container + writable `release_agent` \u2192 host escape (Doki, Hildegard pattern).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Container release-agent breakout from DB pod"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-098-RC01",
+      "issue": "SEC-SQL-WRM-098",
+      "name": "Docker socket abuse from DB host",
+      "slug": "wrm-098-docker-socket-abuse-from-db-host",
+      "description": "`/var/run/docker.sock` read \u2192 privileged container spawn.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Docker socket abuse from DB host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-099-RC01",
+      "issue": "SEC-SQL-WRM-099",
+      "name": "WinRM lateral from MSSQL host",
+      "slug": "wrm-099-winrm-lateral-from-mssql-host",
+      "description": "`Invoke-Command` against neighbour Windows on TCP/5985/5986.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "WinRM lateral from MSSQL host"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-100-RC01",
+      "issue": "SEC-SQL-WRM-100",
+      "name": "MCP server compromise \u2192 DB worm pivot",
+      "slug": "wrm-100-mcp-server-compromise-db-worm-pivot",
+      "description": "Model Context Protocol server with DB-tool access compromised \u2192 enumerates every reachable DB.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MCP server compromise \u2192 DB worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-101-RC01",
+      "issue": "SEC-SQL-WRM-101",
+      "name": "CI/CD pipeline worm",
+      "slug": "wrm-101-ci-cd-pipeline-worm",
+      "description": "self-hosted GitHub Actions runner with DB-deployment secrets compromised \u2192 every pipeline run carries worm payload.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "CI/CD pipeline worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-102-RC01",
+      "issue": "SEC-SQL-WRM-102",
+      "name": "PostgreSQL CVE-2025-8715 pg_dump restore-time RCE",
+      "slug": "wrm-102-postgresql-cve-2025-8715-pg-dump-restore-time-rce",
+      "description": "newline in identifiers \u2192 arbitrary code at restore time. CI/CD pipelines that auto-restore dev/staging dumps = worm amplification.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL CVE-2025-8715 pg_dump restore-time RCE"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-103-RC01",
+      "issue": "SEC-SQL-WRM-103",
+      "name": "PostgreSQL CVE-2025-1094 libpq quoting bypass",
+      "slug": "wrm-103-postgresql-cve-2025-1094-libpq-quoting-bypass",
+      "description": "same root as the BeyondTrust / US Treasury 2024-2025 zero-day. Any client linked to vulnerable libpq passes the attack through.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PostgreSQL CVE-2025-1094 libpq quoting bypass"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-104-RC01",
+      "issue": "SEC-SQL-WRM-104",
+      "name": "pgAdmin 4 CVE-2025-12762 / -13780 worm pivot",
+      "slug": "wrm-104-pgadmin-4-cve-2025-12762-13780-worm-pivot",
+      "description": "restore-time code injection + shell bypass. Compromises the DBA's pgAdmin host = instant pivot to every DB the DBA monitors.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "pgAdmin 4 CVE-2025-12762 / -13780 worm pivot"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-105-RC01",
+      "issue": "SEC-SQL-WRM-105",
+      "name": "SQL Server CVE-2025-59499 + CVE-2026-21262 privesc worm",
+      "slug": "wrm-105-sql-server-cve-2025-59499-cve-2026-21262-privesc-worm",
+      "description": "authenticated network privesc-to-sysadmin. Carried as escalation primitive by Lemon_Duck / Vollgar.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "SQL Server CVE-2025-59499 + CVE-2026-21262 privesc worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-106-RC01",
+      "issue": "SEC-SQL-WRM-106",
+      "name": "Marimo CVE-2026-39987 \u2192 PostgreSQL lateral worm",
+      "slug": "wrm-106-marimo-cve-2026-39987-postgresql-lateral-worm",
+      "description": "pre-auth RCE in marimo notebook `/terminal/ws`. Exploited within 10 hours of disclosure. 662 exploit events from 11 IPs across 10 countries in 72 hours. Drops NKAbuse Go backdoor + dumps DATABASE_URL env vars + pivots to PostgreSQL.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Marimo CVE-2026-39987 \u2192 PostgreSQL lateral worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-107-RC01",
+      "issue": "SEC-SQL-WRM-107",
+      "name": "Shai-Hulud self-replicating npm worm",
+      "slug": "wrm-107-shai-hulud-self-replicating-npm-worm",
+      "description": "September 2025. Self-replicating npm worm. 796 npm packages \u00d7 1,092 versions compromised. Steals SSH keys + GitHub tokens + AWS creds + DATABASE_URL.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Shai-Hulud self-replicating npm worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-108-RC01",
+      "issue": "SEC-SQL-WRM-108",
+      "name": "TrapDoor npm/PyPI/Crates.io supply-chain (May 2026)",
+      "slug": "wrm-108-trapdoor-npm-pypi-crates-io-supply-chain-may-2026",
+      "description": "34 packages \u00d7 384 versions across three registries.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "TrapDoor npm/PyPI/Crates.io supply-chain (May 2026)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-109-RC01",
+      "issue": "SEC-SQL-WRM-109",
+      "name": "Trivy supply-chain compromise (March 2026)",
+      "slug": "wrm-109-trivy-supply-chain-compromise-march-2026",
+      "description": "Aqua's Trivy v0.69.4 release + 76/77 trivy-action tags + all 7 setup-trivy tags trojanized. Every CI pipeline using them runs attacker code. Attributed to TeamPCP.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Trivy supply-chain compromise (March 2026)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-110-RC01",
+      "issue": "SEC-SQL-WRM-110",
+      "name": "LiteLLM CVE-2026-42208 pre-auth SQLi \u2192 API-key cascade",
+      "slug": "wrm-110-litellm-cve-2026-42208-pre-auth-sqli-api-key-cascade",
+      "description": "leaks upstream OpenAI / Anthropic / Bedrock / Azure OpenAI keys.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "LiteLLM CVE-2026-42208 pre-auth SQLi \u2192 API-key cascade"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-111-RC01",
+      "issue": "SEC-SQL-WRM-111",
+      "name": "Quasar Linux RAT (QLNX) PAM + LD_PRELOAD rootkit",
+      "slug": "wrm-111-quasar-linux-rat-qlnx-pam-ld-preload-rootkit",
+      "description": "Trend Micro May 2026. Embedded C source compiled in-place with gcc; deployed via `/etc/ld.so.preload`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Quasar Linux RAT (QLNX) PAM + LD_PRELOAD rootkit"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-112-RC01",
+      "issue": "SEC-SQL-WRM-112",
+      "name": "NKAbuse blockchain-C2 Go backdoor",
+      "slug": "wrm-112-nkabuse-blockchain-c2-go-backdoor",
+      "description": "uses NKN (New Kind of Network) blockchain for C2. Bypasses every commercial C2 IP/domain denylist.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "NKAbuse blockchain-C2 Go backdoor"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-113-RC01",
+      "issue": "SEC-SQL-WRM-113",
+      "name": "TeamPCP worm (Docker/K8s/Ray/Redis)",
+      "slug": "wrm-113-teampcp-worm-docker-k8s-ray-redis",
+      "description": "modular worm-like malware behind the Trivy compromise. Ray CVE-2025-55182 entry point.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "TeamPCP worm (Docker/K8s/Ray/Redis)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-114-RC01",
+      "issue": "SEC-SQL-WRM-114",
+      "name": "PCPJack credential-theft worm",
+      "slug": "wrm-114-pcpjack-credential-theft-worm",
+      "description": "May 2026 Linux cloud worm. bootstrap.sh + 6 Python modules. Telegram C2 (encrypted). NOT crypto-mining \u2014 focused on credential theft for fraud/resale/extortion. Removes earlier TeamPCP infections (turf war).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "PCPJack credential-theft worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-115-RC01",
+      "issue": "SEC-SQL-WRM-115",
+      "name": "Hugging Face space abuse \u2192 DB credential dump",
+      "slug": "wrm-115-hugging-face-space-abuse-db-credential-dump",
+      "description": "modern worm-loader pattern: shell-script payloads hosted on HF spaces, curl-fetched post-RCE, used to scrape DATABASE_URL / PGPASSWORD / MYSQL_PWD / MONGO_URI.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Hugging Face space abuse \u2192 DB credential dump"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-116-RC01",
+      "issue": "SEC-SQL-WRM-116",
+      "name": "Fileless memory-based DB worm",
+      "slug": "wrm-116-fileless-memory-based-db-worm",
+      "description": "Aqua Nautilus reports 1400% surge. Payloads execute entirely in-memory, no disk writes. Anti-virus signature scans return clean.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Fileless memory-based DB worm"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-117-RC01",
+      "issue": "SEC-SQL-WRM-117",
+      "name": "36 malicious npm packages \u2192 Redis+PostgreSQL persistent implants",
+      "slug": "wrm-117-36-malicious-npm-packages-redis-postgresql-persistent-implan",
+      "description": "April 2026. Implant reads dev's existing Redis/PG connection state + plants worm code in stored procedures + Redis modules.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "36 malicious npm packages \u2192 Redis+PostgreSQL persistent implants"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-118-RC01",
+      "issue": "SEC-SQL-WRM-118",
+      "name": "MongoBleed CVE-2025-14847 mass-scan memory-leak exploit",
+      "slug": "wrm-118-mongobleed-cve-2025-14847-mass-scan-memory-leak-exploit",
+      "description": "actively exploited memory leak. 87,000+ exposed instances. PoC generates 50,000-100,000 connections/min. Distinctive signature: exploit sessions connect, extract memory, disconnect WITHOUT sending client metadata (legitimate drivers always send metadata).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoBleed CVE-2025-14847 mass-scan memory-leak exploit"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-119-RC01",
+      "issue": "SEC-SQL-WRM-119",
+      "name": "Mass-scraping worm against exposed Elasticsearch (March 2026)",
+      "slug": "wrm-119-mass-scraping-worm-against-exposed-elasticsearch-march-2026",
+      "description": "single unsecured ES server leaked 6.19 billion records.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Mass-scraping worm against exposed Elasticsearch (March 2026)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-120-RC01",
+      "issue": "SEC-SQL-WRM-120",
+      "name": "Kibana CVE-2024-12556 prototype pollution \u2192 RCE",
+      "slug": "wrm-120-kibana-cve-2024-12556-prototype-pollution-rce",
+      "description": "chain that pivots from Kibana to backing Elasticsearch (Kibana inherits ES superuser).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Kibana CVE-2024-12556 prototype pollution \u2192 RCE"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-121-RC01",
+      "issue": "SEC-SQL-WRM-121",
+      "name": "DeepSeek-pattern exposed ClickHouse leak",
+      "slug": "wrm-121-deepseek-pattern-exposed-clickhouse-leak",
+      "description": "Wiz Jan 2025: ClickHouse exposed without auth leaked 1M+ chat history + secret keys.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DeepSeek-pattern exposed ClickHouse leak"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-122-RC01",
+      "issue": "SEC-SQL-WRM-122",
+      "name": "RediShell CVE-2025-49844 (13-year Lua UAF, CVSS 10.0)",
+      "slug": "wrm-122-redishell-cve-2025-49844-13-year-lua-uaf-cvss-10-0",
+      "description": "use-after-free in Redis Lua scripting present 13 years. Affects every Redis with Lua up to 6.2.20 / 7.2.11 / 7.4.6 / 8.0.4 / 8.2.2. ~60,000 Redis servers exposed.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "RediShell CVE-2025-49844 (13-year Lua UAF, CVSS 10.0)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-123-RC01",
+      "issue": "SEC-SQL-WRM-123",
+      "name": "Redis module CVE cluster (CVE-2026-23479 / -25243 / -25588 / -25589 / -23631)",
+      "slug": "wrm-123-redis-module-cve-cluster-cve-2026-23479-25243-25588-25589-23",
+      "description": "RedisBloom RESTORE invalid memory access + four sibling memory-corruption issues.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis module CVE cluster (CVE-2026-23479 / -25243 / -25588 / -25589 / -23631)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-124-RC01",
+      "issue": "SEC-SQL-WRM-124",
+      "name": "ClickHouse CVE-2025-1385 `clickhouse-library-bridge` RCE",
+      "slug": "wrm-124-clickhouse-cve-2025-1385-clickhouse-library-bridge-rce",
+      "description": "input-validation flaw \u2192 RCE \u2192 cryptominer + TCP/8123/9000 scan.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "ClickHouse CVE-2025-1385 `clickhouse-library-bridge` RCE"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-125-RC01",
+      "issue": "SEC-SQL-WRM-125",
+      "name": "Ray CVE-2025-55182 worm pivot (React2Shell)",
+      "slug": "wrm-125-ray-cve-2025-55182-worm-pivot-react2shell",
+      "description": "pre-auth RCE on Ray Dashboard. TeamPCP and PCPJack both use it on AI-pipeline infrastructure.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Ray CVE-2025-55182 worm pivot (React2Shell)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-126-RC01",
+      "issue": "SEC-SQL-WRM-126",
+      "name": "AI worm via stored prompt-injection (multi-agent)",
+      "slug": "wrm-126-ai-worm-via-stored-prompt-injection-multi-agent",
+      "description": "OWASP Top 10 for LLM #1 for 2026. Stored prompt injection in one agent's context \u2192 viral infection chain.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "AI worm via stored prompt-injection (multi-agent)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-127-RC01",
+      "issue": "SEC-SQL-WRM-127",
+      "name": "Database-query prompt injection (LLM generates malicious SQL)",
+      "slug": "wrm-127-database-query-prompt-injection-llm-generates-malicious-sql",
+      "description": "Keysight 2025 attack class. Different from classic SQLi because the source IS the legitimate agent.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Database-query prompt injection (LLM generates malicious SQL)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-128-RC01",
+      "issue": "SEC-SQL-WRM-128",
+      "name": "Sub-threshold brute-force",
+      "slug": "wrm-128-sub-threshold-brute-force",
+      "description": "99 fails/hour from single source. Rolling-90-day baseline catches it.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Sub-threshold brute-force"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-129-RC01",
+      "issue": "SEC-SQL-WRM-129",
+      "name": "Distributed credential stuffing",
+      "slug": "wrm-129-distributed-credential-stuffing",
+      "description": "500+ source IPs against single account in 24h, regardless of per-IP rate.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Distributed credential stuffing"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-130-RC01",
+      "issue": "SEC-SQL-WRM-130",
+      "name": "Slow-and-low destructive DML",
+      "slug": "wrm-130-slow-and-low-destructive-dml",
+      "description": "100 DELETEs/day for 60 days = 6,000 rows quietly wiped. 30-day cumulative baseline.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Slow-and-low destructive DML"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-131-RC01",
+      "issue": "SEC-SQL-WRM-131",
+      "name": "App-account session executing non-app query digest",
+      "slug": "wrm-131-app-account-session-executing-non-app-query-digest",
+      "description": "stolen `.env` credentials. Per-app digest baseline + alert on destructive-shape digests.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "App-account session executing non-app query digest"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-132-RC01",
+      "issue": "SEC-SQL-WRM-132",
+      "name": "DBA session via stolen IDE session cookie / JWT",
+      "slug": "wrm-132-dba-session-via-stolen-ide-session-cookie-jwt",
+      "description": "MFA-freshness cross-check.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DBA session via stolen IDE session cookie / JWT"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-133-RC01",
+      "issue": "SEC-SQL-WRM-133",
+      "name": "Backdoor account named like real app account",
+      "slug": "wrm-133-backdoor-account-named-like-real-app-account",
+      "description": "`app_user_v2`, `migration_runner`. Levenshtein edit-distance \u2264 2 from operator allow-list.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backdoor account named like real app account"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-134-RC01",
+      "issue": "SEC-SQL-WRM-134",
+      "name": "Payload encoded in user JSONB / TEXT column",
+      "slug": "wrm-134-payload-encoded-in-user-jsonb-text-column",
+      "description": "per-column entropy + length-distribution drift.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Payload encoded in user JSONB / TEXT column"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-135-RC01",
+      "issue": "SEC-SQL-WRM-135",
+      "name": "Existing function body drift",
+      "slug": "wrm-135-existing-function-body-drift",
+      "description": "SHA-256 of `pg_proc.prosrc` against last-known-good baseline.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Existing function body drift"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-136-RC01",
+      "issue": "SEC-SQL-WRM-136",
+      "name": "Existing scheduled-report SQL modification",
+      "slug": "wrm-136-existing-scheduled-report-sql-modification",
+      "description": "per-scheduled-query digest hash.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Existing scheduled-report SQL modification"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-137-RC01",
+      "issue": "SEC-SQL-WRM-137",
+      "name": "Existing Service Broker queue traffic drift",
+      "slug": "wrm-137-existing-service-broker-queue-traffic-drift",
+      "description": "per-queue message-content shape monitoring.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Existing Service Broker queue traffic drift"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-138-RC01",
+      "issue": "SEC-SQL-WRM-138",
+      "name": "Trigger body modified on high-frequency application table",
+      "slug": "wrm-138-trigger-body-modified-on-high-frequency-application-table",
+      "description": "per-trigger body hash.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Trigger body modified on high-frequency application table"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-139-RC01",
+      "issue": "SEC-SQL-WRM-139",
+      "name": "DNS exfil to legit-looking parent domain",
+      "slug": "wrm-139-dns-exfil-to-legit-looking-parent-domain",
+      "description": "`customer.com.attacker.example` defeats `.onion`/`.i2p` detection.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "DNS exfil to legit-looking parent domain"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-140-RC01",
+      "issue": "SEC-SQL-WRM-140",
+      "name": "HTTPS exfil via trusted SaaS (Gist / Pastebin / Discord / Cloudflare Workers / Telegram)",
+      "slug": "wrm-140-https-exfil-via-trusted-saas-gist-pastebin-discord-cloudflar",
+      "description": "bypasses commercial denylists.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "HTTPS exfil via trusted SaaS (Gist / Pastebin / Discord / Cloudflare Workers / Telegram)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-141-RC01",
+      "issue": "SEC-SQL-WRM-141",
+      "name": "Encrypted CDN exfil (per-request chunks)",
+      "slug": "wrm-141-encrypted-cdn-exfil-per-request-chunks",
+      "description": "50 bytes/HTTPS request, no high-volume burst.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Encrypted CDN exfil (per-request chunks)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-142-RC01",
+      "issue": "SEC-SQL-WRM-142",
+      "name": "Cloud-API read-replica creation",
+      "slug": "wrm-142-cloud-api-read-replica-creation",
+      "description": "cross-region replica targeted at attacker AWS account. No DB-side trace.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Cloud-API read-replica creation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-143-RC01",
+      "issue": "SEC-SQL-WRM-143",
+      "name": "Snapshot sharing with attacker cloud account",
+      "slug": "wrm-143-snapshot-sharing-with-attacker-cloud-account",
+      "description": "`rds:ModifyDBSnapshotAttribute` share. No SQL trace.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Snapshot sharing with attacker cloud account"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-144-RC01",
+      "issue": "SEC-SQL-WRM-144",
+      "name": "EBS / managed-disk block-level read",
+      "slug": "wrm-144-ebs-managed-disk-block-level-read",
+      "description": "`ebs:GetSnapshotBlock`. Bypasses every DB-side access control.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "EBS / managed-disk block-level read"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-145-RC01",
+      "issue": "SEC-SQL-WRM-145",
+      "name": "Application-tier compromise (app server runs attacker queries via own pool)",
+      "slug": "wrm-145-application-tier-compromise-app-server-runs-attacker-queries",
+      "description": "app-server EDR signal + cross-reference with app digest baseline.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Application-tier compromise (app server runs attacker queries via own pool)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-146-RC01",
+      "issue": "SEC-SQL-WRM-146",
+      "name": "JWT signing-key DB read + token-forgery exfil",
+      "slug": "wrm-146-jwt-signing-key-db-read-token-forgery-exfil",
+      "description": "read of `*jwt*key*` / `*signing*key*` / `*session*secret*` columns.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "JWT signing-key DB read + token-forgery exfil"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-147-RC01",
+      "issue": "SEC-SQL-WRM-147",
+      "name": "Detection-path `is_active` flip",
+      "slug": "wrm-147-detection-path-is-active-flip",
+      "description": "meta-check against operator-blessed baseline + audit-log entry.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Detection-path `is_active` flip"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-148-RC01",
+      "issue": "SEC-SQL-WRM-148",
+      "name": "Operator allow-list mutation",
+      "slug": "wrm-148-operator-allow-list-mutation",
+      "description": "SHA-256 hash chain with periodic external-anchor publication.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Operator allow-list mutation"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-149-RC01",
+      "issue": "SEC-SQL-WRM-149",
+      "name": "Detection-sweep cadence tampering",
+      "slug": "wrm-149-detection-sweep-cadence-tampering",
+      "description": "alert if elapsed > 2\u00d7 expected interval.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Detection-sweep cadence tampering"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-150-RC01",
+      "issue": "SEC-SQL-WRM-150",
+      "name": "Findings mass-resolved without remediation evidence",
+      "slug": "wrm-150-findings-mass-resolved-without-remediation-evidence",
+      "description": "cross-check status transitions against execution rows.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Findings mass-resolved without remediation evidence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-151-RC01",
+      "issue": "SEC-SQL-WRM-151",
+      "name": "LLM recommendation poisoning",
+      "slug": "wrm-151-llm-recommendation-poisoning",
+      "description": "cross-validate every recommendation against deterministic resolution_path.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "LLM recommendation poisoning"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-152-RC01",
+      "issue": "SEC-SQL-WRM-152",
+      "name": "Ingest-token theft + fake diagnostic results",
+      "slug": "wrm-152-ingest-token-theft-fake-diagnostic-results",
+      "description": "token use from novel IP family.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Ingest-token theft + fake diagnostic results"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-153-RC01",
+      "issue": "SEC-SQL-WRM-153",
+      "name": "OAuth refresh-token compromise (MFA satisfied)",
+      "slug": "wrm-153-oauth-refresh-token-compromise-mfa-satisfied",
+      "description": "per-user IP-ASN history novelty check.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "OAuth refresh-token compromise (MFA satisfied)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-154-RC01",
+      "issue": "SEC-SQL-WRM-154",
+      "name": "VPN-tunneled geo-velocity bypass",
+      "slug": "wrm-154-vpn-tunneled-geo-velocity-bypass",
+      "description": "first-ever ASN check + commercial-VPN-provider classification.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "VPN-tunneled geo-velocity bypass"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-155-RC01",
+      "issue": "SEC-SQL-WRM-155",
+      "name": "Backup-embedded worm \u2014 re-infects on restore",
+      "slug": "wrm-155-backup-embedded-worm-re-infects-on-restore",
+      "description": "post-restore IOC replay check.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Backup-embedded worm \u2014 re-infects on restore"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-156-RC01",
+      "issue": "SEC-SQL-WRM-156",
+      "name": "Schema-modification with matching commit but unverified signing key",
+      "slug": "wrm-156-schema-modification-with-matching-commit-but-unverified-sign",
+      "description": "verify GPG/SSH signature against operator key allow-list.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Schema-modification with matching commit but unverified signing key"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-157-RC01",
+      "issue": "SEC-SQL-WRM-157",
+      "name": "Service-account use during MFA-rotation gap",
+      "slug": "wrm-157-service-account-use-during-mfa-rotation-gap",
+      "description": "operator rotation-event timestamp cross-check.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Service-account use during MFA-rotation gap"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-158-RC01",
+      "issue": "SEC-SQL-WRM-158",
+      "name": "Redis CONFIG REWRITE + restart persistence",
+      "slug": "wrm-158-redis-config-rewrite-restart-persistence",
+      "description": "`redis.conf` file content hash drift (catches the persist-via-restart bypass).",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis CONFIG REWRITE + restart persistence"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-159-RC01",
+      "issue": "SEC-SQL-WRM-159",
+      "name": "Custom FDW with HTTPS-wrapped tunneling",
+      "slug": "wrm-159-custom-fdw-with-https-wrapped-tunneling",
+      "description": "every loaded FDW's `.so` path + checksum must be on operator allow-list.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Custom FDW with HTTPS-wrapped tunneling"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-160-RC01",
+      "issue": "SEC-SQL-WRM-160",
+      "name": "MongoBleed metadata-forgery bypass",
+      "slug": "wrm-160-mongobleed-metadata-forgery-bypass",
+      "description": "extend signature to include `clientMetadata.driver` field never previously seen.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "MongoBleed metadata-forgery bypass"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-161-RC01",
+      "issue": "SEC-SQL-WRM-161",
+      "name": "Redis EVALSHA-only of cached attacker script",
+      "slug": "wrm-161-redis-evalsha-only-of-cached-attacker-script",
+      "description": "operator-blessed Lua-script SHA allow-list.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Redis EVALSHA-only of cached attacker script"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-162-RC01",
+      "issue": "SEC-SQL-WRM-162",
+      "name": "Single-row credential-table probe (granular recon)",
+      "slug": "wrm-162-single-row-credential-table-probe-granular-recon",
+      "description": "read of `pg_authid` etc by principal with zero such history.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Single-row credential-table probe (granular recon)"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-163-RC01",
+      "issue": "SEC-SQL-WRM-163",
+      "name": "Timing-based blind-extraction pattern",
+      "slug": "wrm-163-timing-based-blind-extraction-pattern",
+      "description": "`pg_sleep` / `WAITFOR DELAY` / `BENCHMARK` combined with character-by-character `substring()`.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "Timing-based blind-extraction pattern"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    },
+    {
+      "rc": "SEC-SQL-WRM-164-RC01",
+      "issue": "SEC-SQL-WRM-164",
+      "name": "`/proc` side-channel reads from non-DB account",
+      "slug": "wrm-164-proc-side-channel-reads-from-non-db-account",
+      "description": "auditd-tagged reads of `/proc/<dbpid>/*` by non-DB-service accounts.",
+      "topics": [
+        "worms",
+        "wrm"
+      ],
+      "risk_level": "high",
+      "resolution": "TODO: see WORMS_DETECTION.md / the module knowledge JSON.",
+      "expected": {
+        "condition": "row_count > 0",
+        "description": "`/proc` side-channel reads from non-DB account"
+      },
+      "columns": [],
+      "detect": {
+        "postgresql": null,
+        "sqlserver": null,
+        "oracle": null,
+        "mysql": null
+      }
+    }
+  ]
+}

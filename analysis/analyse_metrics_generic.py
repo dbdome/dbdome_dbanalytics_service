@@ -309,7 +309,7 @@ join
     finally:
             db_write_log(f"metrics_active_sessions_analysis failed with error:{e}"   ,0,"metrics_active_transactions_analysis",servername, port=get_port_for_server(servername) )
             raw_conn.close()
-            return  1
+    return  1
     
 
 

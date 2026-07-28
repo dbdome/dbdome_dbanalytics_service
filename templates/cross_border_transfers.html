@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cross-Border Transfers - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg-primary);padding:0 16px;}
+  .tab{padding:10px 18px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab-pane{display:none;padding:12px 16px;}
+  .tab-pane.active{display:block;}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .stats-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .stat-panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:14px 20px;flex:1;min-width:110px;text-align:center;}
+  .stat-value{font-size:24px;font-weight:500;line-height:1.2;}
+  .stat-label{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-ok{background:#0a1f0a;color:var(--green-text);}
+  .badge-nolegal{background:#3a0010;color:var(--red-text);}
+  .badge-critical{background:#3a0010;color:var(--red-text);}
+  .badge-high{background:#2a1000;color:var(--orange);}
+  .badge-medium{background:#2a2000;color:var(--yellow);}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .form-group{margin-bottom:12px;}
+  .form-group label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block;}
+  .form-group input,.form-group select{width:100%;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .form-row{display:flex;gap:8px;}
+  .form-row .form-group{flex:1;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1f6b33;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;display:none;z-index:9999;}
+  .toast.err{background:#7a0a25;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Cross-Border Transfer Tracking (GDPR Ch. V)</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('transfers')">Transfer Log</div>
+  <div class="tab" onclick="switchTab('regions')">Server Regions</div>
+  <div class="tab" onclick="switchTab('agreements')">Transfer Agreements</div>
+</div>
+
+<!-- Transfer Log Tab -->
+<div id="tab-transfers" class="tab-pane active">
+  <div class="stats-row" id="xfer-stats"></div>
+  <div class="panel">
+    <div class="panel-header"><span>Detected Cross-Border Transfers (Last 30d)</span>
+      <button class="btn-sm" onclick="loadTransfers()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Source Server</th><th>Destination</th>
+          <th>Source Country</th><th>Dest Country</th>
+          <th>Mechanism</th><th>Legal Basis</th><th>Risk</th>
+          <th>DB User</th><th>Detected</th>
+        </tr></thead>
+        <tbody id="transfers-body"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Regions Tab -->
+<div id="tab-regions" class="tab-pane">
+  <div class="panel">
+    <div class="panel-header"><span>Server Region Registry</span>
+      <button class="btn-sm" onclick="loadRegions()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Server Name</th><th>Country Code</th><th>Country</th>
+          <th>Zone</th><th>Adequate</th>
+        </tr></thead>
+        <tbody id="regions-body"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel" style="max-width:560px">
+    <div class="panel-header"><span>Register Server Region</span></div>
+    <div style="padding:16px;">
+      <div class="form-row">
+        <div class="form-group"><label>Server Name</label><input id="r-server" placeholder="prod-mysql-01"></div>
+        <div class="form-group"><label>Country Code (ISO 2)</label><input id="r-cc" maxlength="2" placeholder="DE"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Country Name</label><input id="r-country" placeholder="Germany"></div>
+        <div class="form-group"><label>Data Residency Zone</label>
+          <select id="r-zone">
+            <option value="EEA">EEA</option><option value="US">US</option>
+            <option value="UK">UK</option><option value="APAC">APAC</option><option value="OTHER">Other</option>
+          </select></div>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="r-adequate" style="width:auto">
+        <label style="margin:0;color:var(--text-primary)">Adequacy decision (GDPR Art. 45)</label>
+      </div>
+      <button class="btn btn-primary" style="margin-top:8px" onclick="saveRegion()">Save Region</button>
+    </div>
+  </div>
+</div>
+
+<!-- Agreements Tab -->
+<div id="tab-agreements" class="tab-pane">
+  <div class="panel">
+    <div class="panel-header"><span>Transfer Agreements</span>
+      <button class="btn-sm" onclick="loadAgreements()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Source</th><th>Destination</th><th>Type</th><th>Reference</th>
+          <th>Valid From</th><th>Valid Until</th><th>Regulation</th>
+        </tr></thead>
+        <tbody id="agreements-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel" style="max-width:600px">
+    <div class="panel-header"><span>Add Transfer Agreement</span></div>
+    <div style="padding:16px;">
+      <div class="form-row">
+        <div class="form-group"><label>Source Server</label><input id="ag-src" placeholder="eea-server-01"></div>
+        <div class="form-group"><label>Destination Server</label><input id="ag-dst" placeholder="us-server-01"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Agreement Type</label>
+          <select id="ag-type">
+            <option value="SCC">Standard Contractual Clauses (SCC)</option>
+            <option value="BCR">Binding Corporate Rules (BCR)</option>
+            <option value="ADEQUACY">Adequacy Decision</option>
+            <option value="DEROGATION">Derogation (Art. 49)</option>
+          </select></div>
+        <div class="form-group"><label>Agreement Reference</label>
+          <input id="ag-ref" placeholder="e.g. SCC-2021-001"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Valid From</label><input type="date" id="ag-from"></div>
+        <div class="form-group"><label>Valid Until</label><input type="date" id="ag-until"></div>
+        <div class="form-group"><label>Regulation</label>
+          <select id="ag-reg"><option value="GDPR">GDPR</option><option value="OTHER">Other</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveAgreement()">Save Agreement</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function switchTab(t){
+  ['transfers','regions','agreements'].forEach((id,idx)=>{
+    document.querySelectorAll('.tab')[idx].classList.toggle('active',id===t);
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='transfers') loadTransfers();
+  if(t==='regions') loadRegions();
+  if(t==='agreements') loadAgreements();
+}
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');t.style.display='block';setTimeout(()=>t.style.display='none',3500);
+}
+function fmtTs(ts){ return (ts||'').replace('T',' ').substring(0,16); }
+
+async function loadTransfers(){
+  const res=await fetch('/api/cross-border-transfers');
+  const data=await res.json();
+  const rows=data.transfers||[];
+  const noLegal=rows.filter(r=>!r.has_legal_basis).length;
+  const crit=rows.filter(r=>r.risk_level==='CRITICAL').length;
+  document.getElementById('xfer-stats').innerHTML=`
+    <div class="stat-panel"><div class="stat-value">${rows.length}</div><div class="stat-label">Transfers Detected (30d)</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--red-text)">${noLegal}</div><div class="stat-label">No Legal Basis</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--red-text)">${crit}</div><div class="stat-label">Critical Risk</div></div>
+  `;
+  document.getElementById('transfers-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>#${r.transfer_id}</td>
+    <td style="font-size:11px">${r.source_server}</td>
+    <td style="font-size:11px">${r.destination_server}</td>
+    <td style="font-size:11px">${r.source_country||'—'}</td>
+    <td style="font-size:11px">${r.destination_country||'—'}</td>
+    <td style="font-size:11px">${r.transfer_mechanism||'—'}</td>
+    <td><span class="badge ${r.has_legal_basis?'badge-ok':'badge-nolegal'}">${r.has_legal_basis?'YES':'NO'}</span></td>
+    <td><span class="badge badge-${(r.risk_level||'').toLowerCase()}">${r.risk_level||'—'}</span></td>
+    <td style="font-size:11px">${r.db_user||'—'}</td>
+    <td style="font-size:11px">${fmtTs(r.detected_at)}</td>
+  </tr>`).join(''):'<tr><td colspan="10" class="empty">No cross-border transfers detected</td></tr>';
+}
+
+async function loadRegions(){
+  const res=await fetch('/api/data-regions');
+  const data=await res.json();
+  const rows=data.regions||[];
+  document.getElementById('regions-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-weight:500">${r.server_name}</td>
+    <td>${r.country_code}</td>
+    <td>${r.country_name}</td>
+    <td>${r.data_residency_zone||'—'}</td>
+    <td><span class="badge ${r.is_adequate?'badge-ok':'badge-nolegal'}">${r.is_adequate?'YES':'NO'}</span></td>
+  </tr>`).join(''):'<tr><td colspan="5" class="empty">No regions configured</td></tr>';
+}
+
+async function saveRegion(){
+  const body={
+    server_name:document.getElementById('r-server').value.trim(),
+    country_code:document.getElementById('r-cc').value.trim().toUpperCase(),
+    country_name:document.getElementById('r-country').value.trim(),
+    data_residency_zone:document.getElementById('r-zone').value,
+    is_adequate:document.getElementById('r-adequate').checked,
+  };
+  const res=await fetch('/api/data-regions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('Region saved');
+  loadRegions();
+}
+
+async function loadAgreements(){
+  const res=await fetch('/api/transfer-agreements');
+  const data=await res.json();
+  const rows=data.agreements||[];
+  document.getElementById('agreements-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-size:11px">${r.source_server}</td>
+    <td style="font-size:11px">${r.destination_server}</td>
+    <td><span class="badge" style="background:#0a1020;color:var(--blue)">${r.agreement_type}</span></td>
+    <td style="font-size:11px">${r.agreement_ref||'—'}</td>
+    <td style="font-size:11px">${r.valid_from||'—'}</td>
+    <td style="font-size:11px">${r.valid_until||'—'}</td>
+    <td style="font-size:11px">${r.regulation}</td>
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">No agreements configured</td></tr>';
+}
+
+async function saveAgreement(){
+  const body={
+    source_server:document.getElementById('ag-src').value.trim(),
+    destination_server:document.getElementById('ag-dst').value.trim(),
+    agreement_type:document.getElementById('ag-type').value,
+    agreement_ref:document.getElementById('ag-ref').value.trim()||null,
+    valid_from:document.getElementById('ag-from').value||null,
+    valid_until:document.getElementById('ag-until').value||null,
+    regulation:document.getElementById('ag-reg').value,
+  };
+  const res=await fetch('/api/transfer-agreements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('Agreement saved');
+  loadAgreements();
+}
+
+loadTransfers();
+</script>
+</body>
+</html>

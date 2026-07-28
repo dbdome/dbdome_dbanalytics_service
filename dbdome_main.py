@@ -16,17 +16,37 @@ Usage (Windows service):
     python dbdome_service.py remove           # uninstall service
 """
 
+import warnings
+# pandas emits a UserWarning when read_sql() is handed a raw DBAPI2 connection
+# (psycopg2/pyodbc) instead of a SQLAlchemy engine. The raw connections work
+# fine here; silence the cosmetic warning so it doesn't flood the service log.
+warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy connectable")
+
 import argparse
 import os
 import sys
 import threading
 import time
 
+# Collectors print status lines containing emoji (🔍/✅/❌). On a cp1252
+# console or redirected stdout those prints raise UnicodeEncodeError INSIDE
+# the collection loop and abort the whole collector run. Never let console
+# encoding kill collection: replace unencodable characters instead.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(errors="replace")
+    except (AttributeError, ValueError, OSError):
+        pass  # frozen/pythonw builds may have no real console streams
+
+# Force matplotlib's non-interactive backend before anything imports pyplot.
+# On Windows (session-0 service) the default GUI backend (Tk) has no display and
+# blocks forever when a report renders a chart — this made the IPS report hang.
+os.environ.setdefault("MPLBACKEND", "Agg")
+
 
 def rotate_service_log():
-    """Recreate dbdome_service.log every hour (wipes old content)."""
-    import time
-    from utils.log4dbexpert import db_write_log
+    """Truncate dbdome_service.log once per hour."""
+    # Truncation must succeed even if db_write_log is unavailable.
     try:
         log_path = getattr(sys.stdout, 'name', None)
         if not log_path or not log_path.endswith('.log'):
@@ -48,14 +68,18 @@ def rotate_service_log():
                     pass
 
         stamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{stamp}] Log file rotated (hourly)", flush=True)
-        db_write_log("Log file rotated (hourly)", "INFO", "rotate_service_log", "")
+        print(f"[{stamp}] Log file rotated (hourly truncate)", flush=True)
     except Exception as e:
         try:
-            from utils.log4dbexpert import db_write_log
-            db_write_log(f"rotate_service_log failed: {e}", "ERROR", "rotate_service_log", "")
+            print(f"rotate_service_log truncate failed: {e}", flush=True)
         except Exception:
             pass
+
+    try:
+        from utils.log4dbexpert import db_write_log
+        db_write_log("Log file rotated (hourly)", "INFO", "rotate_service_log", "")
+    except Exception:
+        pass
 
 
 def start_scheduler():
@@ -72,9 +96,28 @@ def start_scheduler():
     from analysis.analyse_user_risk import run_user_risk_scoring
     from processes.data_masking_engine import sync_masking_rules
     from processes.threat_response_engine import run_threat_response
+    from processes.ddl_audit_scanner import run_ddl_audit_scan
+    from processes.privilege_change_scanner import run_privilege_change_scan
+    from processes.sod_scanner import run_sod_violation_scan
+    from processes.policy_exception_notifier import run_exception_expiry_check
+    from processes.access_review_scheduler import run_access_review_cycle_check
+    from processes.continuous_data_discovery import run_continuous_data_discovery
+    from processes.tls_enforcement_scanner import run_tls_enforcement_scan
+    from processes.vulnerability_scanner import run_vulnerability_scan
+    from processes.retention_engine import run_retention_enforcement, refresh_retention_overview
+    from processes.sql_script_runner import run_sql_scripts
+    from processes.dedup_metric_results import run_dedup_metric_results
+    from datetime import datetime
 
     scheduler = BackgroundScheduler(daemon=True, timezone="Asia/Jerusalem")
     scheduler.start()
+
+    # Apply sql_scripts migrations in a dedicated thread at startup: as a pool
+    # job it competes with the flood of collection jobs, misfires past its
+    # grace window and is silently skipped (observed: 6390-6480 never applied).
+    import threading
+    threading.Thread(target=run_sql_scripts, name="sql_script_runner_startup",
+                     daemon=True).start()
 
     current_jobs = {}
 
@@ -110,7 +153,11 @@ def start_scheduler():
                     continue
                 scheduler.add_job(
                     func, 'interval', seconds=interval_secs,
-                    id=process_name, max_instances=10,
+                    # max_instances=1: never overlap the same collection routine —
+                    # overlapping runs piled up threads/connections and spammed
+                    # "maximum number of running instances reached". coalesce drops
+                    # the backlog so a slow run just delays, never stacks.
+                    id=process_name, max_instances=1,
                     coalesce=True, misfire_grace_time=60,
                 )
                 current_jobs[process_name] = interval_secs
@@ -136,6 +183,15 @@ def start_scheduler():
     scheduler.add_job(
         run_grc_firewall_scan, 'interval', seconds=60,
         id="grc_firewall_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=30,
+    )
+
+    # retention: refresh the metrics.t_retention_overview cache table every minute
+    # so the retention dashboard reads a precomputed table instead of recomputing
+    # per-metric sizes (~several seconds) on every panel load.
+    scheduler.add_job(
+        refresh_retention_overview, 'interval', seconds=60,
+        id="retention", max_instances=1,
         coalesce=True, misfire_grace_time=30,
     )
 
@@ -169,6 +225,78 @@ def start_scheduler():
         coalesce=True, misfire_grace_time=30,
     )
 
+    scheduler.add_job(
+        run_ddl_audit_scan, 'interval', seconds=300,
+        id="ddl_audit_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=60,
+    )
+
+    scheduler.add_job(
+        run_privilege_change_scan, 'interval', seconds=300,
+        id="privilege_change_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=60,
+    )
+
+    scheduler.add_job(
+        run_sod_violation_scan, 'interval', seconds=300,
+        id="sod_violation_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=60,
+    )
+
+    scheduler.add_job(
+        run_exception_expiry_check, 'interval', seconds=3600,
+        id="exception_expiry_check", max_instances=1,
+        coalesce=True, misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        run_access_review_cycle_check, 'interval', seconds=3600,
+        id="access_review_cycle_check", max_instances=1,
+        coalesce=True, misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        run_continuous_data_discovery, 'interval', seconds=3600,
+        id="continuous_data_discovery", max_instances=1,
+        coalesce=True, misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        run_tls_enforcement_scan, 'interval', seconds=300,
+        id="tls_enforcement_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=60,
+    )
+
+    scheduler.add_job(
+        run_vulnerability_scan, 'interval', seconds=86400,
+        id="vulnerability_scan", max_instances=1,
+        coalesce=True, misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        run_retention_enforcement, 'interval', seconds=3600,
+        id="retention_enforcement", max_instances=1,
+        coalesce=True, misfire_grace_time=300,
+    )
+
+    # Generic SQL-scripts runner: applies views/functions/migrations from the
+    # sql_scripts folder. Startup pass runs in its own thread (above); this is
+    # the daily re-run. misfire_grace_time=None: never skip for pool contention
+    # (the advisory lock + checksum ledger make a late/duplicate run a no-op).
+    scheduler.add_job(
+        run_sql_scripts, 'interval', seconds=86400,
+        id="sql_script_runner", max_instances=1,
+        coalesce=True, misfire_grace_time=None,
+    )
+
+    # De-duplicate monitoring.general_metric_metadata_results, ignoring
+    # row_id + entry_date (keeps the latest row per identical content).
+    scheduler.add_job(
+        run_dedup_metric_results, 'interval', seconds=86400,
+        id="dedup_metric_results", max_instances=1,
+        coalesce=True, misfire_grace_time=600,
+    )
+
     print("[scheduler] Started")
     return scheduler
 
@@ -178,10 +306,24 @@ def start_web(port=8080):
     import uvicorn
     from http_server import app
 
+    # Resolve TLS: serve HTTPS with the active certificate (self-signed
+    # "personal" cert by default, or a customer-uploaded cert once installed).
+    # get_uvicorn_ssl_kwargs() returns {} when SSL is disabled or unavailable,
+    # in which case we fall back to plain HTTP exactly as before.
+    ssl_kwargs = {}
+    try:
+        from utils.ssl_cert import get_uvicorn_ssl_kwargs
+        ssl_kwargs = get_uvicorn_ssl_kwargs()
+    except Exception as e:
+        print(f"[http] SSL setup failed, serving plain HTTP: {e}")
+        ssl_kwargs = {}
+
+    scheme = "https" if ssl_kwargs else "http"
+
     def _run():
         try:
-            print(f"[http] Uvicorn starting on 0.0.0.0:{port}...")
-            uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+            print(f"[http] Uvicorn starting on {scheme}://0.0.0.0:{port}...")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="info", **ssl_kwargs)
         except Exception as e:
             print(f"[http] ERROR: {e}")
 
@@ -190,7 +332,7 @@ def start_web(port=8080):
     # Wait a moment for uvicorn to bind the port
     time.sleep(2)
     if thread.is_alive():
-        print(f"[http] Started on port {port}")
+        print(f"[http] Started on port {port} ({scheme.upper()})")
     else:
         print(f"[http] FAILED to start on port {port}")
     return thread
@@ -198,6 +340,12 @@ def start_web(port=8080):
 
 def run(port=8080, web_only=False, scheduler_only=False):
     """Main run loop — used by both console and Windows service."""
+    # Silence SQLAlchemy per-statement INFO logging (was flooding the service log
+    # to tens of MB). Backstop in case any create_engine(echo=True) slips back in.
+    import logging as _logging
+    for _n in ("sqlalchemy.engine", "sqlalchemy.pool", "sqlalchemy.dialects", "sqlalchemy.orm"):
+        _logging.getLogger(_n).setLevel(_logging.WARNING)
+
     run_scheduler = not web_only
     run_web = not scheduler_only
 
@@ -214,7 +362,12 @@ def run(port=8080, web_only=False, scheduler_only=False):
     if run_scheduler:
         print("  Scheduler: active")
     if run_web:
-        print(f"  HTTP:      http://localhost:{port}")
+        try:
+            from utils.ssl_cert import web_scheme
+            _scheme = web_scheme()
+        except Exception:
+            _scheme = "http"
+        print(f"  HTTP:      {_scheme}://localhost:{port}")
     print()
 
     return scheduler

@@ -176,7 +176,7 @@ def metrics_active_transactions_analysis_parse():
 
                                     db_write_log(f"metrics_active_transactions_analysis_parse success"   ,0,"metrics_active_transactions_analysis","" )  
                                     raw_conn.close()                                                                                    
-                                    return  1
+    return  1
     
     p_sql_cmd = f""" 
                 select MAX(row_id) row_id  , server  , query from monitoring.active_transactions where query in(select query from monitoring.metric_query_parsing )            
@@ -208,7 +208,7 @@ def metrics_active_transactions_analysis_parse():
     finally:
             db_write_log(f"metrics_active_transactions_analysis_parse success"   ,0,"metrics_active_transactions_analysis_parse","" )  
             raw_conn.close()
-            return  1
+    return  1
     
 
 
@@ -391,7 +391,7 @@ def metrics_active_transactions_analysis_parse():
 
                                     db_write_log(f"metrics_active_transactions_analysis_parse success"   ,0,"metrics_active_transactions_analysis","" )  
                                     raw_conn.close()                                                                                    
-                                    return  1
+    return  1
     
     p_sql_cmd = f""" 
                 select MAX(row_id) row_id  , server  , query from monitoring.active_transactions where query in(select query from monitoring.metric_query_parsing )            
@@ -423,7 +423,7 @@ def metrics_active_transactions_analysis_parse():
     finally:
             db_write_log(f"metrics_active_transactions_analysis_parse success"   ,0,"metrics_active_transactions_analysis_parse","" )  
             raw_conn.close()
-            return  1
+    return  1
     
 
 

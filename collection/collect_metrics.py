@@ -26,8 +26,10 @@ from collection.mssql.monitoring_metrics_mssql_schema  import collect_metric_mss
 from collection.mssql.monitoring_metrics_mssql_event_session import collect_metric_mssql_event_sessions
 from collection.MariaDB.monitoring_metrics_MariaDB_generic_query import collect_all_metrics_MariaDB_queries
 from collection.informix.monitoring_metrics_informix_generic_query import collect_all_metrics_informix_queries
+from collection.clickhouse.monitoring_metrics_clickhouse_generic_query import collect_all_metrics_clickhouse_queries
 import psycopg2
 from utils.log4dbexpert import db_write_log
+from utils.secrets_crypto import decrypt_secret
 from jobs.job_handler  import job_update_next_run_time
 from jobs.job_handler  import job_history_write
 import os
@@ -45,7 +47,7 @@ def _dispatch_full_row(row):
     servername   = row[2]
     database     = row[3]
     username     = row[4]
-    password     = row[5]
+    password     = decrypt_secret(row[5])   # monitored-DB password is stored encrypted
     driver       = row[6]
     routine_name = row[8]
     job_id       = row[9]
@@ -327,6 +329,17 @@ def _dispatch_full_row(row):
             finally:
                 db_write_log(f"Function succeeded", result, "collect_all_metrics_informix_queries", server_label)
             result = "default"
+        case "collect_all_metrics_clickhouse_queries":
+            try:
+                result = collect_all_metrics_clickhouse_queries(server, database, username, password, port)
+                job_update_next_run_time(job_id, duration_secs, next_run_time)
+                job_history_write(job_id)
+            except Exception as e:
+                db_write_log(f"collect_all_metrics_clickhouse_queries failed with error:{e}", 2, "collect_all_metrics_clickhouse_queries", server_label)
+                return
+            finally:
+                db_write_log(f"Function succeeded", result, "collect_all_metrics_clickhouse_queries", server_label)
+            result = "default"
         case "collect_metric_mssql_active_schema":
             try:
                 result = collect_metric_mssql_table_schema(server,servername  , database , username , password , driver,auth_type,mssql_port=port)
@@ -392,7 +405,7 @@ def _dispatch_domain_row(row, domain_filter, risk_filter=None):
     servername   = row[2]
     database     = row[3]
     username     = row[4]
-    password     = row[5]
+    password     = decrypt_secret(row[5])   # monitored-DB password is stored encrypted
     driver       = row[6]
     routine_name = row[8]
     job_id       = row[9]

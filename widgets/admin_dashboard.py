@@ -15,7 +15,7 @@ current_user = None
 @ui.page('/')
 def login_page():
     def try_login():
-        nonlocal is_authenticated
+        global is_authenticated
         if username.value == 'admin' and password.value == 'password':
             is_authenticated = True
             ui.navigate('/dashboard')

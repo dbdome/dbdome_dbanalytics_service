@@ -1,0 +1,6 @@
+-- Intentionally a NO-OP.
+-- monitoring.v_sec_sql_acc_010_rc07 is defined canonically by
+-- 1010_create_view_sec_sql_acc_010_rc07.sql (correct column types, plus the
+-- "!= 'dbdome'" filter). This file previously held a corrupted duplicate whose
+-- pasted-in line numbers produced: syntax error at or near "8".
+-- Kept as a no-op so the updater's script run stays clean.

@@ -17,7 +17,7 @@ from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
 
 
-ACTIVE_VENDORS = ["sqlserver", "oracle", "postgresql", "mysql"]
+ACTIVE_VENDORS = ["sqlserver", "oracle", "postgresql", "mysql", "mariadb"]
 
 VENDOR_DISPLAY = {
     "sqlserver": "SQL Server",
@@ -51,9 +51,13 @@ SELECT
     ds.id        AS detection_step_id,
     ds.step_type,
     ds.name      AS step_name,
-    ds.content,
-    ds.expected,
-    ds.parameters
+    -- detection logic is encrypted at rest (7300_rootcause_content_encryption.sql);
+    -- rootcause.dec() returns plaintext because the connection carries the session
+    -- key (options=-c rootcause.k=... injected by get_connection_string). Plaintext
+    -- rows pass through unchanged, so this is safe before and after the migration.
+    rootcause.dec(ds.content)    AS content,
+    rootcause.dec(ds.expected)   AS expected,
+    rootcause.dec(ds.parameters) AS parameters
 FROM rootcause.domains d
 JOIN rootcause.issues i ON i.domain_code = d.code
 JOIN rootcause.areas a ON a.code = i.area_code

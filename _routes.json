@@ -1,0 +1,3056 @@
+[
+ {
+  "verb": "GET",
+  "path": "/",
+  "handler": "dbdome_main",
+  "line": 158,
+  "args": [],
+  "returns": "",
+  "response_class": "RedirectResponse",
+  "purpose": "Redirects (302) to the Grafana dbdome dashboard at http://<request-host>:3000/d/ad7kkx7/dbdome; logs the request, no DB work.",
+  "result": "RedirectResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/addrecipients",
+  "handler": "addrecipients",
+  "line": 198,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders an inline HTML form: the /addrecipients variant shows a recipient-group form (POST /submit-addrecipients); the /mailconfiguration variant shows an SMTP mail-config form, prefilling smtp_* fields and recipients from config.mail_config and config.mail_groups (password via decrypt_secret) when row_id is supplied.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/alert_dashboard",
+  "handler": "alert_dashboard",
+  "line": 3231,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the alert dashboard screen (renders templates/alert_dashboard.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/alert_rules",
+  "handler": "alert_rules_page",
+  "line": 3762,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the alert rules screen (renders templates/alert_rules.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/alert_thresholds",
+  "handler": "alert_thresholds_page",
+  "line": 3678,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the alert thresholds screen (renders templates/alert_thresholds.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/api/access-review/cycles",
+  "handler": "api_access_review_cycles",
+  "line": 5862,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all configured recurring access-review cycles from config.access_review_cycles (ordered by cycle_id) - the campaign definitions: name, reviewer, frequency, regulation scope and next due date.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/access-review/cycles",
+  "handler": "api_create_access_review_cycle",
+  "line": 5878,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates a new recurring access-review cycle in config.access_review_cycles from JSON body cycle_name (required), reviewer_email (required), frequency (default QUARTERLY), regulation and next_cycle_due_at; returns the new cycle_id.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/access-review/instances",
+  "handler": "api_access_review_instances",
+  "line": 5836,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists open access-review campaign instances (status OPEN or IN_PROGRESS) from log.access_review_instances joined to config.access_review_cycles, showing cycle name, scope regulations, reviewer email and the review period, ordered by soonest due date (up to 200) - the reviewer's outstanding worklist.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/alert-rules",
+  "handler": "api_alert_rules",
+  "line": 3767,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists alert rules from config.alerts_issue_root_causes (air) left-joined to config.alerts (alert_name) and to config.webook_alerts where row_id=1 for send_mail/send_siem/send_diagnosis flags (defaulting false), ordered by issue_id then rootcause_number; also returns distinct issues (issue_id, name) from rootcause.issues and all alerts (row_id, alert_name) from config.alerts. Responds with JSON {rules, issues, alerts} or a 500 with empty lists on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/alert-thresholds",
+  "handler": "api_alert_thresholds",
+  "line": 3683,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists alert thresholds by joining config.alerts_thresholds to config.alerts and config.thresholds (selecting row_id, alert_name, level, value_start, value_end, alert_id, threshold_id) ordered by alert_name, casting value_start/value_end to float (0 if null), plus a list of all alerts (row_id, alert_name) from config.alerts; returns JSON {thresholds, alerts} or a 500 with empty lists on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/alert_dashboard",
+  "handler": "api_alert_dashboard",
+  "line": 3237,
+  "args": [
+   {
+    "name": "days",
+    "type": "int",
+    "default": "7"
+   },
+   {
+    "name": "server",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "severity",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON for the security alert dashboard: runs ALERT_DASHBOARD_SQL against alerts.mail_alert_log (mal) filtered to the last `days` (default 7), optionally adding `AND mal.server=%s` when `server` is given and Python-filtering rows by `severity` when supplied, ordered by entry_date DESC; computes severity counts (critical/high/medium) and distinct server/root_cause tallies, queries DISTINCT servers from alerts.mail_alert_log over the last 90 days, and responds with stats, servers, and a hierarchical tree from build_alert_tree(rows); on error returns a 500 with empty stats/servers and an empty SEC domain tree.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/audit-log",
+  "handler": "api_audit_log",
+  "line": 4615,
+  "args": [
+   {
+    "name": "page",
+    "type": "int",
+    "default": "1"
+   },
+   {
+    "name": "page_size",
+    "type": "int",
+    "default": "50"
+   },
+   {
+    "name": "action",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "server_name",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "db_user",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "from_dt",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "to_dt",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Paginated firewall audit log query over log.firewall_audit_log left-joined to config.firewall_policies (policy_name via matched_policy); accepts page (default 1), page_size (default 50) and optional filters action (exact), server_name and db_user (ILIKE substring), and from_dt/to_dt event_time bounds; returns total count plus rows (event_id, event_time ISO, server_name, vendor, db_user, client_ip, db_name, action_taken, policy_name, regulation, risk_score, sql_statement truncated to 200 chars) ordered by event_time DESC with LIMIT/OFFSET. On error it calls db_write_log and returns a 500 with total 0 and empty rows.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/compliance-reports",
+  "handler": "api_list_reports",
+  "line": 4729,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON {\"reports\": [...]} listing generated PDF files (newest first) in the BASE_DIR/reports/compliance directory; for each file it infers the regulation (PCI-DSS, HIPAA, GDPR or SOC2, else UNKNOWN) from the filename and reports filename, generated_at (mtime), and size_kb; returns 500 with empty list on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/compliance-reports/download/{filename}",
+  "handler": "api_download_report",
+  "line": 4753,
+  "args": [
+   {
+    "name": "filename",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Serves a compliance PDF for download; takes the path filename, reduces it to its basename, and returns a FileResponse (media type application/pdf) from BASE_DIR/reports/compliance, raising HTTP 404 if the file does not exist.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/compliance-reports/run",
+  "handler": "api_run_report",
+  "line": 4763,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "POST handler that reads JSON body {regulation, lookback_days (default 7), recipients}, validates regulation is one of PCI-DSS/HIPAA/GDPR/SOC2 (else 400), then calls processes.compliance_report_generator.run_compliance_report_on_demand to generate the PDF on demand, logs the result, and returns {message, filename}; returns 500 with detail on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/compliance-reports/schedules",
+  "handler": "api_get_schedules",
+  "line": 4676,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON {\"schedules\": [...]} selecting schedule_id, regulation, frequency, is_active, recipients and last_run_at (ISO-formatted) from config.compliance_report_schedules ordered by regulation; logs via db_write_log and returns 500 with empty list on error.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/compliance-reports/schedules/{schedule_id}",
+  "handler": "api_update_schedule",
+  "line": 4702,
+  "args": [
+   {
+    "name": "schedule_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "PUT handler that updates a row in config.compliance_report_schedules identified by path schedule_id; reads a JSON body and dynamically sets only the provided is_active, recipients and/or frequency fields, commits, and returns {\"message\": \"Schedule updated\"}; returns 400 if no updatable fields are supplied and rolls back with 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/ddl-audit/logs",
+  "handler": "api_ddl_audit_logs",
+  "line": 5363,
+  "args": [
+   {
+    "name": "ddl_command",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "risk_level",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "regulation",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns up to 500 DDL audit records from log.ddl_audit_log (event_time, server_name, db_user, ddl_command, object_name, ddl_statement, risk_level, regulation) ordered by event_time DESC, optionally filtered by the ddl_command, risk_level, and regulation query params; returns JSON {rows} with ISO-formatted timestamps or {error, rows: []} with HTTP 500 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/ddl-audit/summary",
+  "handler": "api_ddl_audit_summary",
+  "line": 5394,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns a 30-day DDL audit summary from log.ddl_audit_log grouped by event date and server_name with total_events, destructive_events (DROP/TRUNCATE) and high_risk_events (risk_level='HIGH') counts, ordered by date and total descending and limited to 200 rows, as JSON {rows}; returns {error, rows: []} with HTTP 500 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/delete-alert-rule",
+  "handler": "api_delete_alert_rule",
+  "line": 3820,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "POST that reads JSON body row_id and deletes the matching config.alerts_issue_root_causes row, commits, and returns {message:'Deleted'}; returns a 500 with the exception message on error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/delete-global-param",
+  "handler": "api_delete_global_param",
+  "line": 3875,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "POST that reads JSON body key, deletes the matching row from config.global_params, commits, and returns {message:'Deleted'}; returns a 500 with the exception message on error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/delete-threshold",
+  "handler": "api_delete_threshold",
+  "line": 3738,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "POST that reads JSON body row_id, looks up the linked threshold_id in config.alerts_thresholds, deletes the config.alerts_thresholds row and then the corresponding config.thresholds row (if found), commits, and returns {message:'Deleted'}; on error rolls back and returns a 500 with the exception message.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/delete-webhook-alert",
+  "handler": "api_delete_webhook_alert",
+  "line": 3941,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "POST that reads JSON body row_id and deletes the matching config.webook_alerts row, commits, and returns {message:'Deleted'}; returns a 500 with the exception message on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/discovery-candidates",
+  "handler": "api_discovery_candidates",
+  "line": 6103,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns up to 500 PENDING PII discovery candidates from log.discovery_candidates (candidate_id, server_name, db_name, table_schema, table_name, column_name, data_type, pii_type, detection_method, confidence_score, sample_matches, review_status, discovered_at) ordered by confidence_score then discovered_at descending, as JSON {rows} with ISO-formatted timestamps; returns {error, rows: []} with HTTP 500 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/discovery-candidates/{candidate_id}",
+  "handler": "api_update_discovery_candidate",
+  "line": 6126,
+  "args": [
+   {
+    "name": "candidate_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates the review_status of a single log.discovery_candidates row identified by candidate_id (path param) to the review_status from the JSON body (default 'DISMISSED'), commits, and returns {message: 'Candidate <status>'}; rolls back and returns {detail} with HTTP 500 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/email-panel",
+  "handler": "email_panel",
+  "line": 4310,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Builds the Grafana panel PDF via _build_panel_pdf from POSTed form fields and emails it as an attachment to the parsed recipients (split on commas/semicolons) using SMTP settings loaded from config.mail_config via _load_mail_config and _send_pdf_email; logs the send with db_write_log and returns an HTML confirmation page, or raises HTTP 400/404/500 (500 if mail_config has no rows).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/api/email-panel-form",
+  "handler": "email_panel_form",
+  "line": 4237,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders a small self-contained HTML dialog prompting for email recipients, subject (defaulting to 'DBDOME report: <panel title>' resolved via _lookup_panel_sql), and an optional message; requires dashboard and panel query params and re-emits all incoming query params as hidden inputs so the form POSTs everything to /api/email-panel.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/api/evidence-packages",
+  "handler": "api_get_evidence_packages",
+  "line": 6251,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists the 100 most recent compliance evidence packages from log.evidence_packages (newest first): package name, regulation, reporting period, generator, status, file size, SHA-256 hashes of the PDF/CSV artefacts and their stored paths - the audit-evidence archive index.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/evidence-packages/generate",
+  "handler": "api_generate_evidence_package",
+  "line": 6275,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Starts asynchronous generation of a compliance evidence package: parses period_start/period_end and launches processes.evidence_package_generator.generate_evidence_package on a background daemon thread for the given regulation (generated_by defaults to 'ui-user'), returning immediately while the package builds.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/evidence-packages/{package_id}/download/{file_type}",
+  "handler": "api_download_evidence_package",
+  "line": 6298,
+  "args": [
+   {
+    "name": "package_id",
+    "type": "int",
+    "default": null
+   },
+   {
+    "name": "file_type",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Downloads a completed evidence package artefact: looks up pdf_path/csv_zip_path/status in log.evidence_packages; file_type 'txt' streams the report file (text/plain) and 'zip' streams the CSV archive (application/zip). Returns 404 if the package/file is missing, 409 if status is not COMPLETE, and 400 for an invalid file_type.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/firewall-policies",
+  "handler": "api_get_policies",
+  "line": 4413,
+  "args": [
+   {
+    "name": "action",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "regulation",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "is_active",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists firewall policies from config.firewall_policies (policy_id, policy_name, vendor, action, condition_type, condition_value, severity, regulation, priority, is_active, created_at, updated_at), ordered by priority then policy_id; optional query filters action, regulation, and is_active (string compared case-insensitively to 'true'). Returns JSON {policies:[...]} with timestamps ISO-formatted, or 500 {error, policies:[]} on failure.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/firewall-policies",
+  "handler": "api_create_policy",
+  "line": 4452,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Inserts a new row into config.firewall_policies from the JSON body (requires policy_name; defaults vendor='all', action='ALERT', condition_type='query_pattern', condition_value='', priority=100, is_active=True, regulation=None, severity='MEDIUM'), commits, then calls reload_policy_cache() from processes.firewall_policy_engine to refresh the live cache. Returns {message, policy_id} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/firewall-policies/apply-template",
+  "handler": "api_apply_template",
+  "line": 4538,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Seeds default firewall policies for a regulation given in the JSON body (must be one of PCI-DSS, HIPAA, GDPR, SOC2, else 400) by inserting hardcoded template rows into config.firewall_policies with vendor='all' and ON CONFLICT DO NOTHING, counting rows actually added, then calls reload_policy_cache(). Returns {message, added} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "DELETE",
+  "path": "/api/firewall-policies/{policy_id}",
+  "handler": "api_delete_policy",
+  "line": 4519,
+  "args": [
+   {
+    "name": "policy_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Deletes the config.firewall_policies row matching the path policy_id, commits, and calls reload_policy_cache() from processes.firewall_policy_engine to refresh the live cache. Returns {message:'Policy deleted'} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/firewall-policies/{policy_id}",
+  "handler": "api_update_policy",
+  "line": 4490,
+  "args": [
+   {
+    "name": "policy_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates config.firewall_policies for the given policy_id, dynamically setting only supplied body keys (policy_name, vendor, action, condition_type, condition_value, priority, is_active, regulation, severity) plus updated_at=NOW(); returns 400 if no updatable fields. On commit it calls reload_policy_cache() to refresh the engine cache. Returns {message} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/fleet",
+  "handler": "api_fleet",
+  "line": 3314,
+  "args": [
+   {
+    "name": "days",
+    "type": "int",
+    "default": "7"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns a fleet overview of database servers by running FLEET_SQL with a days window (default 7); aggregates stats (total, active, inactive, distinct vendors, servers with alerts, total alerts) plus a sorted vendor list and the per-server rows as JSON, returning zeroed stats with HTTP 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/global-params",
+  "handler": "api_global_params",
+  "line": 3844,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all rows from config.global_params (key, value) ordered by key as JSON {params:[{key,value}]}; on error returns a 500 with an empty params list.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/grc-alerts/channels",
+  "handler": "api_get_alert_channels",
+  "line": 5598,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all GRC alert channels by selecting every row from config.grc_alert_channels ordered by channel_id, as JSON {\"channels\": [...]}; on error returns 500 with {\"error\", \"channels\": []}.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/grc-alerts/channels",
+  "handler": "api_create_alert_channel",
+  "line": 5612,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates a GRC alert channel by INSERTing into config.grc_alert_channels (channel_name defaulting to channel_type, channel_type, min_severity default 'MEDIUM', regulations and feature_sources default empty lists, and JSON config default {}) from the request JSON, and returns the new channel_id; rolls back and returns 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "DELETE",
+  "path": "/api/grc-alerts/channels/{channel_id}",
+  "handler": "api_delete_alert_channel",
+  "line": 5659,
+  "args": [
+   {
+    "name": "channel_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Deletes the config.grc_alert_channels row matching the path channel_id and returns {\"message\": \"Channel deleted\"}; rolls back and returns 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/grc-alerts/channels/{channel_id}",
+  "handler": "api_update_alert_channel",
+  "line": 5635,
+  "args": [
+   {
+    "name": "channel_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates the config.grc_alert_channels row for the path channel_id, dynamically setting only the provided fields among channel_name, channel_type, min_severity, regulations, feature_sources, is_active and JSON config; returns 400 if no fields are supplied and rolls back with 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/grc-alerts/delivery-log",
+  "handler": "api_grc_alert_delivery_log",
+  "line": 5673,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the 200 most recent GRC alert delivery records (sent_at, channel_type, source_feature, severity, server_name, event_summary, success, error_message) from log.grc_alert_delivery_log ordered by sent_at descending, with sent_at ISO-formatted, as {\"rows\": [...]}.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/mail-config/delete",
+  "handler": "api_delete_mail_config",
+  "line": 1885,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Deletes an SMTP mail configuration by calling the config.delete_mail_config(p_row_id, p_force) stored procedure with row_id and a force flag (default False) taken from the JSON body; returns {ok: true} on success or {ok: false, error} with HTTP 400 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/mail-config/list",
+  "handler": "api_list_mail_config",
+  "line": 2288,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all SMTP configs from config.mail_config (row_id, smtp_server, smtp_port, smtp_user, tls, mail_sender) and all recipient groups from config.mail_groups (row_id, mail_config_id, group_name, recipients, is_active), each ordered by row_id, as JSON {configs, groups}; returns {ok: false, error} with HTTP 400 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/mail-group/delete",
+  "handler": "api_delete_mail_group",
+  "line": 1902,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Deletes a mail recipient group by calling the config.delete_mail_group(p_row_id) stored procedure with row_id from the JSON body; returns {ok: true} on success or {ok: false, error} with HTTP 400 on failure.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/masking-rules",
+  "handler": "api_get_masking_rules",
+  "line": 4851,
+  "args": [
+   {
+    "name": "pii_type",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "mask_type",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "is_active",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "server_name",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists data-masking rules from config.masking_rules with optional filters (pii_type, mask_type, is_active, case-insensitive server_name). Each rule shows the target server/database/table/column, pii_type, mask_type, allowed_roles, regulation and active flag - the masking policy set.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/masking-rules",
+  "handler": "api_create_masking_rule",
+  "line": 4892,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Upserts a masking rule into config.masking_rules (ON CONFLICT on server+table+column) from JSON server_name/table_name/column_name (required) plus pii_type (default GENERIC), mask_type (default HASH), allowed_roles[] and regulation; returns rule_id. Then reloads the data-masking engine's rule cache so masking applies immediately.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/masking-rules/sync",
+  "handler": "api_sync_masking_rules",
+  "line": 4958,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Triggers an immediate sync: runs data_masking_engine.sync_masking_rules() to regenerate masking rules from the confirmed monitoring.sensitive_schema inventory and reload them, keeping masking coverage aligned with newly discovered PII.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/masking-rules/{rule_id}",
+  "handler": "api_update_masking_rule",
+  "line": 4929,
+  "args": [
+   {
+    "name": "rule_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates a masking rule: patches any of pii_type/mask_type/allowed_roles/regulation/is_active/server_name/table_name/column_name/database_name on config.masking_rules (bumps updated_at) and reloads the masking engine's rule cache.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/policy-exceptions",
+  "handler": "api_get_policy_exceptions",
+  "line": 5704,
+  "args": [
+   {
+    "name": "status",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists firewall/access policy exception requests from config.policy_exceptions (up to 200, newest first). Filters by approval_status when status is supplied, otherwise returns only PENDING and APPROVED. Each row shows the target policy/server/db_user/CIDR, requester, approver, business justification and expiry - the exception approval queue.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/policy-exceptions",
+  "handler": "api_create_policy_exception",
+  "line": 5735,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Submits a new policy-exception request into config.policy_exceptions from JSON body policy_id (required), server_name, db_user, client_ip_cidr, expires_at (required), business_justification (required) and requested_by; status defaults to PENDING. Returns the new exception_id.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/policy-exceptions/{exception_id}",
+  "handler": "api_update_policy_exception",
+  "line": 5759,
+  "args": [
+   {
+    "name": "exception_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Approves or edits a policy exception: patches approval_status, approved_by, expires_at and/or business_justification on config.policy_exceptions for exception_id. When approval_status becomes APPROVED it reloads the firewall policy cache (processes.firewall_policy_engine.reload_policy_cache) so the exception takes effect immediately.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/print-panel",
+  "handler": "print_panel",
+  "line": 4197,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Generates and streams a PDF of a Grafana table panel via _build_panel_pdf using required query params dashboard (uid) and panel (id), treating all other query params (except from/to) as Grafana template variable values; returns the PDF as a FileResponse, or raises HTTP 400/404/500 (logging failures via db_write_log).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/privilege-changes",
+  "handler": "api_privilege_changes",
+  "line": 5428,
+  "args": [
+   {
+    "name": "operation",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "regulation",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns up to 500 recent privilege-change (GRANT/REVOKE) audit records from log.privilege_change_log, newest first, optionally filtered by operation and mapped regulation. Each row shows grantor, grantee, privilege_type, object_name and whether it carried WITH GRANT / admin option - the DCL change audit trail.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/privilege-changes/recent-summary",
+  "handler": "api_privilege_recent_summary",
+  "line": 5457,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Aggregates the last 7 days of GRANT events from log.privilege_change_log by server and grantee, returning grant_count, admin_option_count (grants carrying WITH GRANT) and last_event, top 100 by grant volume - a 'who received the most privileges lately' summary card.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/regulation-controls",
+  "handler": "api_regulation_controls",
+  "line": 5797,
+  "args": [
+   {
+    "name": "regulation",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "status",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON {\"rows\": [...]} from config.regulation_controls (control_id, regulation, clause_number, control_name, control_type, policy_ids, feature_refs) with a computed coverage_status of COVERED or GAP based on whether policy_ids/feature_refs are populated; filters by optional regulation query param in SQL and by optional status query param in Python, ordered by regulation and clause_number; returns 500 with empty list on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/report-schedules",
+  "handler": "api_report_schedules",
+  "line": 3363,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON {\"reports\": [...], \"schedules\": [...]}; queries config.reports for all reports (row_id, report_name, is_active, report_url) and a second query joining config.reports to config.reports_jobs, jobs.jobs (occurance, occurs_at) and config.mail_groups (recipients where mail_config_id=1 and is_active) to expose each report's schedule; returns 500 with empty lists on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/reports/list",
+  "handler": "api_reports_list",
+  "line": 2122,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns JSON {\"reports\": [...]} listing the report definition files (sorted filenames matching rpt_*.json) found in the REPORTS_DIR directory via the _reports_list() helper; returns an empty list if the directory does not exist.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/retention/executions",
+  "handler": "api_retention_executions",
+  "line": 6219,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the 200 most recent retention-purge runs from log.retention_executions (newest first): executed_at, policy, target_table, cutoff_date, rows_deleted, purge_mode, regulation, success, error_message and sha256_manifest - the audit trail (with tamper-evident manifest hash) of what each purge deleted.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/retention/policies",
+  "handler": "api_retention_policies",
+  "line": 6155,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all data-retention policies from config.retention_policies (ordered by id): target schema/table, retention_days, min_retain_days, timestamp_column, purge_mode, regulation and last_run_at - the automated purge rules for compliance-driven data minimisation.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/retention/policies",
+  "handler": "api_create_retention_policy",
+  "line": 6171,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates a retention policy in config.retention_policies from JSON policy_name/target_table/retention_days (required) plus target_schema (default log), min_retain_days (default 0), timestamp_column (default event_time), purge_mode (default DELETE) and regulation; returns retention_id.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/retention/policies/{retention_id}",
+  "handler": "api_update_retention_policy",
+  "line": 6196,
+  "args": [
+   {
+    "name": "retention_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates a retention policy: patches any of policy_name/target_schema/target_table/retention_days/min_retain_days/timestamp_column/purge_mode/regulation/is_active on config.retention_policies for retention_id.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/risk-level/list",
+  "handler": "api_list_risk_levels",
+  "line": 2274,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the catalogue of configured user risk-level bands (row_id, risk_level label, is_active) from rootcause.risk_level, ordered by row_id. Populates risk-level reference lists and filters in the GRC UI.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/risk-scores",
+  "handler": "api_risk_scores",
+  "line": 4784,
+  "args": [
+   {
+    "name": "min_risk_score",
+    "type": "int",
+    "default": "0"
+   },
+   {
+    "name": "server_name",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "login_name",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists per-login behavioural risk profiles from monitoring.user_risk_profiles, filtered to risk_score >= min_risk_score with optional case-insensitive server_name / login_name search. Each entry returns the computed risk_score, consecutive_high_risk streak and behavioural baselines (avg queries/hour, avg duration, avg logical reads, typical tables and active-hours window) plus last_updated, ordered highest-risk first. Feeds the user-risk leaderboard.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/risk-scores/{server_name}/{login_name}/events",
+  "handler": "api_risk_events",
+  "line": 4822,
+  "args": [
+   {
+    "name": "server_name",
+    "type": "str",
+    "default": null
+   },
+   {
+    "name": "login_name",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Drill-down timeline for one login on one server: returns the 20 most recent risk-scoring events from monitoring.user_risk_events (event_time, risk_score, risk_factors), newest first, explaining why that user's risk score changed.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/sensitive-schema",
+  "handler": "api_sensitive_schema",
+  "line": 3536,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the PII / sensitive-column inventory: unions confirmed columns from monitoring.sensitive_schema with monitoring.schema columns whose names match the PII regex (PII_PATTERNS) and are not yet confirmed. Includes summary stats (total, sensitive, enabled/disabled, server count) and the distinct server and database lists. Powers the sensitive-data classification screen.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/sensitive-schema/bulk-toggle",
+  "handler": "api_bulk_toggle_sensitive",
+  "line": 3618,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Bulk version of the sensitivity toggle: iterates the items[] list, updating monitoring.schema.is_enabled or deleting monitoring.sensitive_schema rows as appropriate, and returns the count updated.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/sensitive-schema/discover",
+  "handler": "api_discover_sensitive",
+  "line": 3640,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Runs PII auto-discovery: inserts into monitoring.sensitive_schema every enabled monitoring.schema column whose name matches the PII regex and is not already classified, then reports how many new sensitive columns were found and the new total.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/sensitive-schema/toggle",
+  "handler": "api_toggle_sensitive",
+  "line": 3594,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Toggles one column's sensitivity flag: for source='schema' it sets is_enabled on monitoring.schema (by row_id); for source='sensitive' with is_enabled=false it removes the row from monitoring.sensitive_schema. Includes or excludes a single column from PII scope.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/siem/ips-dashboard",
+  "handler": "api_siem_ips_dashboard",
+  "line": 6339,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Aggregates FortiAnalyzer IPS dashboard data: computes summed stats (total/critical/high/medium/blocked/monitored counts) from siem.fortianalyzer_ips_events and pulls severity, timeline (last 7 days), types (15), blocked (15), sources (10), victims (10), http_attacks (20) and monitored (20) from the siem.v_ips_* views, returning them all as one JSON object; logs and returns 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/siem/ips-report/download",
+  "handler": "api_siem_ips_download",
+  "line": 6461,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Generates the IPS report PDF via JSONReportGenerator from templates/rpt_ips_fortianalyzer_ips_report.json and returns it as a FileResponse download named IPS_Report_<timestamp>.pdf; raises 500 if the template is missing or generation fails.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/siem/ips-report/email",
+  "handler": "api_siem_ips_email",
+  "line": 6419,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Generates the IPS PDF/HTML report via JSONReportGenerator from templates/rpt_ips_fortianalyzer_ips_report.json and emails both files to the request's recipients (subject default 'IPS Report - dbdome') using SMTP settings read from config.mail_config; returns 400 if recipients missing, 500 if template or SMTP config absent, and logs the send.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/siem/ips-report/schedule",
+  "handler": "api_siem_ips_schedule_get",
+  "line": 6476,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the current weekly IPS report schedule for report 'IPS Report - dbdome' by joining config.reports, config.reports_jobs, jobs.jobs, jobs.job_schedules and mail_group 'ips_weekly', yielding is_active, occurance, occurs_at (first 5 chars), day_of_week (isodow of next_run), next_run and recipients; returns {\"is_active\": false} when no schedule exists.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/siem/ips-report/schedule",
+  "handler": "api_siem_ips_schedule_post",
+  "line": 6515,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Saves the weekly IPS report schedule (day_of_week default 1, occurs_at default '06:00:00', is_active default true, recipients) by upserting config.reports ('IPS Report - dbdome'), jobs.jobs (weekly), config.reports_jobs, computing the next weekly run time and upserting jobs.job_schedules, and upserting the 'ips_weekly' config.mail_groups recipients; returns the computed next_run and logs the save, rolling back with 500 on error.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/sod/rules",
+  "handler": "api_sod_rules",
+  "line": 5530,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all configured SoD rules from config.sod_rules (ordered by rule_id) - the toxic-combination definitions (conflicting role A vs role B patterns) that drive violation detection.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/sod/rules",
+  "handler": "api_sod_create_rule",
+  "line": 5544,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates a new SoD rule in config.sod_rules from JSON body rule_name (required), description, severity (default HIGH), regulation, role_a_patterns[] and role_b_patterns[]; returns the new rule_id. Defines a new conflicting-duties combination to monitor.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/sod/rules/{rule_id}",
+  "handler": "api_sod_update_rule",
+  "line": 5566,
+  "args": [
+   {
+    "name": "rule_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates an existing SoD rule: patches any supplied subset of rule_name, description, severity, regulation, role_a_patterns, role_b_patterns, is_active on config.sod_rules for rule_id. Used to tune a rule or enable/disable it (400 if the body has no updatable fields).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/sod/violations",
+  "handler": "api_sod_violations",
+  "line": 5491,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists Separation-of-Duties violations detected in the last 30 days from log.sod_violations (violation_id, detected_at, server, db_user, rule_name, severity, regulation, is_acknowledged), up to 500 newest-first - the SoD violation worklist.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/sod/violations/{violation_id}/acknowledge",
+  "handler": "api_sod_acknowledge",
+  "line": 5513,
+  "args": [
+   {
+    "name": "violation_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Triages one SoD violation: sets is_acknowledged=TRUE and acknowledged_at=NOW() on log.sod_violations for the given violation_id, marking it as reviewed/accepted by an analyst.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/threat-response/blocked-ips",
+  "handler": "api_get_blocked_ips",
+  "line": 5081,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the active network block list from config.blocked_ips (is_active AND not expired), newest first: ip_address, reason, blocked_by, blocked_at and expires_at.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/threat-response/blocked-ips",
+  "handler": "api_block_ip",
+  "line": 5107,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Blocks a client IP: upserts into config.blocked_ips (ON CONFLICT on ip_address re-activates the entry) with a reason and optional duration_mins TTL (NULL = permanent); ip_address is required. Then reloads the threat-response engine's in-memory entity cache so the block is enforced immediately.",
+  "result": ""
+ },
+ {
+  "verb": "DELETE",
+  "path": "/api/threat-response/blocked-ips/{block_id}",
+  "handler": "api_release_ip",
+  "line": 5139,
+  "args": [
+   {
+    "name": "block_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lifts an IP block by setting is_active=FALSE on config.blocked_ips for block_id, then reloads the threat-response entity cache so enforcement stops immediately.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/threat-response/incidents",
+  "handler": "api_get_incidents",
+  "line": 4983,
+  "args": [
+   {
+    "name": "status",
+    "type": "str",
+    "default": "None"
+   },
+   {
+    "name": "severity",
+    "type": "str",
+    "default": "None"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists security incidents from log.security_incidents (up to 200), filtered by status (defaults to OPEN + ACKNOWLEDGED) and optional severity, ordered by severity (CRITICAL, HIGH, MEDIUM, ...) then newest-first. Each row carries title, severity, regulation, server/db_user/client_ip, description, status and timestamps - the incident queue.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/threat-response/incidents",
+  "handler": "api_create_incident",
+  "line": 5021,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Opens a new security incident in log.security_incidents from JSON body title (required), severity (default HIGH), regulation, server_name, db_user, client_ip, description and status (default OPEN); returns the new incident_id and writes an audit log line.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/threat-response/incidents/{incident_id}",
+  "handler": "api_update_incident",
+  "line": 5050,
+  "args": [
+   {
+    "name": "incident_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates an incident: patches any supplied subset of title/severity/regulation/server_name/db_user/client_ip/description/status on log.security_incidents, always bumping updated_at, and stamps resolved_at when status becomes RESOLVED. Used to triage or close an incident.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/threat-response/playbooks",
+  "handler": "api_get_playbooks",
+  "line": 5241,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all automated-response playbooks from config.threat_response_playbooks (ordered by id): the trigger (type/threshold/regulation), the response (type + params JSON), cooldown_mins and is_active - the SOAR-style automation rules.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/threat-response/playbooks",
+  "handler": "api_create_playbook",
+  "line": 5262,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates an automated-response playbook in config.threat_response_playbooks from JSON playbook_name, trigger_type and response_type (required), plus trigger_threshold (default 70), trigger_regulation, response_params (JSON object, default empty) and cooldown_mins (default 60); returns the new playbook_id.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/threat-response/playbooks/{playbook_id}",
+  "handler": "api_update_playbook",
+  "line": 5296,
+  "args": [
+   {
+    "name": "playbook_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates a playbook: patches any of playbook_name/description/trigger_type/trigger_threshold/trigger_regulation/response_type/cooldown_mins/is_active, and response_params (re-serialized to JSON), on config.threat_response_playbooks. Used to tune automation or enable/disable it.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/threat-response/response-log",
+  "handler": "api_get_response_log",
+  "line": 5328,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the 200 most recent automated-response actions from log.threat_response_log (newest first): triggered_at, playbook_name, trigger_type, subject, response_type, response_detail, success and error_message - the audit trail of what the automation actually executed.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/threat-response/suspended-users",
+  "handler": "api_get_suspended_users",
+  "line": 5160,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the active login-suspension list from config.suspended_users (is_active AND not expired), newest first: server_name, login_name, reason, suspended_by and timestamps.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/threat-response/suspended-users",
+  "handler": "api_suspend_user",
+  "line": 5187,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Suspends a database login: upserts into config.suspended_users (ON CONFLICT on server_name+login_name re-activates) with a reason and optional duration_mins TTL; server_name and login_name are required. Reloads the threat-response entity cache to enforce immediately.",
+  "result": ""
+ },
+ {
+  "verb": "DELETE",
+  "path": "/api/threat-response/suspended-users/{suspension_id}",
+  "handler": "api_release_user",
+  "line": 5220,
+  "args": [
+   {
+    "name": "suspension_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Ends a suspension by setting is_active=FALSE on config.suspended_users for suspension_id, then reloads the threat-response entity cache.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/tls/policies",
+  "handler": "api_tls_policies",
+  "line": 5932,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns the active TLS enforcement policies from config.tls_enforcement_policies (is_active), by server - the per-server require-SSL and minimum-TLS-version rules.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/tls/policies",
+  "handler": "api_create_tls_policy",
+  "line": 5946,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Creates a TLS enforcement policy in config.tls_enforcement_policies from JSON server_name (required) plus require_ssl (default true), action (default ALERT), min_tls_version and regulation (default PCI-DSS); returns tls_policy_id.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/tls/policies/{tls_policy_id}",
+  "handler": "api_update_tls_policy",
+  "line": 5968,
+  "args": [
+   {
+    "name": "tls_policy_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates a TLS policy: patches any of server_name/require_ssl/action/min_tls_version/regulation/is_active on config.tls_enforcement_policies for tls_policy_id.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/tls/violations",
+  "handler": "api_tls_violations",
+  "line": 5910,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists TLS/SSL enforcement violations from log.tls_violations in the last 24 hours (up to 500, newest first): server_name, db_user, client_ip, ssl_mode, risk_level, regulation and action_taken - connections that breached the encryption-in-transit policy.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/toggle-report",
+  "handler": "api_toggle_report",
+  "line": 3489,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Reads JSON body {report_id, is_active (default false)} and runs UPDATE config.reports SET is_active WHERE row_id=report_id, commits, and returns JSON {message, report_id, is_active}; returns 500 with the error message on failure.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/vulnerability/cve-watchlist",
+  "handler": "api_cve_watchlist",
+  "line": 6024,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all rows from config.cve_watchlist (SELECT *) ordered by cve_id, casting cvss_score to float, as JSON {cves:[...]}, or 500 {error, cves:[]} on failure.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/vulnerability/cve-watchlist",
+  "handler": "api_create_cve",
+  "line": 6040,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Upserts a CVE into config.cve_watchlist from the JSON body (requires cve_id; defaults severity='HIGH', affected_vendors=[], affected_versions=[]) using ON CONFLICT (cve_id) DO UPDATE of title, cvss_score, severity, affected_vendors, and affected_versions, then commits. Returns {message:'CVE saved'} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "PUT",
+  "path": "/api/vulnerability/cve-watchlist/{cve_id}",
+  "handler": "api_update_cve",
+  "line": 6066,
+  "args": [
+   {
+    "name": "cve_id",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Updates config.cve_watchlist for the path cve_id, dynamically setting only supplied body keys (title, cvss_score, severity, affected_vendors, affected_versions, description); returns 400 if none supplied. Commits and returns {message:'CVE updated'} or 500 {detail} with rollback.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/vulnerability/findings",
+  "handler": "api_vulnerability_findings",
+  "line": 6000,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Lists up to 500 vulnerability findings from log.vulnerability_findings (finding_id, detected_at, server_name, vendor, db_version, cve_id, cvss_score, severity, patch_status, regulation), ordered by severity rank (CRITICAL, HIGH, MEDIUM, else) then detected_at descending, with detected_at ISO-formatted and cvss_score cast to float. Returns {rows:[...]} or 500 {error, rows:[]}.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/api/vulnerability/scan",
+  "handler": "api_trigger_vulnerability_scan",
+  "line": 6088,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Starts an asynchronous vulnerability scan by launching run_vulnerability_scan from processes.vulnerability_scanner in a daemon background thread, returning immediately with {message:'Vulnerability scan started'} or 500 {detail} on failure.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/api/webhook-alerts",
+  "handler": "api_webhook_alerts",
+  "line": 3899,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Returns all rows from config.webook_alerts (row_id, metric_type, send_mail_alert, send_siem_alert, send_diagnosis_evidence) ordered by metric_type as JSON {channels}; on error returns a 500 with an empty channels list.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/capture_report/{reportname}",
+  "handler": "capture_report",
+  "line": 603,
+  "args": [
+   {
+    "name": "reportname",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders an inline 'Send report by mail' HTML form for the named report, collecting recipients only (no DB work); the /capture_report variant posts to /submit-report_capture, the /generate_report variant posts to /submit-generate_report.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/custom_metrics",
+  "handler": "serverform_page",
+  "line": 186,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves static configuration screens by opening and returning a template: templates/email_configuration.html (/email_configuration), templates/retention_policy.html (/retention_policy), or templates/serverform.html (/serverform).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/custom_metrics_update",
+  "handler": "submit",
+  "line": 2668,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler reused for three GET routes: serves templates/custom_metrics.html (/custom_metrics_update) and redirects to Grafana dashboards for /email_configuration (configuration) and /take_action (take-action).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/db_restore",
+  "handler": "db_restore",
+  "line": 1371,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Restores a database from its backup (reverting all changes) via processes.rbac_provisioning.restore_database, then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dbdome",
+  "handler": "dbdome_main",
+  "line": 148,
+  "args": [],
+  "returns": "",
+  "response_class": "RedirectResponse",
+  "purpose": "Redirects (302) to the Grafana dbdome dashboard at http://<request-host>:3000/d/ad7kkx7/dbdome; logs the request, no DB work.",
+  "result": "RedirectResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/download_report/{reportname}",
+  "handler": "download_report",
+  "line": 850,
+  "args": [
+   {
+    "name": "reportname",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Generates a report PDF: reads SMTP settings from config.mail_config and the report query from config.reports, runs it via fetch_data_report_once, writes reports/<name>_<timestamp>.pdf via export_to_pdf_once, then 302-redirects back to the referer.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_anonymize",
+  "handler": "dp_anonymize",
+  "line": 1162,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Irreversibly anonymizes a column (or all big character columns when column omitted) via processes.data_protection.anonymize (audited), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_anonymize_actual",
+  "handler": "dp_anonymize_actual",
+  "line": 1209,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Staged anonymization phase 2: switches the live table with its latest pre-copy via processes.data_protection.anonymize_actual, then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_anonymize_confirm",
+  "handler": "dp_anonymize_confirm",
+  "line": 1225,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Staged anonymization phase 3: creates the backup schema (default dbdome_backup) and archives the original dated copy into it via processes.data_protection.anonymize_confirm, then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_anonymize_pre",
+  "handler": "dp_anonymize_pre",
+  "line": 1187,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Staged anonymization phase 1: copies the table to <table>_<datetime> and anonymizes the copy via processes.data_protection.anonymize_pre (original untouched), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_anonymize_preview",
+  "handler": "dp_anonymize_preview",
+  "line": 1243,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Read-only preview: runs SELECT TOP <rows> on the latest anonymized dry-run copy via processes.data_protection.preview_copy and renders the rows as an HTML table.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_dynamic_mask",
+  "handler": "dp_dynamic_mask",
+  "line": 1100,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Applies SQL Server Dynamic Data Masking on a column via processes.data_protection.apply_dynamic_mask (audited in metrics.dp_log), then 302-redirects back to the referring dashboard.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_revert_mask",
+  "handler": "dp_revert_mask",
+  "line": 1337,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Reverts Dynamic Data Masking on a column (DROP MASKED) via processes.data_protection.revert_dynamic_mask (audited), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_revert_tokenize",
+  "handler": "dp_revert_tokenize",
+  "line": 1354,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Reverts tokenization by de-tokenizing a column from the vault via processes.data_protection.revert_tokenize (audited), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_static_mask",
+  "handler": "dp_static_mask",
+  "line": 1143,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Applies destructive static masking (null/default/fixed/shuffle/partial) to a column via processes.data_protection.static_mask (audited), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_tokenize",
+  "handler": "dp_tokenize",
+  "line": 1280,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Tokenizes a column (passphrase/aes256) moving real values into an encrypted TokenVault via processes.data_protection.tokenize (audited), then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_tokenize_actual",
+  "handler": "dp_tokenize_actual",
+  "line": 1319,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Staged tokenization phase 2: switches the live table with its latest tokenize_pre copy via processes.data_protection.tokenize_actual, then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/dp_tokenize_pre",
+  "handler": "dp_tokenize_pre",
+  "line": 1299,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Staged tokenization phase 1: copies the table to <table>_<datetime>, tokenizes the column on the copy (original untouched, mirrored to Postgres) via processes.data_protection.tokenize_pre, then 302-redirects back.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/email_configuration",
+  "handler": "serverform_page",
+  "line": 2486,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves static configuration screens by opening and returning a template: templates/email_configuration.html (/email_configuration), templates/retention_policy.html (/retention_policy), or templates/serverform.html (/serverform).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/email_configuration",
+  "handler": "submit",
+  "line": 2681,
+  "args": [
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler reused for three GET routes: serves templates/custom_metrics.html (/custom_metrics_update) and redirects to Grafana dashboards for /email_configuration (configuration) and /take_action (take-action).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/encrypt_column",
+  "handler": "encrypt_column",
+  "line": 1747,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Backs up the table to an [unencrypted] copy and tokenizes the column: authorises against monitoring.v_sec_sql_pri_001_rc12, gated by config.global_params 'encryption_dry_run', logs metrics.encryption_log and encryption previews, then 302-redirects back to the Sensitive Columns Explorer.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/fleet",
+  "handler": "fleet_dashboard",
+  "line": 3308,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the server fleet dashboard screen (renders templates/fleet.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/generate_report/{reportname}",
+  "handler": "capture_report",
+  "line": 685,
+  "args": [
+   {
+    "name": "reportname",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders an inline 'Send report by mail' HTML form for the named report, collecting recipients only (no DB work); the /capture_report variant posts to /submit-report_capture, the /generate_report variant posts to /submit-generate_report.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/global_param_set",
+  "handler": "global_param_set",
+  "line": 1046,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Sets a whitelisted config.global_params key by calling config.set_global_param(key,value), then 302-redirects back to the referring Grafana dashboard.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/global_params",
+  "handler": "global_params_page",
+  "line": 3839,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the global parameters screen (renders templates/global_params.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/access-review",
+  "handler": "grc_access_review_page",
+  "line": 5831,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC access review screen (renders templates/access_review.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/alert-channels",
+  "handler": "grc_alert_channels_page",
+  "line": 5593,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC alert channels screen (renders templates/grc_alert_channels.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/audit-log",
+  "handler": "grc_audit_log_page",
+  "line": 4390,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC firewall audit log screen (renders templates/firewall_audit_log.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/compliance-reports",
+  "handler": "grc_compliance_reports_page",
+  "line": 4395,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC compliance reports screen (renders templates/compliance_reports.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/data-retention",
+  "handler": "grc_data_retention_page",
+  "line": 6150,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC data retention screen (renders templates/data_retention.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/ddl-audit",
+  "handler": "grc_ddl_audit_page",
+  "line": 5358,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC DDL audit screen (renders templates/ddl_audit.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/evidence-packages",
+  "handler": "grc_evidence_packages_page",
+  "line": 6246,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC evidence packages screen (renders templates/evidence_packages.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/masking-rules",
+  "handler": "grc_masking_rules_page",
+  "line": 4405,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC masking rules screen (renders templates/masking_rules.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/policies",
+  "handler": "grc_policies_page",
+  "line": 4385,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC firewall policies screen (renders templates/firewall_policies.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/policy-exceptions",
+  "handler": "grc_policy_exceptions_page",
+  "line": 5699,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC policy exceptions screen (renders templates/policy_exceptions.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/privilege-changes",
+  "handler": "grc_privilege_changes_page",
+  "line": 5423,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC privilege changes screen (renders templates/privilege_changes.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/regulation-controls",
+  "handler": "grc_regulation_controls_page",
+  "line": 5792,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC regulation controls screen (renders templates/regulation_controls.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/risk-dashboard",
+  "handler": "grc_risk_dashboard_page",
+  "line": 4400,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC risk dashboard screen (renders templates/risk_dashboard.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/sod-violations",
+  "handler": "grc_sod_violations_page",
+  "line": 5486,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC segregation-of-duties violations screen (renders templates/sod_violations.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/threat-response",
+  "handler": "grc_threat_response_page",
+  "line": 4975,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC threat response screen (renders templates/threat_response.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/tls-enforcement",
+  "handler": "grc_tls_enforcement_page",
+  "line": 5905,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC TLS enforcement screen (renders templates/tls_enforcement.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/grc/vulnerability-assessment",
+  "handler": "grc_vulnerability_page",
+  "line": 5995,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the GRC vulnerability assessment screen (renders templates/vulnerability_assessment.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/mailconfiguration",
+  "handler": "addrecipients",
+  "line": 329,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders an inline HTML form: the /addrecipients variant shows a recipient-group form (POST /submit-addrecipients); the /mailconfiguration variant shows an SMTP mail-config form, prefilling smtp_* fields and recipients from config.mail_config and config.mail_groups (password via decrypt_secret) when row_id is supplied.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/mask_column",
+  "handler": "mask_column",
+  "line": 1558,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Creates SQL Server Dynamic Data Masking on a discovered sensitive column: authorises against monitoring.v_sec_sql_pri_001_rc12, gated by the config.global_params 'masking_dry_run' switch, applies the mask and captures real-vs-masked previews (logs metrics.masking_log and metrics.mask_preview), then 302-redirects back to the Sensitive Columns Explorer.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/metric_enable",
+  "handler": "metric_enable",
+  "line": 2497,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Serves the metric-enable screens, returning templates/metric_enable.html (/metric_enable) or templates/metric_enable_all_servers.html (/metric_enable_all_servers).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/metric_enable_all_servers",
+  "handler": "metric_enable",
+  "line": 2538,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Serves the metric-enable screens, returning templates/metric_enable.html (/metric_enable) or templates/metric_enable_all_servers.html (/metric_enable_all_servers).",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/processform",
+  "handler": "processform_page",
+  "line": 169,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the process-form screen (renders templates/processform.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/rbac_provision",
+  "handler": "rbac_provision",
+  "line": 1072,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Provisions RBAC for a server/db: backs up the database and creates the standard least-privilege role set via processes.rbac_provisioning.provision_rbac (audited in metrics.rbac_log), then 302-redirects back to the Sensitive Columns Explorer.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/report_schedule",
+  "handler": "report_schedule_page",
+  "line": 3357,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the report scheduling screen (renders templates/report_schedule.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/reportbymail/{reportname}",
+  "handler": "show_send_report_by_mail",
+  "line": 767,
+  "args": [
+   {
+    "name": "reportname",
+    "type": "str",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Renders an inline 'Send report by mail' HTML form for the named report, carrying start_time/end_time/server/referer as hidden fields, posting to /submit-reportbymail (no DB work).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/reports",
+  "handler": "reports_list_page",
+  "line": 1961,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Lists report-definition files (via _reports_list) and renders them as an HTML table with per-file Edit links.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/reports/edit",
+  "handler": "reports_edit_page",
+  "line": 1987,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Loads a report definition JSON file (validated via _safe_report_path) and renders a column-toggle/ordering edit form, discovering query columns via _discover_columns_for_query.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "POST",
+  "path": "/reports/save",
+  "handler": "reports_save",
+  "line": 2067,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /reports/save: takes form fields name, sender, table_count and per-table column enable/order values, validates the report path via _safe_report_path, backs up the report JSON to a rolling .bak, then rewrites the report template's table sections to keep only enabled columns in the chosen order. Redirects to the sender URL (or /reports) afterward.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/retention_policy",
+  "handler": "serverform_page",
+  "line": 2492,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves static configuration screens by opening and returning a template: templates/email_configuration.html (/email_configuration), templates/retention_policy.html (/retention_policy), or templates/serverform.html (/serverform).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/revert_encryption",
+  "handler": "revert_encryption",
+  "line": 1792,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Reverts column encryption: drops the tokenized table and restores its [unencrypted] backup to the original schema/name (authorised against monitoring.v_sec_sql_pri_001_rc12), then 302-redirects back to the Sensitive Columns Explorer.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/risklevel",
+  "handler": "risklevel_page",
+  "line": 2127,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Queries rootcause.risk_level and renders an inline HTML form listing each row (row_id/risk_level/is_active) with per-row active checkboxes that post to /submit-risklevel.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/risklevel_toggle",
+  "handler": "risklevel_toggle",
+  "line": 2215,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Enables/disables/toggles is_active on a single rootcause.risk_level row matched by the risk_level query param (action=enable|disable|toggle), writes a db log, then returns JSON or redirects to Grafana via the sender param.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/root_cause_active",
+  "handler": "root_cause_active",
+  "line": 1388,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Enables/disables a root cause (rootcause.resolution_paths.is_active) via rootcause.set_root_cause_active(id,active), then 302-redirects back to the rootcauses dashboard.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/root_cause_risk",
+  "handler": "root_cause_risk",
+  "line": 1415,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Sets a root cause's risk level (rootcause.resolution_paths.risk_level) via rootcause.set_root_cause_risk(id,risk), then 302-redirects back to the rootcauses dashboard.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/sensitive_column_add",
+  "handler": "sensitive_column_add",
+  "line": 1016,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Registers a sensitive column by calling metrics.add_sensitive_column(server,db,schema,table,column,pii), then 302-redirects back to the Sensitive Columns Explorer dashboard.",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/sensitive_schema",
+  "handler": "sensitive_schema_page",
+  "line": 3530,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the sensitive schema screen (renders templates/sensitive_schema.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/server_enable",
+  "handler": "server_enable",
+  "line": 940,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Activates a server by calling the metrics.server_activate(:p_server_name) procedure, then 302-redirects back to the referring Grafana dashboard (default transaction-report).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/serverform",
+  "handler": "serverform_page",
+  "line": 174,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves static configuration screens by opening and returning a template: templates/email_configuration.html (/email_configuration), templates/retention_policy.html (/retention_policy), or templates/serverform.html (/serverform).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/serverform",
+  "handler": "serverform_page",
+  "line": 2579,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves static configuration screens by opening and returning a template: templates/email_configuration.html (/email_configuration), templates/retention_policy.html (/retention_policy), or templates/serverform.html (/serverform).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/siem/ips-dashboard",
+  "handler": "siem_ips_dashboard_page",
+  "line": 6333,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the SIEM IPS dashboard screen (renders templates/ips_dashboard.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/siem_configuration",
+  "handler": "siem_configuration",
+  "line": 180,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the SIEM configuration screen (renders templates/siem_configuration.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-addrecipients",
+  "handler": "addrecipients",
+  "line": 1836,
+  "args": [
+   {
+    "name": "mail_config_id",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "group_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "referer",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "row_id",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "is_active",
+    "type": "bool",
+    "default": "Form(True)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Renders an inline HTML form: the /addrecipients variant shows a recipient-group form (POST /submit-addrecipients); the /mailconfiguration variant shows an SMTP mail-config form, prefilling smtp_* fields and recipients from config.mail_config and config.mail_groups (password via decrypt_secret) when row_id is supplied.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-alert-rule",
+  "handler": "submit_alert_rule",
+  "line": 3798,
+  "args": [
+   {
+    "name": "issue_id",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "rootcause_number",
+    "type": "int",
+    "default": "Form(1)"
+   },
+   {
+    "name": "event_rule_id",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": "Form(None)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-alert-rule: takes issue_id and event_rule_id (required) plus rootcause_number and optional row_id, and inserts or updates a row in config.alerts_issue_root_causes. Returns a JSON confirmation or 500 error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-alert-threshold",
+  "handler": "submit_alert_threshold",
+  "line": 3711,
+  "args": [
+   {
+    "name": "alert_id",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "level",
+    "type": "int",
+    "default": "Form(3)"
+   },
+   {
+    "name": "value_start",
+    "type": "float",
+    "default": "Form(0)"
+   },
+   {
+    "name": "value_end",
+    "type": "float",
+    "default": "Form(100)"
+   },
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": "Form(None)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-alert-threshold: takes alert_id (required) plus level, value_start, value_end and optional row_id, and either updates the existing config.thresholds row linked through config.alerts_thresholds (when row_id is given) or inserts a new threshold and links it to the alert. Returns a JSON confirmation or 500 error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-generate_report",
+  "handler": "report_capture",
+  "line": 3045,
+  "args": [
+   {
+    "name": "report",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "referer",
+    "type": "str",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler report_capture, bound to POST /submit-generate_report and POST /submit-report_capture. For /submit-generate_report it takes report, recipients and referer, looks up the report_url in config.reports, generates PDF+HTML via JSONReportGenerator, reads SMTP settings from config.mail_config and emails the report. For /submit-report_capture it takes report, url, recipients and referer and calls capture_grafana_dashboard_pdf(url, report, recipients) to capture and email a Grafana dashboard PDF. Both redirect to the referer (or a fallback Grafana dashboard).",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-global-param",
+  "handler": "submit_global_param",
+  "line": 3857,
+  "args": [
+   {
+    "name": "key",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "value",
+    "type": "str",
+    "default": "Form('')"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-global-param: takes key (required) and value, and upserts that key/value into config.global_params (updates if the key exists, otherwise inserts). Returns a JSON confirmation or 500 error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-mailconfiguration",
+  "handler": "mailconfigure",
+  "line": 524,
+  "args": [
+   {
+    "name": "smtp_server",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_user",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_password",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_port",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "tls",
+    "type": "bool",
+    "default": "Form(False)"
+   },
+   {
+    "name": "smtp_sender",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "referer",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "row_id",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "group_name",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "group_id",
+    "type": "str",
+    "default": "Form(None)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-mailconfiguration: accepts SMTP form fields (smtp_server, smtp_user, smtp_password, smtp_port, tls, smtp_sender required; optional row_id, group_name, recipients, group_id) and upserts the mail server config via CALL config.save_mail_config with the password encrypted through encrypt_secret; if recipients is supplied it also upserts the linked recipient group via config.save_mail_group. Redirects to the referer (or the Grafana configuration dashboard) on completion.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-processform",
+  "handler": "show_processform",
+  "line": 2699,
+  "args": [
+   {
+    "name": "process_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "interval",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "active",
+    "type": "bool",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-processform: takes process_name, interval and active (all required) and activates/updates a scheduled process via CALL metrics.process_activate. Redirects to the Grafana processes dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-report-schedule",
+  "handler": "submit_report_schedule",
+  "line": 3395,
+  "args": [
+   {
+    "name": "report_id",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "report_name",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "schedule",
+    "type": "str",
+    "default": "Form('daily')"
+   },
+   {
+    "name": "occurs_at",
+    "type": "str",
+    "default": "Form('06:00')"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "report_type",
+    "type": "str",
+    "default": "Form('json')"
+   },
+   {
+    "name": "report_query",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "report_url",
+    "type": "str",
+    "default": "Form(None)"
+   },
+   {
+    "name": "is_active",
+    "type": "str",
+    "default": "Form('true')"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-report-schedule: takes optional report_id (or 'new'), report_name, schedule, occurs_at, recipients, report_type, report_query, report_url and is_active, and creates or updates a scheduled report by inserting/updating config.reports, finding/creating a jobs.jobs schedule, linking via config.reports_jobs, seeding jobs.job_schedules, and optionally adding a config.mail_groups recipient group. Returns JSON with the report_id or an error; report_name is required when creating a new report.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-report_capture",
+  "handler": "report_capture",
+  "line": 3115,
+  "args": [
+   {
+    "name": "report",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "url",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "referer",
+    "type": "str",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler report_capture, bound to POST /submit-generate_report and POST /submit-report_capture. For /submit-generate_report it takes report, recipients and referer, looks up the report_url in config.reports, generates PDF+HTML via JSONReportGenerator, reads SMTP settings from config.mail_config and emails the report. For /submit-report_capture it takes report, url, recipients and referer and calls capture_grafana_dashboard_pdf(url, report, recipients) to capture and email a Grafana dashboard PDF. Both redirect to the referer (or a fallback Grafana dashboard).",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-reportbymail",
+  "handler": "submit_mail_report",
+  "line": 2307,
+  "args": [
+   {
+    "name": "server",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "start_time",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "end_time",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "recipients",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "reportname",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "referer",
+    "type": "str",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-reportbymail: takes server, start_time, end_time, recipients, reportname and referer (all required), reads SMTP settings from config.mail_config and the report_query from config.reports, runs the query for the time range, generates a timestamped PDF, emails it to the recipients as an attachment, then deletes the temp PDF. Redirects to the referer or the Grafana transaction-report dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-risklevel",
+  "handler": "submit_risklevel",
+  "line": 2187,
+  "args": [],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-risklevel: takes referer and a comma-separated row_ids plus per-row active_{id} flags, and updates rootcause.risk_level.is_active for each listed row_id in one transaction. Returns 400 if row_ids is missing, redirects to the referer on success, otherwise returns JSON {ok:true}.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-serverform",
+  "handler": "show_server_form",
+  "line": 2933,
+  "args": [
+   {
+    "name": "server",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "add_delete_modify",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "ipAddress",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "port",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "dbVendor",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "dbVersion",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "authType",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "user",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "password",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "service_name",
+    "type": "str",
+    "default": "Form('')"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-serverform: takes server, add_delete_modify, ipAddress, port, dbVendor and authType (required) plus optional dbVersion, user, password and service_name, and adds/modifies/deletes a monitored server via CALL metrics.upsert_monitored_server; also writes the submitted data to server_data.json. Redirects to the Grafana automation-and-workflows dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit-webhook-alert",
+  "handler": "submit_webhook_alert",
+  "line": 3913,
+  "args": [
+   {
+    "name": "metric_type",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "send_mail_alert",
+    "type": "str",
+    "default": "Form('false')"
+   },
+   {
+    "name": "send_siem_alert",
+    "type": "str",
+    "default": "Form('false')"
+   },
+   {
+    "name": "send_diagnosis_evidence",
+    "type": "str",
+    "default": "Form('false')"
+   },
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": "Form(None)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit-webhook-alert: takes metric_type (required) plus send_mail_alert, send_siem_alert, send_diagnosis_evidence boolean-string flags and optional row_id, and inserts or updates the alert channel row in config.webook_alerts. Returns a JSON confirmation or 500 error.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_custom_metric_enable",
+  "handler": "submit_custom_metric_enable",
+  "line": 2454,
+  "args": [
+   {
+    "name": "row_id",
+    "type": "str",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_custom_metric_enable: takes a required row_id and toggles/enables that custom metric via CALL gapi.custom_metric_enable. Redirects to the Grafana configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_custom_metrics",
+  "handler": "submit_custom_metrics",
+  "line": 2407,
+  "args": [
+   {
+    "name": "metric_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "metric_desc",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "query",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "db_vendor_selector",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "action_select",
+    "type": "int",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_custom_metrics (handler submit_custom_metrics): takes metric_name, metric_desc, query, db_vendor_selector and action_select (all required) and upserts a custom metric definition via CALL gapi.custom_metrics_upsert. Redirects to the Grafana configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_custom_metrics",
+  "handler": "show_custom_metrics",
+  "line": 2750,
+  "args": [
+   {
+    "name": "process_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "interval",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "active",
+    "type": "bool",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_custom_metrics (handler show_custom_metrics, line 2750): takes process_name, interval and active (all required) and calls CALL metrics.process_activate to activate/update the process. Redirects to the Grafana processes dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_custom_metrics_update",
+  "handler": "show_custom_metrics_update",
+  "line": 2739,
+  "args": [
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_custom_metrics_update: takes a row_id parameter, opens a DB connection/engine but performs no write, and just redirects to the Grafana configuration dashboard (no-op redirect stub).",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_email_configuration",
+  "handler": "submit_email_configuration",
+  "line": 2620,
+  "args": [
+   {
+    "name": "smtp_server",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_port",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_user",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "smtp_password",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "tls",
+    "type": "bool",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_email_configuration: takes smtp_server, smtp_port, smtp_user, smtp_password and tls (all required) and upserts the email configuration via CALL gapi.email_configuration_upsert (password stored as-is, not encrypted). Redirects to the Grafana email-configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_metrics_enable",
+  "handler": "submit_metrics_enable",
+  "line": 2502,
+  "args": [
+   {
+    "name": "action_select",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler submit_metrics_enable, bound to POST /submit_metrics_enable and POST /submit_metrics_enable_all_servers: takes required action_select (enable flag) and row_id and calls CALL gapi.metric_enable (single server) or CALL gapi.metric_enable_all_servers (all servers) respectively. Redirects to the Grafana configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_metrics_enable",
+  "handler": "show_metrics_enable",
+  "line": 2791,
+  "args": [
+   {
+    "name": "process_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "interval",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "active",
+    "type": "bool",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_metrics_enable (handler show_metrics_enable, line 2791): takes process_name, interval and active (all required) and calls CALL metrics.process_activate. Redirects to the Grafana processes dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_metrics_enable_all_servers",
+  "handler": "submit_metrics_enable",
+  "line": 2543,
+  "args": [
+   {
+    "name": "action_select",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler submit_metrics_enable, bound to POST /submit_metrics_enable and POST /submit_metrics_enable_all_servers: takes required action_select (enable flag) and row_id and calls CALL gapi.metric_enable (single server) or CALL gapi.metric_enable_all_servers (all servers) respectively. Redirects to the Grafana configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_retention_policy",
+  "handler": "submit",
+  "line": 2673,
+  "args": [
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler reused for three GET routes: serves templates/custom_metrics.html (/custom_metrics_update) and redirects to Grafana dashboards for /email_configuration (configuration) and /take_action (take-action).",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_retention_policy",
+  "handler": "show_submit_retention_policy",
+  "line": 2832,
+  "args": [
+   {
+    "name": "process_name",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "interval",
+    "type": "int",
+    "default": "Form(...)"
+   },
+   {
+    "name": "active",
+    "type": "bool",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_retention_policy (handler show_submit_retention_policy, line 2832): takes process_name, interval and active (all required) and calls CALL metrics.process_activate. Redirects to the Grafana processes dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/submit_siem_configuration",
+  "handler": "show_siem_configuration",
+  "line": 3005,
+  "args": [
+   {
+    "name": "select_vendor",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "url",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "secret",
+    "type": "str",
+    "default": "Form(...)"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /submit_siem_configuration: takes select_vendor, url and secret (all required) and upserts the SIEM interface configuration (vendor name, URL, app key) via CALL metrics.siem_upsert. Redirects to the Grafana siem-configuration dashboard.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/take_action",
+  "handler": "submit",
+  "line": 2689,
+  "args": [
+   {
+    "name": "row_id",
+    "type": "int",
+    "default": null
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handler reused for three GET routes: serves templates/custom_metrics.html (/custom_metrics_update) and redirects to Grafana dashboards for /email_configuration (configuration) and /take_action (take-action).",
+  "result": ""
+ },
+ {
+  "verb": "POST",
+  "path": "/test-connection",
+  "handler": "test_connection",
+  "line": 2873,
+  "args": [
+   {
+    "name": "ipAddress",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "port",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "dbVendor",
+    "type": "str",
+    "default": "Form(...)"
+   },
+   {
+    "name": "authType",
+    "type": "str",
+    "default": "Form('sql')"
+   },
+   {
+    "name": "user",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "password",
+    "type": "str",
+    "default": "Form('')"
+   },
+   {
+    "name": "service_name",
+    "type": "str",
+    "default": "Form('')"
+   }
+  ],
+  "returns": "",
+  "response_class": "",
+  "purpose": "Handles POST /test-connection: takes ipAddress and dbVendor (required) plus optional port, authType, user, password and service_name, and attempts a live test connection to the target database (MSSQL via pyodbc, Oracle, PostgreSQL via psycopg2, or MySQL/MariaDB via pymysql) running a version query. Returns JSON {success, message} with the server version or the error; makes no config changes.",
+  "result": ""
+ },
+ {
+  "verb": "GET",
+  "path": "/update_schema_column",
+  "handler": "update_schema_column",
+  "line": 2585,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Calls the monitoring.sensitive_schema_column_enable procedure for the schema_column query param to activate a sensitive schema column, then redirects to Grafana (sender path or the email-configuration dashboard).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/webhook_alerts",
+  "handler": "webhook_alerts_page",
+  "line": 3894,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Serves the webhook alerts screen (renders templates/webhook_alerts.html).",
+  "result": "HTMLResponse"
+ },
+ {
+  "verb": "GET",
+  "path": "/webook_alert_set",
+  "handler": "webook_alert_set",
+  "line": 986,
+  "args": [],
+  "returns": "",
+  "response_class": "HTMLResponse",
+  "purpose": "Toggles a config.webook_alerts flag by calling config.set_webook_alert(row_id, field, value), then 302-redirects back to the referring Grafana dashboard (default webhook-alerts-config).",
+  "result": "HTMLResponse"
+ }
+]

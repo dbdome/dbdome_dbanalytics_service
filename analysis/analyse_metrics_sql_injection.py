@@ -101,4 +101,4 @@ where HISTORICAL_SQL_INJECTIONS.pattern_name IS NULL
     finally:
             db_write_log(f"metrics_sql_injection_analysis sucess"   ,0,"metrics_active_transactions_analysis","" )
             raw_conn.close()
-            return  1
+    return  1

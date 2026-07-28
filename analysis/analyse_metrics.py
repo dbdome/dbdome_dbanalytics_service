@@ -1,6 +1,7 @@
 from analysis.analyse_metrics_active_transactions    import metrics_active_transactions_analysis
 from analysis.analyse_metrics_active_sessions        import metrics_active_sessions_analysis
 from analysis.analyse_metrics_sql_injection          import metrics_sql_injection_analysis
+from analysis.analyse_metrics_sensitive_column_access import metrics_sensitive_column_access_analysis
 from analysis.analyse_mssql_unification              import metrics_sql_unification
 from analysis.analyse_custom_metrics                 import metrics_custom_metrics_analysis
 from analysis.analyse_user_risk                      import run_user_risk_scoring
@@ -30,3 +31,8 @@ def analyse_metrics_operation():
         run_user_risk_scoring()
     except Exception as e:
         db_write_log(f"run_user_risk_scoring failed with error:{e}", 0, "analyse_metrics_operation", "")
+
+    try:
+        metrics_sensitive_column_access_analysis()
+    except Exception as e:
+        db_write_log(f"metrics_sensitive_column_access_analysis failed with error:{e}", 0, "analyse_metrics_operation", "")

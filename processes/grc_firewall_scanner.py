@@ -37,6 +37,7 @@ def _scan_active_sessions(conn, since: datetime):
                     s.db_name,
                     s.sql_text,
                     s.session_id,
+                    s.root_cause_id,
                     s.collected_at
             FROM    monitoring.v_recent_active_sessions s
             WHERE   s.collected_at >= %s
@@ -48,7 +49,7 @@ def _scan_active_sessions(conn, since: datetime):
 
         for row in rows:
             server_name, vendor, db_user, client_ip, db_name, \
-                sql_text, session_id, _ = row
+                sql_text, session_id, root_cause_id, _ = row
 
             result = evaluate_query(
                 server_name=server_name or "",
@@ -63,7 +64,8 @@ def _scan_active_sessions(conn, since: datetime):
             if result["action"] in ("BLOCK", "ALERT"):
                 db_write_log(
                     f"GRC firewall [{result['action']}] user={db_user} "
-                    f"server={server_name} policy='{result['policy_name']}' "
+                    f"server={server_name} root_cause={root_cause_id} "
+                    f"policy='{result['policy_name']}' "
                     f"regulation={result['regulation']} risk={result['risk_score']}",
                     result["risk_score"],
                     "grc_firewall_scanner",
@@ -88,6 +90,7 @@ def _scan_sql_injection_events(conn, since: datetime):
                     mr.client_ip,
                     mr.db_name,
                     mr.sql_text,
+                    mr.root_cause_id,
                     mr.collected_at
             FROM    monitoring.v_recent_sql_injection mr
             WHERE   mr.collected_at >= %s
@@ -98,9 +101,10 @@ def _scan_sql_injection_events(conn, since: datetime):
         cur.close()
 
         for row in rows:
-            server_name, vendor, db_user, client_ip, db_name, sql_text, _ = row
+            server_name, vendor, db_user, client_ip, db_name, \
+                sql_text, root_cause_id, _ = row
 
-            evaluate_query(
+            result = evaluate_query(
                 server_name=server_name or "",
                 vendor=vendor or "",
                 db_user=db_user or "",
@@ -108,6 +112,16 @@ def _scan_sql_injection_events(conn, since: datetime):
                 db_name=db_name or "",
                 sql_statement=sql_text or "",
             )
+
+            if result["action"] in ("BLOCK", "ALERT"):
+                db_write_log(
+                    f"GRC firewall [{result['action']}] user={db_user} "
+                    f"server={server_name} root_cause={root_cause_id} "
+                    f"policy='{result['policy_name']}' regulation={result['regulation']}",
+                    result["risk_score"],
+                    "grc_firewall_scanner",
+                    server_name or "",
+                )
 
     except psycopg2.errors.UndefinedTable:
         pass
@@ -127,6 +141,7 @@ def _scan_privileged_logins(conn, since: datetime):
                     client_ip,
                     db_name,
                     role_name,
+                    root_cause_id,
                     collected_at
             FROM    monitoring.v_recent_privileged_logins
             WHERE   collected_at >= %s
@@ -137,9 +152,10 @@ def _scan_privileged_logins(conn, since: datetime):
         cur.close()
 
         for row in rows:
-            server_name, vendor, db_user, client_ip, db_name, role_name, _ = row
+            server_name, vendor, db_user, client_ip, db_name, \
+                role_name, root_cause_id, _ = row
 
-            evaluate_query(
+            result = evaluate_query(
                 server_name=server_name or "",
                 vendor=vendor or "",
                 db_user=db_user or "",
@@ -148,6 +164,16 @@ def _scan_privileged_logins(conn, since: datetime):
                 sql_statement="",
                 roles=[role_name] if role_name else [],
             )
+
+            if result["action"] in ("BLOCK", "ALERT"):
+                db_write_log(
+                    f"GRC firewall [{result['action']}] user={db_user} "
+                    f"server={server_name} root_cause={root_cause_id} "
+                    f"role={role_name} policy='{result['policy_name']}'",
+                    result["risk_score"],
+                    "grc_firewall_scanner",
+                    server_name or "",
+                )
 
     except psycopg2.errors.UndefinedTable:
         pass

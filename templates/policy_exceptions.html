@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Policy Exceptions - dbdome GRC</title>
+<style>
+  :root {
+    --bg-canvas:#111217; --bg-primary:#181b1f; --bg-secondary:#22252b;
+    --border:#343436; --text-primary:rgb(204,204,220);
+    --text-secondary:rgba(204,204,220,0.65); --text-emphasis:#ffffff;
+    --blue:#33a2e5; --blue-base:#3d71d9; --green:#1a7f4b;
+    --green-text:#6ccf8e; --red:#d10e5c; --red-text:#ff5286;
+    --yellow:#ecbb13; --orange:#eb7b18; --purple:#9933cc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg-canvas);color:var(--text-primary);}
+  .navbar{background:var(--bg-primary);height:52px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);}
+  .navbar-brand{font-size:18px;font-weight:500;color:var(--text-emphasis);}
+  .navbar-sep{width:1px;height:24px;background:var(--border);margin:0 16px;}
+  .navbar-title{font-size:16px;color:var(--text-primary);}
+  .tabs{background:var(--bg-primary);display:flex;border-bottom:1px solid var(--border);padding:0 16px;}
+  .tab{padding:12px 18px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab:hover{color:var(--text-primary);}
+  .tab-content{display:none;padding:12px 16px;}
+  .tab-content.active{display:block;}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;border:none;}
+  .btn-primary{background:var(--blue-base);color:#fff;}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-primary);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;}
+  .btn-approve{color:var(--green-text);border-color:var(--green-text);}
+  .btn-reject{color:var(--red-text);border-color:var(--red-text);}
+  .stats-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .stat-panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:14px 20px;flex:1;min-width:110px;text-align:center;}
+  .stat-value{font-size:24px;font-weight:500;line-height:1.2;}
+  .stat-label{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .panel{background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+  .panel-header{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-emphasis);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-body{padding:0;overflow-x:auto;}
+  .form-panel-body{padding:16px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:hover td{background:var(--bg-secondary);}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;}
+  .badge-pending{background:#2a1a00;color:var(--yellow);}
+  .badge-approved{background:#0a1f0a;color:var(--green-text);}
+  .badge-rejected{background:#3a0010;color:var(--red-text);}
+  .badge-expired{background:#2a2a2a;color:var(--text-secondary);}
+  .empty{text-align:center;padding:40px;color:var(--text-secondary);}
+  .layout-2col{display:flex;gap:12px;align-items:flex-start;}
+  .col-form{width:360px;flex-shrink:0;}
+  .col-table{flex:1;min-width:0;}
+  .form-group{margin-bottom:12px;}
+  .form-group label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:7px 10px;border-radius:4px;font-size:13px;font-family:inherit;}
+  .form-row{display:flex;gap:8px;}
+  .form-row .form-group{flex:1;}
+  .actions-cell{display:flex;gap:4px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1f6b33;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;display:none;z-index:9999;}
+  .toast.err{background:#7a0a25;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">&#x1F6E1; DBDOME GRC</div>
+  <div class="navbar-sep"></div>
+  <div class="navbar-title">Policy Exceptions</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('active')">Active Exceptions</div>
+  <div class="tab" onclick="switchTab('pending')">Pending Approval</div>
+  <div class="tab" onclick="switchTab('new')">Request Exception</div>
+</div>
+
+<div class="tab-content active" id="tab-active">
+  <div class="stats-row" id="exc-stats"></div>
+  <div class="panel">
+    <div class="panel-header"><span>Active & Expiring Exceptions</span>
+      <button class="btn-sm" onclick="loadActive()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Policy</th><th>Server</th><th>DB User</th><th>IP CIDR</th>
+          <th>Requested By</th><th>Approved By</th><th>Expires</th><th>Status</th>
+        </tr></thead>
+        <tbody id="active-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-pending">
+  <div class="panel">
+    <div class="panel-header"><span>Pending Approval</span>
+      <button class="btn-sm" onclick="loadPending()">Refresh</button></div>
+    <div class="panel-body">
+      <table>
+        <thead><tr>
+          <th>Policy</th><th>Server</th><th>DB User</th><th>Requested By</th>
+          <th>Business Justification</th><th>Expires</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="pending-body"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-new">
+  <div style="max-width:560px">
+    <div class="panel">
+      <div class="panel-header">Request Policy Exception</div>
+      <div class="form-panel-body">
+        <div class="form-group"><label>Policy ID *</label>
+          <input type="number" id="nf-policy" placeholder="Enter policy ID"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Server Name</label>
+            <input id="nf-server" placeholder="Leave blank for all"></div>
+          <div class="form-group"><label>DB User</label>
+            <input id="nf-user" placeholder="Leave blank for all"></div>
+        </div>
+        <div class="form-group"><label>Client IP CIDR</label>
+          <input id="nf-ip" placeholder="192.168.1.0/24 or blank"></div>
+        <div class="form-group"><label>Expires At *</label>
+          <input type="datetime-local" id="nf-expires"></div>
+        <div class="form-group"><label>Business Justification *</label>
+          <textarea id="nf-justification" style="min-height:80px" placeholder="Why is this exception needed?"></textarea></div>
+        <div class="form-group"><label>Requested By</label>
+          <input id="nf-requestor" placeholder="your.name@company.com"></div>
+        <button class="btn btn-primary" onclick="submitException()" style="width:100%">Submit Exception Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['active','pending','new'][i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='active') loadActive();
+  if(name==='pending') loadPending();
+}
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');t.style.display='block';setTimeout(()=>t.style.display='none',3500);
+}
+function fmtTs(ts){ return (ts||'').replace('T',' ').substring(0,16); }
+
+async function loadActive(){
+  const res=await fetch('/api/policy-exceptions?status=APPROVED');
+  const data=await res.json();
+  const rows=data.rows||[];
+  const expiring=rows.filter(r=>{
+    if(!r.expires_at) return false;
+    const d=new Date(r.expires_at);
+    return d-Date.now()<7*24*3600*1000;
+  }).length;
+  document.getElementById('exc-stats').innerHTML=`
+    <div class="stat-panel"><div class="stat-value" style="color:var(--green-text)">${rows.length}</div><div class="stat-label">Active</div></div>
+    <div class="stat-panel"><div class="stat-value" style="color:var(--orange)">${expiring}</div><div class="stat-label">Expiring &lt;7d</div></div>
+  `;
+  document.getElementById('active-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-size:11px">Policy #${r.policy_id}</td>
+    <td style="font-size:11px">${r.server_name||'ALL'}</td>
+    <td style="font-size:11px">${r.db_user||'ALL'}</td>
+    <td style="font-size:11px;font-family:monospace">${r.client_ip_cidr||'ANY'}</td>
+    <td style="font-size:11px">${r.requested_by||''}</td>
+    <td style="font-size:11px">${r.approved_by||''}</td>
+    <td style="font-size:11px;${new Date(r.expires_at)-Date.now()<7*24*3600*1000?'color:var(--orange)':''}">${fmtTs(r.expires_at)}</td>
+    <td><span class="badge badge-${(r.approval_status||'').toLowerCase()}">${r.approval_status||''}</span></td>
+  </tr>`).join(''):'<tr><td colspan="8" class="empty">No active exceptions</td></tr>';
+}
+
+async function loadPending(){
+  const res=await fetch('/api/policy-exceptions?status=PENDING');
+  const data=await res.json();
+  const rows=data.rows||[];
+  document.getElementById('pending-body').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td style="font-size:11px">Policy #${r.policy_id}</td>
+    <td style="font-size:11px">${r.server_name||'ALL'}</td>
+    <td style="font-size:11px">${r.db_user||'ALL'}</td>
+    <td style="font-size:11px">${r.requested_by||''}</td>
+    <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.business_justification||''}">${r.business_justification||''}</td>
+    <td style="font-size:11px">${fmtTs(r.expires_at)}</td>
+    <td>
+      <div class="actions-cell">
+        <button class="btn btn-sm btn-approve" onclick="decide(${r.exception_id},'APPROVED')">Approve</button>
+        <button class="btn btn-sm btn-reject" onclick="decide(${r.exception_id},'REJECTED')">Reject</button>
+      </div>
+    </td>
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">No pending requests</td></tr>';
+}
+
+async function decide(id, status){
+  const approver=prompt(`${status} by:`, 'admin');
+  if(approver===null) return;
+  const res=await fetch(`/api/policy-exceptions/${id}`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({approval_status:status,approved_by:approver}),
+  });
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast(`Exception ${status.toLowerCase()}`); loadPending();
+}
+
+async function submitException(){
+  const body={
+    policy_id:parseInt(document.getElementById('nf-policy').value),
+    server_name:document.getElementById('nf-server').value.trim()||null,
+    db_user:document.getElementById('nf-user').value.trim()||null,
+    client_ip_cidr:document.getElementById('nf-ip').value.trim()||null,
+    expires_at:document.getElementById('nf-expires').value,
+    business_justification:document.getElementById('nf-justification').value.trim(),
+    requested_by:document.getElementById('nf-requestor').value.trim()||null,
+  };
+  if(!body.policy_id||!body.expires_at||!body.business_justification){showToast('Policy ID, expires at, and justification required',true);return;}
+  const res=await fetch('/api/policy-exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||'Error',true);return;}
+  showToast('Exception request submitted');
+  ['nf-policy','nf-server','nf-user','nf-ip','nf-expires','nf-justification','nf-requestor'].forEach(id=>document.getElementById(id).value='');
+}
+
+loadActive();
+</script>
+</body>
+</html>

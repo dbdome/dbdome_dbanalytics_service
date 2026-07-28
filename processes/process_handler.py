@@ -1,4 +1,7 @@
-from email_utils.smtp_email_sender import  send_mail_alert_no_attachment                       
+import os
+from utils.oracle_client import oracle_connect
+from utils.secrets_crypto import decrypt_secret
+from email_utils.smtp_email_sender import  send_mail_alert_no_attachment
 from utils.config_dotenv import get_connection_string
 from datetime import datetime
 import unittest
@@ -42,10 +45,10 @@ def _connect_mssql_process(server, database, username, password, auth_type):
         raise RuntimeError("No suitable ODBC driver found for SQL Server")
 
     if auth_type == "win":
-        odbc_str = (f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};"
+        odbc_str = (f"DRIVER={{{driver}}};SERVER={server};DATABASE={database or 'master'};"
                     f"Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;")
     else:
-        odbc_str = (f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};"
+        odbc_str = (f"DRIVER={{{driver}}};SERVER={server};DATABASE={database or 'master'};"
                     f"UID={username};PWD={password};Encrypt=yes;TrustServerCertificate=yes;")
     return pyodbc.connect(odbc_str, timeout=30)
 
@@ -58,16 +61,7 @@ def _connect_postgresql_process(server, database, username, password, port):
 
 
 def _connect_oracle_process(server, username, password, port, service_name):
-    import oracledb
-    dsn = oracledb.makedsn(server, port or 1521, service_name=service_name)
-    try:
-        return oracledb.connect(user=username, password=password, dsn=dsn, tcp_connect_timeout=30)
-    except oracledb.DatabaseError:
-        try:
-            oracledb.init_oracle_client()
-        except oracledb.ProgrammingError:
-            pass
-        return oracledb.connect(user=username, password=password, dsn=dsn)
+    return oracle_connect(username, password, server, port, service_name)
 
 
 def _connect_mysql_process(server, database, username, password, port):
@@ -165,8 +159,8 @@ def execute_process():
             server      = row[0]
             database    = row[1]
             username    = row[2]
-            password    = row[3]
-            port  = row[4]        
+            password    = decrypt_secret(row[3])   # stored encrypted; idempotent for plaintext
+            port  = row[4]
             auth_type  = row[5]
             service_name = row[6]
             vendor = row[7]   
