@@ -1,5 +1,0 @@
-/* Converted to the shared dbdome dark theme.
-   All styling now lives in dbdome-theme.css for a consistent look across pages.
-   Note: processform.html keeps a small inline <style> block for its sparkle
-   effect and success text; those rules layer on top of this theme. */
-@import url('dbdome-theme.css');

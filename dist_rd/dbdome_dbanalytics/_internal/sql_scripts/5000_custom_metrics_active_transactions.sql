@@ -1,7 +1,0 @@
--- Intentionally a NO-OP.
--- This file previously contained a raw ORACLE query (v$transaction / v$session /
--- v$sql / DBMS_LOB / serial#) that is not valid PostgreSQL, so running it under
--- psql against the dbanalytics database failed with: syntax error at or near "AS".
--- The Active-transactions custom metric belongs in the metric configuration that
--- the collector runs against the monitored Oracle server, not as a standalone
--- script executed against the local PostgreSQL DB. Kept as a no-op.
