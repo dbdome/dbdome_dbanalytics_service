@@ -223,7 +223,16 @@ update_dashboard_ip()
 async def dbdome_main(request: Request):
     host_header = request.headers.get("host")
     db_write_log(f"/dbdome success host_header :{host_header}"   ,0,"get/dbdome","" )
-    host = host_header.split(":")[0] if ":" in host_header else host_header
+    # request.url.hostname strips the port and unwraps IPv6 brackets. The old
+    # host_header.split(":") raised TypeError -> 500 whenever a client sent no
+    # Host header (HTTP/1.0 clients, port scanners, some health probes).
+    # With no Host header Starlette falls back to the ASGI server address, which
+    # is the wildcard bind here, so redirect to the configured address instead.
+    host = request.url.hostname
+    if not host or host in ("0.0.0.0", "::"):
+        host = get_public_or_ip()
+    if ":" in host:                      # IPv6 literal must stay bracketed in a URL
+        host = f"[{host}]"
     db_write_log(f"/dbdome success host :{host}"   ,0,"get/dbdome","" )
     target_url = f"http://{host}:3000/d/ad7kkx7/dbdome?orgId=1&from=now-1h&to=now&timezone=browser"
     db_write_log(f"/dbdome success target_url :{target_url}"   ,0,"get/dbdome","" )
@@ -233,7 +242,16 @@ async def dbdome_main(request: Request):
 async def dbdome_main(request: Request):
     host_header = request.headers.get("host")
     db_write_log(f"/dbdome success host_header :{host_header}"   ,0,"get/dbdome","" )
-    host = host_header.split(":")[0] if ":" in host_header else host_header
+    # request.url.hostname strips the port and unwraps IPv6 brackets. The old
+    # host_header.split(":") raised TypeError -> 500 whenever a client sent no
+    # Host header (HTTP/1.0 clients, port scanners, some health probes).
+    # With no Host header Starlette falls back to the ASGI server address, which
+    # is the wildcard bind here, so redirect to the configured address instead.
+    host = request.url.hostname
+    if not host or host in ("0.0.0.0", "::"):
+        host = get_public_or_ip()
+    if ":" in host:                      # IPv6 literal must stay bracketed in a URL
+        host = f"[{host}]"
     db_write_log(f"/dbdome success host :{host}"   ,0,"get/dbdome","" )
     target_url = f"http://{host}:3000/d/ad7kkx7/dbdome?orgId=1&from=now-1h&to=now&timezone=browser"
     db_write_log(f"/dbdome success target_url :{target_url}"   ,0,"get/dbdome","" )
@@ -1860,6 +1878,247 @@ def api_ssl_revert(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+# ---------------------------------------------------------------------------
+# LDAP / Active Directory login (Grafana) — config UI + apply
+#   /ldap_settings        config page (status + settings + group mappings)
+#   /api/ldap/status      saved settings + live ini/toml/service state
+#   /api/ldap/save        persist settings (bind password enc:v1:)
+#   /api/ldap/test        bind + optional user lookup/credential check (ldap3)
+#   /api/ldap/apply       render ldap.toml + patch custom.ini + restart Grafana
+# Authentication itself is Grafana's native LDAP; this only manages its config.
+# Local Grafana logins stay enabled as fallback. See utils/ldap_settings.py and
+# sql_scripts/7400_ldap_settings.sql.
+# ---------------------------------------------------------------------------
+
+@app.get("/ldap_settings", response_class=HTMLResponse)
+def ldap_settings_page(request: Request):
+    """Config page for LDAP / Active Directory login to the DBDOME UI."""
+    return """
+<html lang="en"><head><meta charset="UTF-8"><title>LDAP / Active Directory Login</title>
+<style>
+ body{background:#111217;color:#d8d9da;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;}
+ .panel{max-width:900px;margin:24px auto;background:#181b1f;border:1px solid #2c3235;border-radius:6px;padding:24px;}
+ .panel-header{font-size:18px;font-weight:600;margin-bottom:6px;color:#fff;}
+ .panel-sub{font-size:12px;color:#9aa0a6;margin-bottom:16px;}
+ .badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;}
+ .on{background:#1a7f37;color:#fff;} .off{background:#6e2226;color:#fff;} .warn{background:#8a6d00;color:#fff;}
+ button{background:#3d71d9;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer;margin-right:6px;}
+ button:hover{background:#345fb4;} button.danger{background:#6e2226;} button.danger:hover{background:#8d2a30;}
+ button.minor{background:#2c3235;} button.minor:hover{background:#3a4146;}
+ input[type=text],input[type=password],select{background:#111217;color:#d8d9da;border:1px solid #2c3235;border-radius:4px;padding:8px 10px;font-size:14px;width:340px;}
+ textarea{background:#111217;color:#d8d9da;border:1px solid #2c3235;border-radius:4px;padding:8px 10px;font-size:13px;width:520px;font-family:Consolas,monospace;}
+ .field{margin:10px 0;} .field label{display:block;color:#9aa0a6;font-size:12px;margin-bottom:4px;}
+ .row{display:flex;gap:18px;flex-wrap:wrap;}
+ .msg{margin-top:10px;font-size:13px;min-height:18px;white-space:pre-wrap;} .ok{color:#4caf50;} .err{color:#f56b6b;}
+ h3{color:#fff;font-size:15px;margin-top:26px;border-top:1px solid #2c3235;padding-top:16px;}
+ code{background:#0d0e12;padding:1px 5px;border-radius:3px;}
+ .note{font-size:12px;color:#9aa0a6;margin-top:6px;}
+ table.map{width:100%;border-collapse:collapse;margin:8px 0;}
+ table.map th,table.map td{text-align:left;padding:6px 8px;border-bottom:1px solid #2c3235;font-size:13px;}
+ table.map input[type=text]{width:96%;}
+ #live td,#live th{padding:6px 8px;font-size:13px;border-bottom:1px solid #2c3235;text-align:left;}
+</style></head><body>
+ <div class="panel">
+   <div class="panel-header">LDAP / Active Directory Login</div>
+   <div class="panel-sub">Let your team sign in to the DBDOME UI (Grafana) with their corporate
+     directory credentials. Users are created automatically on first login and get their role from
+     the <b>group mappings</b> below. Local logins (the built-in <code>dbdome</code> and
+     <code>admin</code> users) always keep working as a fallback, so a bad LDAP config can't lock you out.
+     <b>Save</b> stores the settings; <b>Test</b> verifies them against your directory;
+     <b>Apply</b> activates them (restarts the DBDOME Grafana service, ~10 seconds).</div>
+
+   <table id="live"></table>
+
+   <h3>Server</h3>
+   <div class="row">
+     <div class="field"><label>LDAP host (name or IP)</label><input type="text" id="host" placeholder="dc1.corp.local"></div>
+     <div class="field"><label>Port</label><input type="text" id="port" style="width:90px" placeholder="636"></div>
+     <div class="field"><label>Encryption</label>
+       <select id="encryption">
+         <option value="ldaps">LDAPS (SSL, port 636)</option>
+         <option value="starttls">StartTLS (port 389)</option>
+         <option value="none">None (port 389, not recommended)</option>
+       </select></div>
+     <div class="field"><label>Skip TLS certificate verification</label>
+       <select id="ssl_skip_verify" style="width:120px"><option value="false">no</option><option value="true">yes</option></select></div>
+   </div>
+   <div class="field"><label>CA certificate for the directory server (PEM, optional &mdash; needed when your AD uses an internal CA)</label>
+     <textarea id="root_ca_cert" rows="3" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
+
+   <h3>Service account (read-only bind user)</h3>
+   <div class="row">
+     <div class="field"><label>Bind DN / UPN</label><input type="text" id="bind_dn" placeholder="CN=svc_dbdome,OU=Service Accounts,DC=corp,DC=local"></div>
+     <div class="field"><label>Bind password <span id="pwset"></span></label>
+       <input type="password" id="bind_password" placeholder="leave blank to keep current"></div>
+   </div>
+
+   <h3>User lookup</h3>
+   <div class="field"><label>User search base DN(s) &mdash; one per line</label>
+     <textarea id="search_base_dns" rows="2" placeholder="OU=Users,DC=corp,DC=local"></textarea></div>
+   <div class="row">
+     <div class="field"><label>Search filter (<code>%s</code> = the typed login)</label>
+       <input type="text" id="search_filter" placeholder="(sAMAccountName=%s)"></div>
+     <div class="field"><label>Group search base DN(s), optional</label>
+       <input type="text" id="group_search_base_dns" placeholder="OU=Groups,DC=corp,DC=local"></div>
+   </div>
+
+   <h3>Group &rarr; role mappings <span class="note">(first match wins; <code>*</code> matches everyone)</span></h3>
+   <table class="map"><thead><tr><th style="width:60%">AD group DN</th><th>DBDOME role</th><th>Grafana admin</th><th></th></tr></thead>
+     <tbody id="maps"></tbody></table>
+   <button class="minor" onclick="addMap('','Viewer',false)">+ add mapping</button>
+   <div class="note">Users in no mapped group are <b>denied login</b> (unless a <code>*</code> mapping exists).
+     Roles: <b>Viewer</b> = dashboards read-only, <b>Editor</b> = edit dashboards, <b>Admin</b> = org admin.</div>
+
+   <h3>Activate</h3>
+   <div class="row">
+     <div class="field"><label>Enable LDAP login</label>
+       <select id="enabled" style="width:120px"><option value="false">disabled</option><option value="true">enabled</option></select></div>
+     <div class="field"><label>Test user (optional, for Test)</label><input type="text" id="test_user" placeholder="jdoe"></div>
+     <div class="field"><label>Test user password (optional)</label><input type="password" id="test_pw"></div>
+   </div>
+   <button onclick="save()">Save</button>
+   <button class="minor" onclick="save(true)">Save &amp; Test</button>
+   <button onclick="applyCfg()">Apply &amp; restart Grafana</button>
+   <div class="msg" id="msg"></div>
+   <div class="note">The bind password is stored encrypted on the host. Attribute mapping defaults fit
+     Active Directory (<code>sAMAccountName</code>/<code>mail</code>/<code>memberOf</code>) and rarely need changing.</div>
+ </div>
+<script>
+ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function msg(t,cls){const m=document.getElementById('msg');m.textContent=t||'';m.className='msg '+(cls||'');}
+ function val(id){return document.getElementById(id).value;}
+ function setVal(id,v){document.getElementById(id).value=(v==null?'':String(v));}
+ function addMap(dn,role,ga){
+   const tb=document.getElementById('maps');const tr=document.createElement('tr');
+   tr.innerHTML='<td><input type="text" class="m_dn" value="'+esc(dn)+'"></td>'
+     +'<td><select class="m_role">'+['Viewer','Editor','Admin'].map(r=>'<option'+(r===role?' selected':'')+'>'+r+'</option>').join('')+'</select></td>'
+     +'<td><input type="checkbox" class="m_ga"'+(ga?' checked':'')+'></td>'
+     +'<td><button class="danger" onclick="this.closest(\\'tr\\').remove()">remove</button></td>';
+   tb.appendChild(tr);
+ }
+ function readMaps(){
+   return Array.from(document.querySelectorAll('#maps tr')).map(tr=>({
+     group_dn:tr.querySelector('.m_dn').value.trim(),
+     org_role:tr.querySelector('.m_role').value,
+     grafana_admin:tr.querySelector('.m_ga').checked})).filter(m=>m.group_dn);
+ }
+ function payload(){
+   return {enabled:val('enabled')==='true',host:val('host').trim(),port:parseInt(val('port')||'636',10),
+     encryption:val('encryption'),ssl_skip_verify:val('ssl_skip_verify')==='true',
+     root_ca_cert:val('root_ca_cert').trim()||null,bind_dn:val('bind_dn').trim(),
+     bind_password:val('bind_password'),search_base_dns:val('search_base_dns'),
+     search_filter:val('search_filter').trim()||'(sAMAccountName=%s)',
+     group_search_base_dns:val('group_search_base_dns').trim()||null,group_mappings:readMaps()};
+ }
+ async function load(){
+   try{const r=await fetch('/api/ldap/status');const j=await r.json();
+     if(!j.ok)throw new Error(j.error||'failed');
+     const s=j.status.settings,l=j.status.live;
+     setVal('host',s.host);setVal('port',s.port);setVal('encryption',s.encryption);
+     setVal('ssl_skip_verify',String(s.ssl_skip_verify));setVal('root_ca_cert',s.root_ca_cert);
+     setVal('bind_dn',s.bind_dn);setVal('search_base_dns',s.search_base_dns);
+     setVal('search_filter',s.search_filter);setVal('group_search_base_dns',s.group_search_base_dns);
+     setVal('enabled',String(s.enabled));
+     document.getElementById('pwset').innerHTML=s.bind_password_set?'<span class="badge on">set</span>':'<span class="badge warn">not set</span>';
+     document.getElementById('maps').innerHTML='';(s.group_mappings||[]).forEach(m=>addMap(m.group_dn,m.org_role,m.grafana_admin));
+     document.getElementById('live').innerHTML=
+       '<tr><th>LDAP in Grafana</th><td><span class="badge '+(l.ldap_enabled_in_ini?'on':'off')+'">'
+       +(l.ldap_enabled_in_ini?'ACTIVE':'not active')+'</span>'
+       +(s.applied_at?' &nbsp;last applied '+esc(s.applied_at.replace('T',' ').slice(0,19)):'')
+       +'</td></tr>'
+       +'<tr><th>Grafana service</th><td>'+esc(l.service)+' &mdash; <span class="badge '
+       +(l.service_state==='running'?'on':'off')+'">'+esc(l.service_state)+'</span></td></tr>'
+       +'<tr><th>Config files</th><td><code>'+esc(l.ini)+'</code>'+(l.ini_exists?'':' <span class="badge off">missing</span>')
+       +'<br><code>'+esc(l.toml)+'</code>'+(l.toml_exists?'':' <span class="badge warn">not written yet</span>')+'</td></tr>';
+   }catch(e){msg('Load failed: '+e.message,'err');}
+ }
+ async function save(alsoTest){
+   msg('Saving\\u2026');
+   try{const r=await fetch('/api/ldap/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
+     const j=await r.json();if(!j.ok)throw new Error(j.error||'save failed');
+     setVal('bind_password','');await load();
+     if(alsoTest){await test();}else{msg('Saved. Use Test to verify, then Apply to activate.','ok');}}
+   catch(e){msg('Save failed: '+e.message,'err');}
+ }
+ async function test(){
+   msg('Testing against the directory\\u2026');
+   try{const r=await fetch('/api/ldap/test',{method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({test_username:val('test_user').trim()||null,test_password:val('test_pw')||null})});
+     const j=await r.json();if(!j.ok)throw new Error(j.error||'test failed');
+     let t='Service-account bind: OK ('+esc(j.result.host)+':'+j.result.port+', '+esc(j.result.encryption)+')';
+     if(j.result.user){const u=j.result.user;
+       t+='\\nUser found: '+u.dn+(u.email?'\\nEmail: '+u.email:'');
+       t+='\\nGroups: '+(u.groups.length?u.groups.join('; '):'(none)');
+       t+='\\nMapped role: '+(typeof u.mapped_role==='string'?u.mapped_role:JSON.stringify(u.mapped_role));
+       if(u.password_check)t+='\\nPassword check: '+u.password_check;}
+     msg(t,'ok');}
+   catch(e){msg('Test failed: '+e.message,'err');}
+ }
+ async function applyCfg(){
+   if(!confirm('Apply the saved LDAP settings and restart the DBDOME Grafana service?\\nActive UI sessions may see a ~10s interruption.'))return;
+   msg('Applying and restarting Grafana\\u2026');
+   try{const r=await fetch('/api/ldap/apply',{method:'POST'});const j=await r.json();
+     if(!j.ok)throw new Error(j.error||'apply failed');
+     msg('Applied. LDAP is now '+(j.result.enabled?'ENABLED':'DISABLED')+'; Grafana restarted.','ok');load();}
+   catch(e){msg('Apply failed: '+e.message,'err');}
+ }
+ load();
+</script></body></html>
+"""
+
+
+@app.get("/api/ldap/status")
+def api_ldap_status(request: Request):
+    try:
+        from utils.ldap_settings import get_status
+        return JSONResponse({"ok": True, "status": get_status()})
+    except Exception as e:
+        db_write_log(f"ldap status failed: {e}", "ERROR", "api_ldap_status", "")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/ldap/save")
+async def api_ldap_save(request: Request):
+    try:
+        from utils.ldap_settings import save_settings
+        payload = await request.json()
+        settings = save_settings(payload)
+        db_write_log("ldap settings saved", "INFO", "api_ldap_save", "")
+        return JSONResponse({"ok": True, "settings": settings})
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    except Exception as e:
+        db_write_log(f"ldap save failed: {e}", "ERROR", "api_ldap_save", "")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/ldap/test")
+async def api_ldap_test(request: Request):
+    try:
+        from utils.ldap_settings import test_connection
+        payload = await request.json()
+        result = test_connection(payload.get("test_username"), payload.get("test_password"))
+        return JSONResponse({"ok": True, "result": result})
+    except Exception as e:
+        # bind/search failures are expected outcomes of a test — 200 with ok:false
+        return JSONResponse({"ok": False, "error": str(e)})
+
+
+@app.post("/api/ldap/apply")
+def api_ldap_apply(request: Request):
+    try:
+        from utils.ldap_settings import apply_settings
+        result = apply_settings()
+        db_write_log(f"ldap settings applied (enabled={result['enabled']})",
+                     "INFO", "api_ldap_apply", "")
+        return JSONResponse({"ok": True, "result": result})
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    except Exception as e:
+        db_write_log(f"ldap apply failed: {e}", "ERROR", "api_ldap_apply", "")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 @app.get("/rbac_provision", response_class=HTMLResponse)
 def rbac_provision(request: Request):
     """RBAC provisioning: for the selected SQL Server + database, back up the
@@ -2671,8 +2930,6 @@ async def addrecipients(
         url=f"http://{get_public_or_ip()}:3000/d/ad6lv7f/transaction-report",
         status_code=302
     )
-                
-    return RedirectResponse(url=f"http://{_re_ip}:/3000/d/ad6lv7f/transaction-report", status_code=302)
 
 
 @app.post("/api/mail-config/delete")
@@ -3194,8 +3451,6 @@ async def submit_mail_report(
         url=f"http://{get_public_or_ip()}:3000/d/ad6lv7f/transaction-report",
         status_code=302
     )
-                
-    return RedirectResponse(url=f"http://{_re_ip}:/3000/d/ad6lv7f/transaction-report", status_code=302)
 
 @app.post("/submit_custom_metrics")
 async def submit_custom_metrics(
@@ -4011,8 +4266,6 @@ async def report_capture(
         url=f"http://{get_public_or_ip()}:3000/d/ad6lv7f/transaction-report",
         status_code=302
     )
-                
-    return RedirectResponse(url=f"http://{_re_ip}:/3000/d/ad6lv7f/transaction-report", status_code=302)
 
 
 # ---------------------------------------------------------------------------
