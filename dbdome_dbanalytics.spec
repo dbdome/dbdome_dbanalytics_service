@@ -139,6 +139,9 @@ a = Analysis(
         'sqlalchemy',
         'pandas',
         'numpy',
+        # LDAP test-connection in utils/ldap_settings.py imports ldap3 lazily,
+        # so PyInstaller can't see it from the module graph.
+        'ldap3',
         'win32serviceutil',
         'win32service',
         'win32event',
@@ -216,6 +219,9 @@ a_svc = Analysis(
         'sqlalchemy',
         'pandas',
         'numpy',
+        # LDAP test-connection in utils/ldap_settings.py imports ldap3 lazily,
+        # so PyInstaller can't see it from the module graph.
+        'ldap3',
         'win32serviceutil',
         'win32service',
         'win32event',
