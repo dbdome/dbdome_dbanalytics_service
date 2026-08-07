@@ -715,12 +715,29 @@ async def mailconfigure(
         "tls"               :tls , 
         "smtp_sender"       :smtp_sender
     }
+    # Two SEPARATE transactions on purpose: a failing recipients-group save must
+    # not roll back the SMTP config insert (they used to share one engine.begin(),
+    # so a group failure silently undid the config row — sequence advanced, table
+    # empty, and the old `finally` still logged "mail_config succeeded").
+    def _error_page(stage, err):
+        import html as _html
+        db_write_log(f"mail_config {stage} FAILED: {err}", "ERROR", "mail_config", "")
+        return HTMLResponse(f"""<!doctype html>
+<html><head><meta charset="UTF-8"><title>Mail configuration failed</title></head>
+<body style="background:#111217;color:#d8d9da;font-family:sans-serif;padding:40px;">
+<h2 style="color:#f56b6b;">Mail configuration NOT saved</h2>
+<p>{_html.escape(stage)} failed:</p>
+<pre style="background:#181b1f;padding:14px;border-radius:6px;white-space:pre-wrap;">{_html.escape(str(err))}</pre>
+<p><a style="color:#3d71d9;" href="javascript:history.back()">&larr; back to the form</a></p>
+</body></html>""", status_code=500)
+
     new_config_id = None
+    pg_postgres_home_engine = create_engine(get_connection_string())
+    p_row_id = int(row_id) if row_id else None
+
+    # 1) SMTP config — its own transaction, committed before the group save.
     try:
-        pg_connection_string = get_connection_string()
-        pg_postgres_home_engine = create_engine(pg_connection_string)
         with pg_postgres_home_engine.begin() as conn:
-            p_row_id = int(row_id) if row_id else None
             result = conn.execute(
                 text("CALL config.save_mail_config(:p_row_id, :p_smtp_server, :p_smtp_port, :p_smtp_user, :p_smtp_password, :p_tls, :p_mail_sender)"),
                 {
@@ -737,8 +754,14 @@ async def mailconfigure(
                 new_config_id = result.scalar()
             except Exception:
                 new_config_id = p_row_id
-            # also save the recipients group linked to this mail config
-            if recipients and recipients.strip():
+    except Exception as e:
+        return _error_page("saving the SMTP configuration (config.save_mail_config)", e)
+
+    # 2) Recipients group — separate transaction; the config above stays saved
+    #    even if this fails, and the operator is told exactly what happened.
+    if recipients and recipients.strip():
+        try:
+            with pg_postgres_home_engine.begin() as conn:
                 conn.execute(
                     text("CALL config.save_mail_group(:p_row_id, :p_mail_config_id, :p_group_name, :p_recipients, :p_is_active)"),
                     {
@@ -749,26 +772,18 @@ async def mailconfigure(
                         "p_is_active"      : True,
                     }
                 )
-    except Exception as e:
-            print("Error calling procedure save_mail_config :", e)
-    except Exception as e:               
-                    db_write_log(f"mail_config failed with error:{e}"   , "mail_config" ,"mail_config" ,"mail_config")
-                    
-    finally:
+        except Exception as e:
+            return _error_page(
+                f"SMTP configuration was SAVED (row {new_config_id}), but saving "
+                f"the recipients group (config.save_mail_group)", e)
 
-                #  Clean up (conn may be undefined if the engine/connection failed)
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-                db_write_log(f"mail_config succeeded", "" ,"addrecipients" ,"")
-                _re_ip =  get_public_or_ip()
+    db_write_log(f"mail_config saved (row {new_config_id})", "", "mail_config", "")
 
     if referer:
         return RedirectResponse(url=f"http://{get_public_or_ip()}:3000{referer}", status_code=302)
     # No referer (page opened directly) — fall back to the configuration dashboard
     # instead of returning None, which FastAPI renders as the literal `null`.
-    grafana_url = f"http://{_re_ip}:3000/d/adnz9dq/configuration?orgId=1&from=now-1h&to=now&timezone=browser"
+    grafana_url = f"http://{get_public_or_ip()}:3000/d/adnz9dq/configuration?orgId=1&from=now-1h&to=now&timezone=browser"
     return RedirectResponse(url=grafana_url, status_code=302)
 
 
@@ -1242,26 +1257,39 @@ def webook_alert_set(request: Request):
 @app.get("/sensitive_column_add", response_class=HTMLResponse)
 def sensitive_column_add(request: Request):
     """Add a column to metrics.sensitive_columns via add_sensitive_column, then
-    redirect back to the referring dashboard (same pattern as /webook_alert_set)."""
+    redirect back to the referring dashboard (same pattern as /webook_alert_set).
+
+    untrack=1 blacklists the column instead of tracking it (7430): it is dropped
+    from metrics.v_sensitive_columns_all so detections never receive it, and
+    alerts whose query text quotes it are suppressed by the alert_log trigger.
+    Accepts 1/true/yes/on; anything else (including absent) means track."""
     q = request.query_params
     referer = q.get("referer", "").strip()
+    untrack = q.get("untrack", "").strip().lower() in ("1", "true", "yes", "on")
     try:
         engine = create_engine(get_connection_string())
         with engine.begin() as conn:
             conn.execute(
-                text("CALL metrics.add_sensitive_column(:p_server,:p_db,:p_schema,:p_table,:p_column,:p_pii)"),
+                text("CALL metrics.add_sensitive_column("
+                     ":p_server,:p_db,:p_schema,:p_table,:p_column,:p_pii,:p_untrack)"),
                 {"p_server": q.get("server", "").strip() or None,
                  "p_db":     q.get("db", "").strip() or None,
                  "p_schema": q.get("schema", "").strip() or None,
                  "p_table":  q.get("table", "").strip() or None,
                  "p_column": q.get("column", "").strip() or None,
-                 "p_pii":    q.get("pii", "").strip() or None},
+                 # a blacklisted column is insensitive by definition, so give it a
+                 # self-describing category rather than whatever discovery guessed
+                 "p_pii":    ("Blacklisted (insensitive)" if untrack
+                              else (q.get("pii", "").strip() or None)),
+                 "p_untrack": untrack},
             )
-        db_write_log(f"add_sensitive_column {q.get('table')}.{q.get('column')} succeeded",
+        db_write_log(f"add_sensitive_column {q.get('table')}.{q.get('column')} "
+                     f"({'untrack' if untrack else 'track'}) succeeded",
                      "", "add_sensitive_column", "")
     except Exception as e:
         print("Error calling add_sensitive_column:", e)
-        db_write_log(f"add_sensitive_column {q.get('table')}.{q.get('column')} failed: {e}",
+        db_write_log(f"add_sensitive_column {q.get('table')}.{q.get('column')} "
+                     f"({'untrack' if untrack else 'track'}) failed: {e}",
                      "", "add_sensitive_column", "")
     base_url = f"http://{get_public_or_ip()}:3000"
     if referer and not referer.startswith("http"):
