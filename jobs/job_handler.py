@@ -263,21 +263,17 @@ def job_next_run():
 
 
                         else:
-                            columns , rows = fetch_data_report(raw_conn , report_query) 
-                            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                            columns , rows = fetch_data_report(raw_conn , report_query)
 
-                            # Build PDF path
+                            # Build output paths (PDF + companion CSV)
                             output_dir = os.path.join(os.getcwd(), "reports")
-
-                            # Make sure the folder exists
                             os.makedirs(output_dir, exist_ok=True)
-
-                            # Generate timestamp
                             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-                            # Build PDF path
                             pdf_filename = f"{report_name}_{timestamp}.pdf"
                             pdf_path = os.path.join(output_dir, pdf_filename)
+                            csv_filename = f"{report_name}_{timestamp}.csv"
+                            csv_path = os.path.join(output_dir, csv_filename)
                             try:
                                 header = alert_name if alert_triggered else report_name
                                 export_to_pdf(
@@ -287,9 +283,23 @@ def job_next_run():
                                             logo_path="./icons/logo.png",
                                             _header=header
                                         )
-                                send_mail_with_attachment(pdf_path , report_name , recipients , mail_sender,pdf_filename ,smtp_user, smtp_server , smtp_port , smtp_password,mail_sender,tls)
+                                # Companion CSV so SQL-query scheduled reports (e.g.
+                                # DAM_report, transaction_report) go out as BOTH PDF
+                                # and CSV, matching the JSON-template report path.
+                                export_report_csv(columns, rows, csv_path)
+                                send_report_files_email(
+                                            (report_name or "DBDOME Report"),
+                                            recipients,
+                                            [pdf_path, csv_path],
+                                            mail_sender,
+                                            smtp_user,
+                                            smtp_server,
+                                            smtp_port,
+                                            smtp_password,
+                                            tls
+                                        )
                                 _sent += 1
-                                db_write_log(f"scheduled report '{report_name}' emailed to {recipients}", 0, "job_next_run", "")
+                                db_write_log(f"scheduled report '{report_name}' emailed (PDF+CSV) to {recipients}", 0, "job_next_run", "")
                             except Exception as e:
                                 # One failed report must not abort the rest of the
                                 # queue; leave it due (no job_schedule_insert) so
@@ -297,8 +307,9 @@ def job_next_run():
                                 db_write_log(f"scheduled report '{report_name}' FAILED: {e}", 0, "job_next_run", "")
                                 continue
                             finally:
-                                if os.path.exists(pdf_path):
-                                    os.remove(pdf_path)
+                                for _tmp in (pdf_path, csv_path):
+                                    if os.path.exists(_tmp):
+                                        os.remove(_tmp)
                             # ========== 4. Bulk UPSERT into PostgreSQL ==========
                             raw_conn = psycopg2.connect(pg_connection_string)
                             cur = raw_conn.cursor()
@@ -324,6 +335,7 @@ def job_next_run():
 
 
 def   fetch_data_report_once (_conn , _query , report_name ,start_time , end_time, server_name="", db_user="", user_roles=None):
+            columns, rows = [], []   # so a query error returns empty (not UnboundLocalError that aborts the whole report cycle)
             try:
                 cur = _conn.cursor()
                 cur.execute(_query, (start_time, end_time))
@@ -340,6 +352,7 @@ def   fetch_data_report_once (_conn , _query , report_name ,start_time , end_tim
             return columns, rows
 
 def   fetch_data_report (_conn , _query , server_name="", db_user="", user_roles=None):
+            columns, rows = [], []   # so a query error returns empty (not UnboundLocalError that aborts the whole report cycle)
             try:
                 cur = _conn.cursor()
                 cur.execute(_query)
@@ -354,6 +367,19 @@ def   fetch_data_report (_conn , _query , server_name="", db_user="", user_roles
                 db_write_log(f"✅ fetch_data_report  complete."   ,0,"fetch_data_report" , "fetch_data_report" )
                 _conn.close()
             return columns, rows
+
+def export_report_csv(columns, rows, csv_path):
+    """Write a scheduled report's resultset to CSV (UTF-8 BOM so Excel opens it
+    cleanly) — the companion to export_to_pdf so SQL-query scheduled reports can
+    be emailed as BOTH PDF and CSV, mirroring the JSON-template report path."""
+    import csv as _csv
+    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        w = _csv.writer(f)
+        w.writerow([str(c) for c in (columns or [])])
+        for r in (rows or []):
+            w.writerow(["" if v is None else v for v in r])
+    return csv_path
+
 
 _MAX_CELL_CHARS = 2500  # one row with CJK wrap stays under landscape-A4 frame height
 

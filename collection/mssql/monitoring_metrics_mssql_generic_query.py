@@ -460,15 +460,30 @@ union all
                 con=conn
             )
 
+        #server_key = f"{mssql_server}:{mssql_port}" if mssql_port else mssql_server
+        server_key = f"{mssql_server}" if mssql_port else mssql_server
+
+        # Overlay this server's learned thresholds (rootcause.parameter_tuning)
+        # onto the global detection_steps.parameters. Must happen BEFORE
+        # calc_query is computed, since the parameters are baked into both the
+        # SQL and the alert condition. No-ops when the server has no overrides.
+        try:
+            from utils.threshold_overrides import apply_parameter_overrides
+            _tuned = apply_parameter_overrides(pg_engine, server_key, queries_df)
+            if _tuned:
+                db_write_log(f"applied {_tuned} tuned threshold(s) for this server", 0,
+                             "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
+        except Exception as _ovr_ex:
+            # Tuning must never be able to stop collection.
+            db_write_log(f"threshold override overlay skipped: {_ovr_ex}", 0,
+                         "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)
+
         # Pre-compute the diagnostic SQL for every row.
         # calc_query = SELECT * FROM (<original_query>) a WHERE <condition_with_params>
         # Returns rows only when the alert condition is met — ready to paste for DBAs.
         queries_df['calc_query'] = queries_df.apply(
             lambda r: compute_calc_query(r['query'], r.get('step_parameters'), r.get('expected')), axis=1
         )
-
-        #server_key = f"{mssql_server}:{mssql_port}" if mssql_port else mssql_server
-        server_key = f"{mssql_server}" if mssql_port else mssql_server
 
         if queries_df.empty:
             db_write_log("✅ No active metric queries found to process.", 0, "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)

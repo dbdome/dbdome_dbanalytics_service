@@ -255,6 +255,17 @@ def collect_all_metrics_postgres_queries(pg_server, pg_port, pg_database, pg_use
             db_write_log("✅ No active metric queries found to process.", 0, "collect_all_metrics_postgres_queries", pg_server, port=pg_port)
             return 1
 
+        # Overlay this server's learned thresholds (rootcause.parameter_tuning)
+        # before calc_query bakes the parameters into the SQL and condition.
+        # Key must match the server_key used for alert_log below (host:port).
+        try:
+            from utils.threshold_overrides import apply_parameter_overrides
+            _srv_key = f"{pg_server}:{pg_port}" if pg_port else f"{pg_server}"
+            apply_parameter_overrides(pg_engine, _srv_key, queries_df)
+        except Exception as _ovr_ex:
+            db_write_log(f"threshold override overlay skipped: {_ovr_ex}", 0,
+                         "threshold_overrides", f"{pg_server}")
+
         queries_df['calc_query'] = queries_df.apply(
             lambda r: compute_calc_query(r['query'], r.get('step_parameters'), r.get('expected')), axis=1
         )

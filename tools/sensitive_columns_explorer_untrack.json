@@ -1,0 +1,1436 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 26,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 21,
+      "libraryPanel": {
+        "name": "dbdome",
+        "uid": "ff9s5r13w5zpcd"
+      },
+      "title": "",
+      "type": "library-panel-ref"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 19,
+        "x": 4,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## Sensitive Columns Explorer\nServer -> Database -> Columns. Click a **server**, then a **database**; the bottom table lists its sensitive (PII) columns. Source: SEC-SQL-PRI-001-RC12.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.2.0",
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "server"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Select",
+                    "url": "/d/adpiicol/sensitive-columns-explorer?${__url_time_range}&var-srv=${__data.fields.server}&var-db="
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 4,
+        "y": 3
+      },
+      "id": 10,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=10&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=10&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=10&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=10&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT server, count(DISTINCT db_name) AS databases, count(*) AS sensitive_columns FROM monitoring.v_sec_sql_pri_001_rc12 GROUP BY server ORDER BY server",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Servers (sensitive columns)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db_name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Select",
+                    "url": "/d/adpiicol/sensitive-columns-explorer?${__url_time_range}&var-srv=${srv}&var-db=${__data.fields.db_name}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 10,
+        "y": 3
+      },
+      "id": 11,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=11&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=11&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=11&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=11&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT db_name, count(DISTINCT schema_name||'.'||table_name) AS tables, count(*) AS columns FROM monitoring.v_sec_sql_pri_001_rc12 WHERE (NULLIF('${srv}','') IS NULL OR server='${srv}') GROUP BY db_name ORDER BY db_name",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Databases on ${srv}",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "column_name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Show details",
+                    "url": "/d/adpiicol/sensitive-columns-explorer?${__url_time_range}&var-srv=${srv}&var-db=${db}&var-dsch=${__data.fields.schema_name}&var-dtbl=${__data.fields.table_name}&var-dcol=${__data.fields.column_name}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "track"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Add to metrics.sensitive_columns",
+                    "url": "https://${global_ip}:8080/sensitive_column_add?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&column=${__data.fields.column_name}&pii=${__data.fields.pii_category}&referer=d/adpiicol/sensitive-columns-explorer"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mask"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Create data masking on this column",
+                    "url": "https://${global_ip}:8080/mask_column?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&column=${__data.fields.column_name}&pii=${__data.fields.pii_category}&referer=d/adpiicol/sensitive-columns-explorer?var-srv=${srv}%26var-db=${db}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "encrypt"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Backup table + tokenize this column",
+                    "url": "https://${global_ip}:8080/encrypt_column?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&column=${__data.fields.column_name}&referer=d/adpiicol/sensitive-columns-explorer?var-srv=${srv}%26var-db=${db}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "revert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Drop tokenized table + restore backup",
+                    "url": "https://${global_ip}:8080/revert_encryption?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&referer=d/adpiicol/sensitive-columns-explorer?var-srv=${srv}%26var-db=${db}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "untrack"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Blacklist this column as insensitive (no more alerts)",
+                    "url": "https://${global_ip}:8080/sensitive_column_add?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&column=${__data.fields.column_name}&untrack=1&referer=d/adpiicol/sensitive-columns-explorer?var-srv=${srv}%26var-db=${db}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 19,
+        "x": 4,
+        "y": 8
+      },
+      "id": 12,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=12&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=12&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=12&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=12&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "enablePagination": true,
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT distinct server, db_name, schema_name , table_name, column_name, data_type, pii_category, max_length, '+ track' AS track, '🚫 untrack' AS untrack, '🛡 mask' AS mask, '🔐 encrypt' AS encrypt, '↩ revert' AS revert FROM monitoring.v_sec_sql_pri_001_rc12 WHERE (NULLIF('${srv}','') IS NULL OR server='${srv}') AND (NULLIF('${db}','') IS NULL OR db_name='${db}') ORDER BY db_name, schema_name , table_name, column_name LIMIT 2000",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Sensitive columns - ${srv} / ${db}",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 19,
+        "x": 4,
+        "y": 21
+      },
+      "id": 13,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=13&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=13&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=13&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=13&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "/*\r\nSELECT j.value AS result FROM jsonb_array_elements(COALESCE(monitoring.get_root_cause_resultset('SEC-SQL-PRI-001-RC12', $__timeFrom()::timestamptz::timestamp)::jsonb,'[]'::jsonb)) j WHERE (NULLIF('${srv}','') IS NULL OR j.value->>'server'='${srv}') AND (NULLIF('${db}','') IS NULL OR j.value->>'db_name'='${db}') AND (NULLIF('${dsch}','') IS NULL OR j.value->>'schema_name'='${dsch}') AND (NULLIF('${dtbl}','') IS NULL OR j.value->>'table_name'='${dtbl}') AND (NULLIF('${dcol}','') IS NULL OR j.value->>'column_name'='${dcol}') LIMIT 500\r\n*/\r\nSELECT\r\n  r.result->>'server'       AS server,\r\n  r.result->>'db_name'      AS db_name,\r\n  r.result->>'schema_name'  AS schema_name,\r\n  r.result->>'table_name'   AS table_name,\r\n  r.result->>'column_name'  AS column_name,\r\n  r.result->>'data_type'    AS data_type,\r\n  r.result->>'pii_category' AS pii_category,\r\n  r.result->>'login_name'   AS login_name,\r\n  r.entry_date\r\nFROM monitoring.get_root_cause_resultset('SEC-SQL-PRI-001-RC12', $__timeFrom()::timestamptz::timestamp) r\r\nWHERE (NULLIF('${srv}','')  IS NULL OR r.result->>'server'      = '${srv}')\r\n  AND (NULLIF('${db}','')   IS NULL OR r.result->>'db_name'     = '${db}')\r\n  AND (NULLIF('${dsch}','') IS NULL OR r.result->>'schema_name' = '${dsch}')\r\n  AND (NULLIF('${dtbl}','') IS NULL OR r.result->>'table_name'  = '${dtbl}')\r\n  AND (NULLIF('${dcol}','') IS NULL OR r.result->>'column_name' = '${dcol}')\r\nORDER BY r.entry_date DESC\r\nLIMIT 500\r\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Column details - ${dtbl}.${dcol}",
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "format": "json",
+            "replace": true,
+            "source": "result"
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 26
+      },
+      "id": 22,
+      "libraryPanel": {
+        "name": "Security Enforcement",
+        "uid": "cfs2iovxiez9ce"
+      },
+      "title": "",
+      "type": "library-panel-ref"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "🚫 blacklisted (insensitive)": {
+                        "color": "orange",
+                        "index": 0
+                      },
+                      "✓ tracked": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "action"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "Toggle tracked / blacklisted",
+                    "url": "https://${global_ip}:8080/sensitive_column_add?server=${__data.fields.server}&db=${__data.fields.db_name}&schema=${__data.fields.schema_name}&table=${__data.fields.table_name}&column=${__data.fields.column_name}&pii=${__data.fields.pii_category}&untrack=${__data.fields.flip}&referer=d/adpiicol/sensitive-columns-explorer"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flip"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 19,
+        "x": 4,
+        "y": 30
+      },
+      "id": 14,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=14&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=14&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=14&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=14&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT server, db_name, schema_name, table_name, column_name, pii_category, CASE WHEN untrack THEN '🚫 blacklisted (insensitive)' ELSE '✓ tracked' END AS status, CASE WHEN untrack THEN '↩ re-track' ELSE '🚫 untrack' END AS action, CASE WHEN untrack THEN '0' ELSE '1' END AS flip, entry_date AT TIME ZONE 'Asia/Jerusalem' AS entry_date FROM metrics.sensitive_columns ORDER BY untrack DESC, entry_date DESC LIMIT 500",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Tracked / blacklisted columns (metrics.sensitive_columns)",
+      "type": "table"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 22,
+        "w": 4,
+        "x": 0,
+        "y": 33
+      },
+      "id": 16,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "GRC \n- [ 1. GRC grc-overview](/d/grc-overview/grc-overview?)\n- [ 2. GRC Access-review](/d/grc-access-review/grc-access-review)\n- [ 3. GRC Audit log](/d/grc-audit-log/grc-audit-log)\n- [ 4. GRC Compliance](/d/grc-compliance/grc-compliance)\n- [ 5. GRC Control attestation workflow](/d/grc-attestations/grc-control-attestation-workflow)\n- [ 6. GRC Cross border transfer tracking](d/grc-cross-border/grc-cross-border-transfer-tracking)\n- [ 7. GRC Immutable audit hash chain](/d/grc-hash-chain/grc-immutable-audit-hash-chain)\n- [ 8. GRC Incident-lifecycle-management](/d/grc-incidents/grc-incident-lifecycle-management)\n- [ 9. GRC masking-coverage](/d/grc-masking/grc-masking-coverage)\n- [10. GRC Policy exceptions](/d/grc-policy-exceptions/grc-policy-exceptions)\n- [11. GRC Risk register](/d/grc-risk-register/grc-risk-register)\n- [12. GRC Risk scoring](/d/grc-risk-scoring/grc-risk-scoring)\n- [13. GRC Threat response](/d/grc-threat-response/grc-threat-response)\n- [14. GRC Workflow segregation of duties](/d/grc-workflow-sod/grc-workflow-segregation-of-duties)\n",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.2.0",
+      "title": "dbdome - GRC",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 19,
+        "x": 4,
+        "y": 38
+      },
+      "id": 17,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT entry_date AT TIME ZONE 'Asia/Jerusalem' AS time, server, db_name,\n       schema_name||'.'||table_name||'.'||column_name AS column, mask_function, action, detail\nFROM metrics.masking_log\nWHERE (NULLIF('${srv}','') IS NULL OR server='${srv}')\nORDER BY log_id DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Masking activity (metrics.masking_log)",
+      "type": "table",
+      "links": [
+        {
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=17&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=17&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=17&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=17&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 20,
+        "x": 3,
+        "y": 55
+      },
+      "id": 18,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT server, db_name, schema_name||'.'||table_name AS \"table\", column_name AS \"column\",\n       row_no, real_value AS \"real (privileged)\", masked_value AS \"masked (test user)\"\nFROM metrics.mask_preview\nWHERE (NULLIF('${srv}','') IS NULL OR server='${srv}')\n  AND (NULLIF('${db}','') IS NULL OR db_name='${db}')\nORDER BY entry_date DESC, schema_name, table_name, column_name, row_no LIMIT 500",
+          "refId": "A"
+        }
+      ],
+      "title": "Masked data preview - real vs masked (as test user)",
+      "type": "table",
+      "links": [
+        {
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=18&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=18&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=18&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=18&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Open this filtered view in a clean tab, then Ctrl+P / Save as PDF",
+              "url": "/d/adpiicol/sensitive-columns-explorer?${__url_time_range}&${__all_variables}&kiosk"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 21,
+        "x": 3,
+        "y": 66
+      },
+      "id": 15,
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=15&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "targetBlank": true,
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=15&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}"
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=15&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=15&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ],
+      "options": {
+        "cellHeight": "md",
+        "showHeader": false
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT '🖨  Print this filtered view (opens clean tab -> Ctrl+P / Save as PDF)' AS print",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 1
+          }
+        }
+      ],
+      "title": "Print (filtered view)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 21,
+        "x": 3,
+        "y": 69
+      },
+      "id": 19,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT entry_date AT TIME ZONE 'Asia/Jerusalem' AS time, server, db_name,\n       schema_name||'.'||table_name||coalesce('.'||nullif(column_name,''),'') AS object, action, detail\nFROM metrics.encryption_log\nWHERE (NULLIF('${srv}','') IS NULL OR server='${srv}')\nORDER BY log_id DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Encryption activity (metrics.encryption_log)",
+      "type": "table",
+      "links": [
+        {
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=19&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=19&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=19&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=19&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "dezcmrkd94em8f"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 21,
+        "x": 3,
+        "y": 76
+      },
+      "id": 20,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "dezcmrkd94em8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT schema_name||'.'||table_name AS \"table\", column_name AS \"column\",\n       row_no, original_value, token_value\nFROM metrics.encryption_preview\nWHERE (NULLIF('${srv}','') IS NULL OR server='${srv}')\n  AND (NULLIF('${db}','') IS NULL OR db_name='${db}')\nORDER BY entry_date DESC, table_name, column_name, row_no LIMIT 500",
+          "refId": "A"
+        }
+      ],
+      "title": "Tokenized data preview - original vs token",
+      "type": "table",
+      "links": [
+        {
+          "title": "Print PDF",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=20&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Print CSV",
+          "url": "https://${global_ip}:8080/api/print-panel?dashboard=adpiicol&panel=20&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        },
+        {
+          "title": "Email PDF",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=20&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}",
+          "targetBlank": true
+        },
+        {
+          "title": "Email CSV",
+          "url": "https://${global_ip}:8080/api/email-panel-form?dashboard=adpiicol&panel=20&from=${__from}&to=${__to}&srv=${srv}&db=${db}&global_ip=${global_ip}&dsch=${dsch}&dtbl=${dtbl}&dcol=${dcol}&format=csv",
+          "targetBlank": true
+        }
+      ]
+    }
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "dbdome",
+    "pii"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "181.214.214.254",
+          "value": "181.214.214.254"
+        },
+        "hide": 2,
+        "label": "srv",
+        "name": "srv",
+        "options": [
+          {
+            "selected": true,
+            "text": "181.214.214.254",
+            "value": "181.214.214.254"
+          }
+        ],
+        "query": "181.214.214.254",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "dbComp1",
+          "value": "dbComp1"
+        },
+        "hide": 2,
+        "label": "db",
+        "name": "db",
+        "options": [
+          {
+            "selected": true,
+            "text": "dbComp1",
+            "value": "dbComp1"
+          }
+        ],
+        "query": "dbComp1",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "192.168.1.192",
+          "value": "192.168.1.192"
+        },
+        "definition": "select  config.get_local_ip()",
+        "hide": 2,
+        "label": "global_ip",
+        "name": "global_ip",
+        "options": [],
+        "query": "select  config.get_local_ip()",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "backup",
+          "value": "backup"
+        },
+        "hide": 2,
+        "label": "dsch",
+        "name": "dsch",
+        "options": [
+          {
+            "selected": true,
+            "text": "backup",
+            "value": "backup"
+          }
+        ],
+        "query": "backup",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "clientdetails",
+          "value": "clientdetails"
+        },
+        "hide": 2,
+        "label": "dtbl",
+        "name": "dtbl",
+        "options": [
+          {
+            "selected": true,
+            "text": "clientdetails",
+            "value": "clientdetails"
+          }
+        ],
+        "query": "clientdetails",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "EmailSent",
+          "value": "EmailSent"
+        },
+        "hide": 2,
+        "label": "dcol",
+        "name": "dcol",
+        "options": [
+          {
+            "selected": true,
+            "text": "EmailSent",
+            "value": "EmailSent"
+          }
+        ],
+        "query": "EmailSent",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "Asia/Jerusalem",
+  "title": "Sensitive Columns Explorer",
+  "uid": "adpiicol",
+  "version": 0
+}

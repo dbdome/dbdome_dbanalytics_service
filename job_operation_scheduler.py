@@ -101,6 +101,7 @@ def get_function_by_name(name):
     from processes.blocker import run_blocker
     from processes.auto_mask import run_auto_mask
     from processes.alert_auto_resolve import run_alert_auto_resolve
+    from processes.alert_threshold_tuner import run_alert_threshold_tuner
     from processes.internal_health_monitor import run_internal_health_monitor
     from processes.app_login_guard import run_app_login_guard
     from processes.ransomware_guard import run_ransomware_guard
@@ -109,6 +110,7 @@ def get_function_by_name(name):
         "app_login_guard": run_app_login_guard,
         "ransomware_guard": run_ransomware_guard,
         "alert_auto_resolve": run_alert_auto_resolve,
+        "alert_threshold_tuner": run_alert_threshold_tuner,
         "internal_health_monitor": run_internal_health_monitor,
         "gmmr_maintain": run_gmmr_maintain,
         "dump_and_prune_metrics": run_dump_and_prune_metrics,

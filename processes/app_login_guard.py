@@ -1,13 +1,16 @@
 """
-app_login_guard: alert + kill sessions where a WATCHED applicative login is used
-from a WATCHED program.
+app_login_guard: alert + kill sessions on a WATCHED program that are NOT run by a
+WHITELISTED applicative login.
 
 Per scheduler tick:
-  1. If either watchlist (metrics.app_logins / metrics.programs) is empty -> no-op.
+  1. No-op unless enforcement is enabled: the whitelist (metrics.app_logins where
+     white=true) and watched-program list (metrics.programs) are both non-empty AND
+     the Security/critical 'blocker' switch is ON in config.webook_alerts.
   2. Read the last ~10 min of SEC-SQL-ACC-011-RC02 active transactions
-     (monitoring.get_root_cause_resultset) and find rows where login_name matches
-     an app_logins pattern AND program_name matches a programs pattern for that
-     server (case-insensitive SQL LIKE; server '%'/blank = all servers).
+     (monitoring.get_root_cause_resultset) and find rows where program_name matches
+     a programs pattern for that server AND login_name is NOT in the app_logins
+     whitelist (white=true) for that server (case-insensitive SQL LIKE; server
+     '%'/blank = all servers).
   3. For each fresh match (deduped per server+session for 1h): raise an alert
      (alerts.alert_log -> incident on the Open Alerts dashboard, plus mail + SIEM
      via the standard pipeline) under root cause SEC-SQL-ACC-030-RC01.
@@ -45,11 +48,12 @@ SELECT metric_result_row_id,
        result                   AS result
 FROM feed
 WHERE result->>'session_id' IS NOT NULL
-  AND EXISTS (SELECT 1 FROM metrics.app_logins a
-              WHERE a.is_active
-                AND (a.server IS NULL OR a.server IN ('', '%%')
-                     OR COALESCE(feed.result->>'server','') ILIKE a.server)
-                AND COALESCE(feed.result->>'login_name','') ILIKE a.applicative_login)
+  -- login_name is NOT one of the whitelisted (white=true) applicative logins
+  AND NOT EXISTS (SELECT 1 FROM metrics.app_logins a
+                  WHERE a.is_active AND a.white IS TRUE
+                    AND (a.server IS NULL OR a.server IN ('', '%%')
+                         OR COALESCE(feed.result->>'server','') ILIKE a.server)
+                    AND COALESCE(feed.result->>'login_name','') ILIKE a.applicative_login)
   AND EXISTS (SELECT 1 FROM metrics.programs p
               WHERE p.is_active
                 AND (p.server IS NULL OR p.server IN ('', '%%')
@@ -65,6 +69,19 @@ def _dry_run(cur):
     if not r or r[0] is None:
         return True
     return str(r[0]).strip().lower() in ("true", "t", "1", "yes", "on")
+
+
+def _security_critical_blocker_on(cur):
+    """The SEC-SQL-ACC-030 guard only fires when the Security / critical 'blocker'
+    switch is enabled in config.webook_alerts. risk_level is fixed-width CHAR
+    (padded), so btrim before comparing; match case-insensitively."""
+    cur.execute("""SELECT 1 FROM config.webook_alerts
+                   WHERE lower(btrim(metric_type)) = 'security'
+                     AND lower(btrim(risk_level))  = 'critical'
+                     AND blocker IS TRUE
+                     AND is_active IS TRUE
+                   LIMIT 1""")
+    return cur.fetchone() is not None
 
 
 def _already_alerted(cur, server, sid):
@@ -83,11 +100,16 @@ def run_app_login_guard():
         conn.autocommit = True
         cur = conn.cursor()
 
-        cur.execute("SELECT (SELECT count(*) FROM metrics.app_logins WHERE is_active), "
+        cur.execute("SELECT (SELECT count(*) FROM metrics.app_logins WHERE is_active AND white IS TRUE), "
                     "       (SELECT count(*) FROM metrics.programs   WHERE is_active)")
-        n_logins, n_progs = cur.fetchone()
-        if not n_logins or not n_progs:
-            return  # nothing to watch
+        n_whitelist, n_progs = cur.fetchone()
+        if not n_whitelist or not n_progs:
+            return  # no whitelist and/or no watched programs -> nothing to enforce
+
+        # Gate: only enforce when the Security/critical 'blocker' is enabled in
+        # config.webook_alerts (turned off -> raise no SEC-SQL-ACC-030-RC01, no kill).
+        if not _security_critical_blocker_on(cur):
+            return
 
         cur.execute(_MATCH_SQL, (SOURCE_ROOT_CAUSE_ID,))
         cols = [d[0] for d in cur.description]
@@ -124,7 +146,7 @@ def run_app_login_guard():
                 "VALUES (%s,%s,'high',%s::jsonb,%s,%s)",
                 (server, ROOT_CAUSE_ID, json.dumps([meta], default=str), m["login_name"], m.get("metric_result_row_id")))
             servers_hit.setdefault(server, {})[sid] = ROOT_CAUSE_ID
-            db_write_log(f"app_login_guard match: login={m['login_name']} program={m['program_name']} "
+            db_write_log(f"app_login_guard: non-whitelisted login={m['login_name']} on watched program={m['program_name']} "
                          f"session={sid} server={server}", 0, "run_app_login_guard", server)
 
         if not servers_hit:

@@ -222,6 +222,15 @@ def collect_all_metrics_mysql_queries(mysql_server, mysql_database, mysql_userna
             db_write_log("✅ No active metric queries found to process.", 0, "collect_all_metrics_mysql_queries", mysql_server, port=mysql_port)
             return 1
 
+        # Overlay this server's learned thresholds (rootcause.parameter_tuning)
+        # before calc_query bakes the parameters into the SQL and condition.
+        try:
+            from utils.threshold_overrides import apply_parameter_overrides
+            apply_parameter_overrides(pg_engine, f"{mysql_server}", queries_df)
+        except Exception as _ovr_ex:
+            db_write_log(f"threshold override overlay skipped: {_ovr_ex}", 0,
+                         "threshold_overrides", f"{mysql_server}")
+
         queries_df['calc_query'] = queries_df.apply(
             lambda r: compute_calc_query(r['query'], r.get('step_parameters'), r.get('expected')), axis=1
         )

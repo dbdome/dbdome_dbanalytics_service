@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Add a 'Print PDF' panel link to every table-type panel in every Grafana
-dashboard.
+"""Add 'Print PDF', 'Print CSV', 'Email PDF' and 'Email CSV' panel links to
+every table-type panel in every Grafana dashboard.
 
 The link points at the dbdome service's /api/print-panel endpoint and
 includes the dashboard uid, panel id, and every dashboard variable as
@@ -34,6 +34,17 @@ DEFAULT_BASE_URL = os.getenv(
 DEFAULT_EMAIL_URL = os.getenv(
     "DBDOME_EMAIL_URL",
     "http://localhost:8080/api/email-panel-form",
+)
+
+# Links added to every table panel: PDF + CSV for both print and email. The CSV
+# variants reuse the same endpoints with &format=csv (handled by
+# /api/print-panel and /api/email-panel-form). Each entry is
+# (link title, base url, extra query-string suffix).
+LINK_SPECS = (
+    (LINK_TITLE,       DEFAULT_BASE_URL,  ""),
+    ("Print CSV",      DEFAULT_BASE_URL,  "&format=csv"),
+    (EMAIL_LINK_TITLE, DEFAULT_EMAIL_URL, ""),
+    ("Email CSV",      DEFAULT_EMAIL_URL, "&format=csv"),
 )
 
 
@@ -98,13 +109,10 @@ def main(db_path):
             if panel.get("type") not in ("table", "table-old"):
                 continue
             existing = panel.setdefault("links", [])
-            for link_title, base_url in (
-                (LINK_TITLE,       DEFAULT_BASE_URL),
-                (EMAIL_LINK_TITLE, DEFAULT_EMAIL_URL),
-            ):
+            for link_title, base_url, suffix in LINK_SPECS:
                 expected_url = _build_link_url(
                     base_url, d["uid"], panel.get("id"), var_names
-                )
+                ) + suffix
                 link = next(
                     (l for l in existing if l.get("title") == link_title),
                     None,
