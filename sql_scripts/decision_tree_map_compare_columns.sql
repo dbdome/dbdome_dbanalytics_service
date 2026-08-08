@@ -2,7 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict AaF9XVcO7mUANXElX3BrePBH8sEsGPTsFv6RaZNjeL8Ue5pfc8b8BgCccoevrHE
+-- NOTE: pg_dump 18 wraps its output in \restrict / \unrestrict psql
+-- directives. Those are CLIENT commands; this file is applied by
+-- processes/sql_script_runner.py through psycopg2, which cannot parse a backslash
+-- command and failed the whole file on line 5. They only guard against a hostile
+-- dump being sourced interactively, which is irrelevant here - the runner already
+-- executes each file inside its own transaction.
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
@@ -40,5 +45,4 @@ SELECT pg_catalog.setval('rootcause.decision_tree_map_compare_columns_row_id_seq
 -- PostgreSQL database dump complete
 --
 
-\unrestrict AaF9XVcO7mUANXElX3BrePBH8sEsGPTsFv6RaZNjeL8Ue5pfc8b8BgCccoevrHE
 
