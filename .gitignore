@@ -37,3 +37,15 @@ Desktop.ini
 
 # Compiled data
 server_data.json
+
+# Build stamp written by build.ps1 on every build (2.01.<Build_No>).
+# Generated, not source: MAJOR/MINOR live in utils/version.py and the build
+# number belongs to the build, not to the checkout.
+utils/version_build.json
+version_build.json
+
+# PyInstaller output/work dirs used by build.ps1
+dist_rd/
+build_rd/
+build_tester/
+*.log.err

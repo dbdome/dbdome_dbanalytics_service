@@ -27,6 +27,7 @@ from collection.mssql.monitoring_metrics_mssql_event_session import collect_metr
 from collection.MariaDB.monitoring_metrics_MariaDB_generic_query import collect_all_metrics_MariaDB_queries
 from collection.informix.monitoring_metrics_informix_generic_query import collect_all_metrics_informix_queries
 from collection.clickhouse.monitoring_metrics_clickhouse_generic_query import collect_all_metrics_clickhouse_queries
+from collection.mongodb.monitoring_metrics_mongodb_generic_query import collect_all_metrics_mongodb_queries
 import psycopg2
 from utils.log4dbexpert import db_write_log
 from utils.secrets_crypto import decrypt_secret
@@ -339,6 +340,18 @@ def _dispatch_full_row(row):
                 return
             finally:
                 db_write_log(f"Function succeeded", result, "collect_all_metrics_clickhouse_queries", server_label)
+            result = "default"
+        case "collect_all_metrics_mongodb_queries":
+            try:
+                # service_name carries the Mongo authSource (usually 'admin')
+                result = collect_all_metrics_mongodb_queries(server, database, username, password, port, service_name=service_name)
+                job_update_next_run_time(job_id, duration_secs, next_run_time)
+                job_history_write(job_id)
+            except Exception as e:
+                db_write_log(f"collect_all_metrics_mongodb_queries failed with error:{e}", 2, "collect_all_metrics_mongodb_queries", server_label)
+                return
+            finally:
+                db_write_log(f"Function succeeded", result, "collect_all_metrics_mongodb_queries", server_label)
             result = "default"
         case "collect_metric_mssql_active_schema":
             try:

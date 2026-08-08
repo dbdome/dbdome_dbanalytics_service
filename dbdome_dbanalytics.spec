@@ -29,6 +29,15 @@ def _meta(*names):
             continue
     return []
 
+# Build stamp written by build.ps1 (utils/version.py reads it to report
+# 2.01.<Build_No>). Absent in an ad-hoc `pyinstaller` run, and that is on
+# purpose: no stamp means the binary reports build 000, which is how you spot a
+# build that did not come through the versioned process.
+VERSION_STAMP = (
+    [('utils/version_build.json', 'utils')]
+    if os.path.isfile('utils/version_build.json') else []
+)
+
 META_DATAS = (
     _meta('numpy')
     + _meta('python-dateutil')
@@ -114,7 +123,7 @@ a = Analysis(
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
         ('.env', '.'),
-    ] + META_DATAS + PYTZ_DATAS,
+    ] + VERSION_STAMP + META_DATAS + PYTZ_DATAS,
     hiddenimports=[
         'http_server',
         'job_operation_scheduler',
@@ -139,6 +148,12 @@ a = Analysis(
         'sqlalchemy',
         'pandas',
         'numpy',
+        # pymongo is imported lazily inside processes/mongo_shim.connect_mongodb so
+        # the driver cost stays off every non-Mongo collector; a lazy import is
+        # invisible to PyInstaller's static analysis, hence the explicit entry.
+        'pymongo',
+        'bson',
+        'dns',              # pymongo needs dnspython to resolve mongodb+srv:// URIs
         # LDAP test-connection in utils/ldap_settings.py imports ldap3 lazily,
         # so PyInstaller can't see it from the module graph.
         'ldap3',
@@ -193,7 +208,7 @@ a_svc = Analysis(
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
         ('.env', '.'),
-    ] + META_DATAS + PYTZ_DATAS,
+    ] + VERSION_STAMP + META_DATAS + PYTZ_DATAS,
     hiddenimports=[
         'dbdome_main',
         'http_server',
@@ -219,6 +234,12 @@ a_svc = Analysis(
         'sqlalchemy',
         'pandas',
         'numpy',
+        # pymongo is imported lazily inside processes/mongo_shim.connect_mongodb so
+        # the driver cost stays off every non-Mongo collector; a lazy import is
+        # invisible to PyInstaller's static analysis, hence the explicit entry.
+        'pymongo',
+        'bson',
+        'dns',              # pymongo needs dnspython to resolve mongodb+srv:// URIs
         # LDAP test-connection in utils/ldap_settings.py imports ldap3 lazily,
         # so PyInstaller can't see it from the module graph.
         'ldap3',

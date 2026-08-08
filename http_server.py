@@ -1918,6 +1918,149 @@ def api_ssl_revert(request: Request):
 # sql_scripts/7400_ldap_settings.sql.
 # ---------------------------------------------------------------------------
 
+@app.get("/login_authorizations", response_class=HTMLResponse)
+def login_authorizations_page(request: Request):
+    """Config page for the login authorisation guard (SEC-SQL-AUD-011-RC06)."""
+    return """
+<html lang="en"><head><meta charset="UTF-8"><title>Login Authorisation Guard</title>
+<style>
+ body{background:#111217;color:#d8d9da;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;}
+ .panel{max-width:1100px;margin:24px auto;background:#181b1f;border:1px solid #2c3235;border-radius:6px;padding:24px;}
+ .panel-header{font-size:18px;font-weight:600;margin-bottom:6px;color:#fff;}
+ .panel-sub{font-size:12px;color:#9aa0a6;margin-bottom:16px;line-height:1.55;}
+ .badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;}
+ .on{background:#1a7f37;color:#fff;} .off{background:#6e2226;color:#fff;} .warn{background:#8a6d00;color:#fff;}
+ .white{background:#1f6feb;color:#fff;} .black{background:#6e2226;color:#fff;}
+ button{background:#3d71d9;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer;margin-right:6px;}
+ button:hover{background:#345fb4;} button.danger{background:#6e2226;} button.minor{background:#2c3235;}
+ input[type=text],select{background:#111217;color:#d8d9da;border:1px solid #2c3235;border-radius:4px;padding:7px 9px;font-size:13px;}
+ table{width:100%;border-collapse:collapse;margin:10px 0;}
+ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #2c3235;font-size:13px;vertical-align:middle;}
+ th{color:#9aa0a6;font-weight:600;}
+ h3{color:#fff;font-size:15px;margin-top:26px;border-top:1px solid #2c3235;padding-top:16px;}
+ code{background:#0d0e12;padding:1px 5px;border-radius:3px;}
+ .note{font-size:12px;color:#9aa0a6;margin-top:6px;line-height:1.5;}
+ .msg{margin-top:10px;font-size:13px;min-height:18px;white-space:pre-wrap;}
+ .ok{color:#4caf50;} .err{color:#f56b6b;}
+ .ops label{margin-right:10px;font-size:12px;color:#d8d9da;white-space:nowrap;}
+ .grid{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+ .f label{display:block;color:#9aa0a6;font-size:12px;margin-bottom:4px;}
+</style></head><body>
+ <div class="panel">
+   <div class="panel-header">Login Authorisation Guard</div>
+   <div class="panel-sub">Declare which statements each login may run. When a login runs something it may not,
+     DBDOME raises the critical root cause
+     <code>SEC-SQL-AUD-011-RC06</code> &mdash; <i>Unauthorised INSERT, UPDATE, DELETE or DROP statement executed by a login</i>.
+     <br><b>White</b> rule = the ticked operations are the <b>only</b> ones that login may run.
+     <b>Black</b> rule = the ticked operations are <b>forbidden</b>. A black rule always wins over a white one.
+     <br>A login with no active rule is unrestricted &mdash; while this table is empty nothing is ever flagged.
+     <code>login</code> and <code>server</code> are case-insensitive LIKE patterns; server <code>%</code> means all servers.</div>
+
+   <h3>Add a rule</h3>
+   <div class="grid">
+     <div class="f"><label>Login (LIKE pattern)</label><input type="text" id="login_name" placeholder="app_%" style="width:210px"></div>
+     <div class="f"><label>Server</label><input type="text" id="server" placeholder="%" style="width:150px"></div>
+     <div class="f"><label>Mode</label><select id="mode" style="width:110px">
+        <option value="white">white</option><option value="black">black</option></select></div>
+     <div class="f"><label>Operations</label><span class="ops" id="ops"></span></div>
+     <div class="f"><label>Note (optional)</label><input type="text" id="description" style="width:200px"></div>
+     <div class="f"><button onclick="addRule()">Add rule</button></div>
+   </div>
+
+   <h3>Rules</h3>
+   <table><thead><tr><th>Login</th><th>Server</th><th>Mode</th><th>Operations</th>
+     <th>Note</th><th>Active</th><th></th></tr></thead><tbody id="rules"></tbody></table>
+
+   <h3>Check a login</h3>
+   <div class="grid">
+     <div class="f"><label>Login</label><input type="text" id="t_login" style="width:180px"></div>
+     <div class="f"><label>Server</label><input type="text" id="t_server" placeholder="%" style="width:140px"></div>
+     <div class="f"><label>Operation</label><select id="t_cmd">
+        <option>select</option><option>insert</option><option>update</option>
+        <option>delete</option><option>drop</option><option>truncate</option></select></div>
+     <div class="f"><button class="minor" onclick="testRule()">Would this be allowed?</button></div>
+   </div>
+   <div class="note">Evaluated by <code>metrics.is_login_authorized()</code> in the database &mdash; the same
+     function the detection uses, so this preview cannot disagree with it.</div>
+
+   <h3>Unauthorised statements seen today</h3>
+   <button class="minor" onclick="loadViolations()">Refresh</button>
+   <table><thead><tr><th>When</th><th>Server</th><th>Login</th><th>Op</th>
+     <th>Database</th><th>Program</th><th>Statement</th></tr></thead><tbody id="viol"></tbody></table>
+
+   <div class="msg" id="msg"></div>
+ </div>
+<script>
+ const OPS=['select','insert','update','delete','drop','truncate'];
+ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function msg(t,c){const m=document.getElementById('msg');m.textContent=t||'';m.className='msg '+(c||'');}
+ document.getElementById('ops').innerHTML=OPS.map(o=>
+   '<label><input type="checkbox" class="op" value="'+o+'"> '+o+'</label>').join('');
+
+ async function post(url,body){
+   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+   const j=await r.json(); if(!j.ok) throw new Error(j.error||'failed'); return j;
+ }
+ async function load(){
+   try{
+     const j=await (await fetch('/api/login-authorizations')).json();
+     if(!j.ok) throw new Error(j.error);
+     document.getElementById('rules').innerHTML = j.rows.length? j.rows.map(r=>{
+       const ops=OPS.filter(o=>r.ops[o]).join(', ')||'<i>none</i>';
+       return '<tr><td><code>'+esc(r.login_name)+'</code></td><td>'+esc(r.server)+'</td>'
+         +'<td><span class="badge '+(r.mode==='black'?'black':'white')+'">'+r.mode+'</span></td>'
+         +'<td>'+ops+'</td><td>'+esc(r.description)+'</td>'
+         +'<td><span class="badge '+(r.is_active?'on':'off')+'">'+(r.is_active?'active':'off')+'</span></td>'
+         +'<td><button class="minor" onclick="toggle('+r.row_id+','+(!r.is_active)+')">'
+         +(r.is_active?'disable':'enable')+'</button>'
+         +'<button class="danger" onclick="del('+r.row_id+')">delete</button></td></tr>';
+     }).join('') : '<tr><td colspan="7"><i>No rules \\u2014 the guard is inactive and nothing will be flagged.</i></td></tr>';
+   }catch(e){msg('Load failed: '+e.message,'err');}
+ }
+ async function addRule(){
+   const ops={}; document.querySelectorAll('.op').forEach(c=>ops[c.value]=c.checked);
+   try{
+     await post('/api/login-authorizations/add',{
+       login_name:document.getElementById('login_name').value.trim(),
+       server:document.getElementById('server').value.trim(),
+       mode:document.getElementById('mode').value,
+       description:document.getElementById('description').value.trim(), ops:ops});
+     document.getElementById('login_name').value='';document.getElementById('description').value='';
+     document.querySelectorAll('.op').forEach(c=>c.checked=false);
+     msg('Rule saved.','ok'); load();
+   }catch(e){msg('Add failed: '+e.message,'err');}
+ }
+ async function toggle(id,active){ try{ await post('/api/login-authorizations/set',{row_id:id,is_active:active}); load(); }catch(e){msg(e.message,'err');} }
+ async function del(id){ if(!confirm('Delete this rule?'))return;
+   try{ await post('/api/login-authorizations/delete',{row_id:id}); load(); }catch(e){msg(e.message,'err');} }
+ async function testRule(){
+   try{
+     const j=await post('/api/login-authorizations/test',{
+       login_name:document.getElementById('t_login').value.trim(),
+       server:document.getElementById('t_server').value.trim(),
+       command:document.getElementById('t_cmd').value});
+     msg(j.authorized ? 'Allowed \\u2014 no alert would be raised.'
+                      : 'NOT allowed \\u2014 this would raise SEC-SQL-AUD-011-RC06 (critical).',
+         j.authorized?'ok':'err');
+   }catch(e){msg('Check failed: '+e.message,'err');}
+ }
+ async function loadViolations(){
+   try{
+     const j=await (await fetch('/api/login-authorizations/violations')).json();
+     if(!j.ok) throw new Error(j.error);
+     document.getElementById('viol').innerHTML = j.rows.length? j.rows.map(r=>
+       '<tr><td>'+esc((r.entry_date||'').replace('T',' ').slice(0,19))+'</td>'
+       +'<td>'+esc(r.servername||r.server)+'</td><td>'+esc(r.login_name)+'</td>'
+       +'<td><b>'+esc(r.command)+'</b></td><td>'+esc(r.database_name)+'</td>'
+       +'<td>'+esc(r.program_name)+'</td><td><code>'+esc((r.query||'').slice(0,140))+'</code></td></tr>'
+     ).join('') : '<tr><td colspan="7"><i>None.</i></td></tr>';
+   }catch(e){msg('Load failed: '+e.message,'err');}
+ }
+ load(); loadViolations();
+</script></body></html>
+"""
+
+
 @app.get("/ldap_settings", response_class=HTMLResponse)
 def ldap_settings_page(request: Request):
     """Config page for LDAP / Active Directory login to the DBDOME UI."""
@@ -2109,6 +2252,175 @@ def ldap_settings_page(request: Request):
  load();
 </script></body></html>
 """
+
+
+# ---------------------------------------------------------------------------
+# Login authorisation guard: metrics.login_authorizations config UI.
+# Each row is a login LIKE pattern + server + mode (white/black) + the set of
+# operations the rule covers. See sql_scripts/7470_login_authorization_guard.sql
+# for the semantics; the rule engine itself is metrics.is_login_authorized() so
+# this page never re-implements it.
+# ---------------------------------------------------------------------------
+_LA_OPS = ("select", "insert", "update", "delete", "drop", "truncate")
+
+
+def _la_rows():
+    conn = psycopg2.connect(get_connection_string())
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT row_id, login_name, COALESCE(server,'%'), mode, "
+            "       op_select, op_insert, op_update, op_delete, op_drop, op_truncate, "
+            "       is_active, COALESCE(description,''), entry_date "
+            "FROM metrics.login_authorizations ORDER BY mode, login_name")
+        out = []
+        for r in cur.fetchall():
+            out.append({"row_id": r[0], "login_name": r[1], "server": r[2], "mode": r[3],
+                        "ops": {op: r[4 + i] for i, op in enumerate(_LA_OPS)},
+                        "is_active": r[10], "description": r[11],
+                        "entry_date": r[12].isoformat() if r[12] else None})
+        return out
+    finally:
+        conn.close()
+
+
+@app.get("/api/login-authorizations")
+def api_login_auth_list():
+    try:
+        return JSONResponse({"ok": True, "rows": _la_rows()})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.post("/api/login-authorizations/add")
+async def api_login_auth_add(request: Request):
+    b = await request.json()
+    login = str(b.get("login_name", "")).strip()
+    mode = str(b.get("mode", "white")).strip().lower()
+    if not login:
+        return JSONResponse({"ok": False, "error": "login_name is required"}, status_code=400)
+    if mode not in ("white", "black"):
+        return JSONResponse({"ok": False, "error": "mode must be white or black"}, status_code=400)
+    ops = b.get("ops") or {}
+    if not any(bool(ops.get(op)) for op in _LA_OPS):
+        return JSONResponse({"ok": False, "error": "tick at least one operation"}, status_code=400)
+    try:
+        conn = psycopg2.connect(get_connection_string()); conn.autocommit = True
+        try:
+            conn.cursor().execute(
+                "INSERT INTO metrics.login_authorizations "
+                "(login_name, server, mode, op_select, op_insert, op_update, "
+                " op_delete, op_drop, op_truncate, description) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "ON CONFLICT (login_name, server, mode) DO UPDATE SET "
+                "  op_select=EXCLUDED.op_select, op_insert=EXCLUDED.op_insert, "
+                "  op_update=EXCLUDED.op_update, op_delete=EXCLUDED.op_delete, "
+                "  op_drop=EXCLUDED.op_drop, op_truncate=EXCLUDED.op_truncate, "
+                "  description=EXCLUDED.description, is_active=true",
+                (login, str(b.get("server", "")).strip() or "%", mode,
+                 *[bool(ops.get(op)) for op in _LA_OPS],
+                 str(b.get("description", "")).strip() or None))
+        finally:
+            conn.close()
+        db_write_log(f"login_authorizations add {mode} {login}", 0, "api_login_auth_add", "")
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.post("/api/login-authorizations/set")
+async def api_login_auth_set(request: Request):
+    b = await request.json()
+    try:
+        conn = psycopg2.connect(get_connection_string()); conn.autocommit = True
+        try:
+            conn.cursor().execute(
+                "UPDATE metrics.login_authorizations SET is_active=%s WHERE row_id=%s",
+                (bool(b.get("is_active", True)), int(b.get("row_id"))))
+        finally:
+            conn.close()
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.post("/api/login-authorizations/delete")
+async def api_login_auth_delete(request: Request):
+    b = await request.json()
+    try:
+        conn = psycopg2.connect(get_connection_string()); conn.autocommit = True
+        try:
+            conn.cursor().execute("DELETE FROM metrics.login_authorizations WHERE row_id=%s",
+                                  (int(b.get("row_id")),))
+        finally:
+            conn.close()
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.post("/api/login-authorizations/test")
+async def api_login_auth_test(request: Request):
+    """Answer 'would this be allowed?' using the DB rule engine itself, so the
+    preview can never drift from what the detection actually does."""
+    b = await request.json()
+    try:
+        conn = psycopg2.connect(get_connection_string())
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT metrics.is_login_authorized(%s,%s,%s)",
+                        (str(b.get("login_name", "")).strip(),
+                         str(b.get("server", "")).strip() or "%",
+                         str(b.get("command", "")).strip().lower()))
+            return JSONResponse({"ok": True, "authorized": cur.fetchone()[0]})
+        finally:
+            conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.get("/api/login-authorizations/violations")
+def api_login_auth_violations():
+    """Current unauthorised statements — the same view the root cause reads."""
+    try:
+        conn = psycopg2.connect(get_connection_string())
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT servername, server, login_name, program_name, database_name, "
+                "       command, left(query, 300), entry_date "
+                "FROM monitoring.v_sec_sql_aud_011_rc06 ORDER BY entry_date DESC LIMIT 200")
+            return JSONResponse({"ok": True, "rows": [
+                {"servername": r[0], "server": r[1], "login_name": r[2], "program_name": r[3],
+                 "database_name": r[4], "command": r[5], "query": r[6],
+                 "entry_date": r[7].isoformat() if r[7] else None} for r in cur.fetchall()]})
+        finally:
+            conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+
+@app.get("/api/version")
+def api_version(request: Request):
+    """Version of the running binary plus what the DB has on record.
+
+    The two can legitimately differ for a moment after an upgrade (the binary
+    registers itself on startup), and a lasting mismatch is the signal that a
+    bin was overlaid without the service being restarted."""
+    from utils import version as _version
+    out = {"ok": True, "running": _version.as_dict()}
+    try:
+        with psycopg2.connect(get_connection_string()) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT config.get_version('service'), "
+                            "       config.get_version_label('service')")
+                row = cur.fetchone()
+        out["registered"] = {"version": row[0], "label": row[1]}
+        out["in_sync"] = (row[0] == out["running"]["version"])
+    except Exception as e:
+        out["registered"] = None
+        out["error"] = str(e)
+    return JSONResponse(out)
 
 
 @app.get("/api/ldap/status")

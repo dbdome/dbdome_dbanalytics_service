@@ -116,8 +116,19 @@ def start_scheduler():
     # job it competes with the flood of collection jobs, misfires past its
     # grace window and is silently skipped (observed: 6390-6480 never applied).
     import threading
-    threading.Thread(target=run_sql_scripts, name="sql_script_runner_startup",
-                     daemon=True).start()
+
+    def _migrate_then_stamp_version():
+        # Version registration has to follow the migrations in the SAME thread:
+        # config.set_version ships in 7440, so on an upgrade it does not exist
+        # until run_sql_scripts has applied it.
+        run_sql_scripts()
+        from utils import version as _version
+        registered = _version.register()
+        print(f"[version] running {_version.version_label()}"
+              + ("" if registered else " (not registered in config.app_version)"))
+
+    threading.Thread(target=_migrate_then_stamp_version,
+                     name="sql_script_runner_startup", daemon=True).start()
 
     current_jobs = {}
 

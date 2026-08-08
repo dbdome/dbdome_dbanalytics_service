@@ -244,6 +244,7 @@
 
             <div class="form-field">
                 <input type="text" id="service_name" name="service_name" class="form-input" placeholder="service_name">
+                <small id="service_name_hint" class="form-hint" style="display:none;color:#9aa0a6;font-size:11px;">MongoDB: this is the <b>auth database</b> (authSource) &mdash; usually <code>admin</code>, not the monitored database. A wrong value fails as &quot;Authentication failed&quot;.</small>
             </div>
 
             <div class="form-field">
@@ -251,13 +252,14 @@
             </div>
 
             <div class="form-field">
-                <select id="dbVendor" name="dbVendor" class="form-input" required>
+                <select id="dbVendor" name="dbVendor" class="form-input" onchange="toggleVendorHints()" required>
                     <option value="mssql">mssql</option>
                     <option value="Oracle">oracle</option>
                     <option value="postgres">postgres</option>
                     <option value="mysql">mysql</option>
                     <option value="mariadb">mariadb</option>
                     <option value="clickhouse">clickhouse</option>
+                    <option value="mongodb">mongodb</option>
                 </select>
             </div>
 
@@ -293,6 +295,17 @@
     <div id="successMessage" class="success-message">The data has been saved successfully.</div>
 
     <script src="../static/js/server_form_script.js"></script>
+<script>
+function toggleVendorHints(){
+  var v=(document.getElementById('dbVendor')||{}).value;
+  var h=document.getElementById('service_name_hint');
+  if(h) h.style.display = (v==='mongodb') ? 'block' : 'none';
+  var p=document.getElementById('port');
+  // only prefill an empty port, never stomp a value the operator typed
+  if(p && !p.value && v==='mongodb') p.value='27017';
+}
+document.addEventListener('DOMContentLoaded', toggleVendorHints);
+</script>
 </body>
 </html>
 
