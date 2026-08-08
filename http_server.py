@@ -1960,9 +1960,9 @@ def ldap_settings_page(request: Request):
    <h3>Server</h3>
    <div class="row">
      <div class="field"><label>LDAP host (name or IP)</label><input type="text" id="host" placeholder="dc1.corp.local"></div>
-     <div class="field"><label>Port</label><input type="text" id="port" style="width:90px" placeholder="636"></div>
+     <div class="field"><label>Port</label><input type="text" id="port" style="width:90px" placeholder="636" onchange="portWarn()"></div>
      <div class="field"><label>Encryption</label>
-       <select id="encryption">
+       <select id="encryption" onchange="syncPort()">
          <option value="ldaps">LDAPS (SSL, port 636)</option>
          <option value="starttls">StartTLS (port 389)</option>
          <option value="none">None (port 389, not recommended)</option>
@@ -1970,6 +1970,7 @@ def ldap_settings_page(request: Request):
      <div class="field"><label>Skip TLS certificate verification</label>
        <select id="ssl_skip_verify" style="width:120px"><option value="false">no</option><option value="true">yes</option></select></div>
    </div>
+   <div class="note" id="portwarn"></div>
    <div class="field"><label>CA certificate for the directory server (PEM, optional &mdash; needed when your AD uses an internal CA)</label>
      <textarea id="root_ca_cert" rows="3" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
 
@@ -2030,6 +2031,21 @@ def ldap_settings_page(request: Request):
      org_role:tr.querySelector('.m_role').value,
      grafana_admin:tr.querySelector('.m_ga').checked})).filter(m=>m.group_dn);
  }
+ // A cleartext bind on 636 (or LDAPS on 389) is silently dropped by the DC and
+ // surfaces only as "connection forcibly closed" - keep the pair consistent.
+ function syncPort(){
+   const enc=val('encryption'),p=parseInt(val('port')||'0',10);
+   if(enc==='ldaps'&&(p===389||p===0))setVal('port',636);
+   if(enc!=='ldaps'&&p===636)setVal('port',389);
+   portWarn();
+ }
+ function portWarn(){
+   const enc=val('encryption'),p=parseInt(val('port')||'0',10),w=document.getElementById('portwarn');
+   let t='';
+   if(enc!=='ldaps'&&(p===636||p===3269))t='Port '+p+' is the LDAPS port \\u2014 a cleartext bind there is dropped by the server.';
+   if(enc==='ldaps'&&(p===389||p===3268))t='Port '+p+' is the cleartext port \\u2014 LDAPS cannot handshake there; use StartTLS.';
+   w.textContent=t;w.className=t?'note err':'note';
+ }
  function payload(){
    return {enabled:val('enabled')==='true',host:val('host').trim(),port:parseInt(val('port')||'636',10),
      encryption:val('encryption'),ssl_skip_verify:val('ssl_skip_verify')==='true',
@@ -2046,7 +2062,7 @@ def ldap_settings_page(request: Request):
      setVal('ssl_skip_verify',String(s.ssl_skip_verify));setVal('root_ca_cert',s.root_ca_cert);
      setVal('bind_dn',s.bind_dn);setVal('search_base_dns',s.search_base_dns);
      setVal('search_filter',s.search_filter);setVal('group_search_base_dns',s.group_search_base_dns);
-     setVal('enabled',String(s.enabled));
+     setVal('enabled',String(s.enabled));portWarn();
      document.getElementById('pwset').innerHTML=s.bind_password_set?'<span class="badge on">set</span>':'<span class="badge warn">not set</span>';
      document.getElementById('maps').innerHTML='';(s.group_mappings||[]).forEach(m=>addMap(m.group_dn,m.org_role,m.grafana_admin));
      document.getElementById('live').innerHTML=
@@ -2125,7 +2141,10 @@ async def api_ldap_test(request: Request):
     try:
         from utils.ldap_settings import test_connection
         payload = await request.json()
-        result = test_connection(payload.get("test_username"), payload.get("test_password"))
+        # Blocking socket work with 10s timeouts (plus transport probing on
+        # failure) - keep it off the event loop or the whole UI stalls with it.
+        result = await asyncio.to_thread(
+            test_connection, payload.get("test_username"), payload.get("test_password"))
         return JSONResponse({"ok": True, "result": result})
     except Exception as e:
         # bind/search failures are expected outcomes of a test — 200 with ok:false

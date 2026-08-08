@@ -116,6 +116,14 @@ def save_settings(payload):
             raise ValueError("port out of range")
     if "encryption" in upd and upd["encryption"] not in _ENCRYPTIONS:
         raise ValueError(f"encryption must be one of {_ENCRYPTIONS}")
+
+    # A pasted URL / host:port in the host box wins over the separate fields -
+    # store it already split so Test and the rendered ldap.toml agree.
+    if "host" in upd:
+        cur = _fetch_row()
+        upd["host"], p, e = normalize_endpoint(
+            upd["host"], upd.get("port", cur["port"]), upd.get("encryption", cur["encryption"]))
+        upd["port"], upd["encryption"] = p, e
     if "search_filter" in upd and "%s" not in (upd["search_filter"] or ""):
         raise ValueError("search_filter must contain %s (the login placeholder)")
     if upd.get("enabled"):
@@ -162,6 +170,129 @@ def _lines(v):
     return [ln.strip() for ln in (v or "").splitlines() if ln.strip()]
 
 
+_SCHEME_RE = re.compile(r"^(ldaps?)://", re.I)
+
+# Ports that only ever speak one transport. Getting this pair wrong is the #1
+# cause of "connection forcibly closed by the remote host" on Test: the TCP
+# connect succeeds, the cleartext bindRequest goes out, and the LDAPS listener
+# drops the socket before answering.
+_TLS_PORTS = (636, 3269)
+_CLEAR_PORTS = (389, 3268)
+
+
+def normalize_endpoint(host, port, encryption):
+    """Split whatever was typed in the host box back into (host, port, encryption).
+
+    Operators routinely paste a full URL (`ldaps://dc1.corp.local:636`) or a
+    `host:port` pair into the host field. Left as typed, the scheme/port there is
+    ignored and the connection is dialled with the separate port + encryption
+    fields instead - which is exactly how a cleartext bind ends up on 636. A
+    scheme or an embedded port is the more specific thing the operator wrote, so
+    it wins."""
+    h = (host or "").strip().rstrip("/")
+    m = _SCHEME_RE.match(h)
+    if m:
+        h = h[m.end():]
+        if m.group(1).lower() == "ldaps":
+            encryption = "ldaps"
+        elif encryption == "ldaps":          # ldap:// is cleartext transport
+            encryption = "none"
+    if h.startswith("["):                    # [2001:db8::1]:636
+        addr, _, rest = h.partition("]")
+        h = addr[1:]
+        if rest.startswith(":") and rest[1:].isdigit():
+            port = rest[1:]
+    elif h.count(":") == 1:                  # host:port (a bare IPv6 has more)
+        addr, _, p = h.partition(":")
+        if p.isdigit():
+            h, port = addr, p
+    return h, int(port), encryption
+
+
+def _endpoint_advice(port, encryption):
+    """Readable reason when the port/encryption pair is one a directory refuses."""
+    if encryption != "ldaps" and port in _TLS_PORTS:
+        return (f"encryption is '{encryption}' (cleartext on the wire) but port {port} "
+                f"is the LDAPS port - the directory drops cleartext connections there. "
+                f"Either set encryption to LDAPS, or move to port 389 with StartTLS.")
+    if encryption == "ldaps" and port in _CLEAR_PORTS:
+        return (f"encryption is 'ldaps' but port {port} is the cleartext port - the TLS "
+                f"handshake never completes there. Either use StartTLS on {port}, or "
+                f"move to port 636 with LDAPS.")
+    return None
+
+
+def _probe_endpoints(host, port, bind_dn, bind_pw, exclude, limit=4, timeout=5):
+    """Try the plausible transport combinations and report which one the directory
+    actually accepts, so a dead-end socket error becomes "use this instead".
+
+    Certificate validation is deliberately off here: this probes the transport,
+    not the trust chain, and a cert complaint would mask the answer we want."""
+    import ssl
+
+    import ldap3
+
+    combos, seen = [], {exclude}
+    for enc, prt in (("ldaps", port), ("starttls", port), ("none", port),
+                     ("ldaps", 636), ("starttls", 389), ("none", 389)):
+        if (enc, prt) in seen:
+            continue
+        seen.add((enc, prt))
+        combos.append((enc, prt))
+
+    lines = []
+    for enc, prt in combos[:limit]:
+        try:
+            tls = (ldap3.Tls(validate=ssl.CERT_NONE) if enc != "none" else None)
+            server = ldap3.Server(host, port=prt, use_ssl=(enc == "ldaps"),
+                                  tls=tls, get_info=None, connect_timeout=timeout)
+            conn = ldap3.Connection(server, user=bind_dn or None,
+                                    password=bind_pw or None, receive_timeout=timeout)
+            if enc == "starttls" and not conn.start_tls():
+                raise RuntimeError(conn.result)
+            bound = conn.bind()
+            desc = (conn.result or {}).get("description", "")
+            conn.unbind()
+        except Exception as e:                                   # noqa: BLE001 - report, don't raise
+            lines.append(f"    {enc}/{prt}: no ({type(e).__name__}: {e})")
+            continue
+        lines.append(f"    {enc}/{prt}: " + (
+            "BIND OK - use this combination" if bound
+            else f"transport works, bind refused ({desc or 'see bind_dn/password'})"))
+    return lines
+
+
+def _transport_failure(err, host, port, encryption, ssl_skip_verify, has_ca,
+                       bind_dn, bind_pw):
+    """Turn a raw ldap3 socket/TLS error into something an operator can act on."""
+    import ldap3.core.exceptions as lex
+
+    parts = [f"cannot talk LDAP to {host}:{port} using '{encryption}'",
+             f"    error: {type(err).__name__}: {err}"]
+
+    hint = _endpoint_advice(port, encryption)
+    if hint is None:
+        if isinstance(err, lex.LDAPSocketOpenError):
+            hint = ("the TCP connection could not be established (host, port or firewall) "
+                    "- or, for LDAPS, the server certificate was rejected by this host.")
+            if encryption in ("ldaps", "starttls") and not ssl_skip_verify and not has_ca:
+                hint += (" No CA certificate is configured: paste the issuing CA into "
+                         "'CA certificate', or set 'Skip TLS certificate verification' "
+                         "to yes for a first test.")
+        else:
+            hint = ("the directory accepted the TCP connection and then closed it without "
+                    "answering. That means the transport is wrong for this port, or the "
+                    "domain controller requires LDAP signing / channel binding and refuses "
+                    "a simple bind over an unprotected connection - use LDAPS or StartTLS.")
+    parts.append(f"    likely cause: {hint}")
+
+    probe = _probe_endpoints(host, port, bind_dn, bind_pw, exclude=(encryption, port))
+    if probe:
+        parts.append("    probed alternatives:")
+        parts.extend(probe)
+    return "\n".join(parts)
+
+
 def test_connection(test_username=None, test_password=None):
     """Bind with the SAVED service account; optionally locate a test user and
     (if test_password given) verify their credentials; preview the role the
@@ -169,14 +300,16 @@ def test_connection(test_username=None, test_password=None):
     import ssl
 
     import ldap3  # lazy: pure-python, but keep import cost off the hot path
+    from ldap3.core.exceptions import LDAPExceptionError
 
     s = _fetch_row()
     if not s["host"]:
         raise ValueError("no LDAP host configured - save settings first")
+    host, port, encryption = normalize_endpoint(s["host"], s["port"], s["encryption"])
     bind_pw = decrypt_secret(s["bind_password"]) if s["bind_password"] else ""
 
     tls = None
-    if s["encryption"] in ("ldaps", "starttls"):
+    if encryption in ("ldaps", "starttls"):
         ca = _ca_path() if s["root_ca_cert"] else None
         if s["root_ca_cert"]:
             # ldap3 wants the CA as a file; write/refresh it beside the conf
@@ -186,18 +319,29 @@ def test_connection(test_username=None, test_password=None):
             validate=ssl.CERT_NONE if s["ssl_skip_verify"] else ssl.CERT_REQUIRED,
             ca_certs_file=ca)
 
-    server = ldap3.Server(s["host"], port=s["port"],
-                          use_ssl=(s["encryption"] == "ldaps"),
+    server = ldap3.Server(host, port=port, use_ssl=(encryption == "ldaps"),
                           tls=tls, get_info=None, connect_timeout=10)
     conn = ldap3.Connection(server, user=s["bind_dn"], password=bind_pw,
                             receive_timeout=10)
-    if s["encryption"] == "starttls" and not conn.start_tls():
-        raise RuntimeError(f"StartTLS failed: {conn.result}")
-    if not conn.bind():
+    # Socket/TLS failures carry no usable detail on their own ("[WinError 10054]
+    # An existing connection was forcibly closed") - diagnose them here instead.
+    try:
+        if encryption == "starttls" and not conn.start_tls():
+            raise RuntimeError(f"StartTLS failed: {conn.result}")
+        bound = conn.bind()
+    except OSError as e:                       # LDAPSocket*Error subclasses socket.error
+        raise RuntimeError(_transport_failure(
+            e, host, port, encryption, s["ssl_skip_verify"], bool(s["root_ca_cert"]),
+            s["bind_dn"], bind_pw)) from None
+    except LDAPExceptionError as e:
+        raise RuntimeError(_transport_failure(
+            e, host, port, encryption, s["ssl_skip_verify"], bool(s["root_ca_cert"]),
+            s["bind_dn"], bind_pw)) from None
+    if not bound:
         raise RuntimeError(f"service-account bind failed: {conn.result.get('description')} "
                            f"{conn.result.get('message', '')}".strip())
 
-    out = {"bind": "ok", "host": s["host"], "port": s["port"], "encryption": s["encryption"]}
+    out = {"bind": "ok", "host": host, "port": port, "encryption": encryption}
 
     if test_username:
         flt = s["search_filter"].replace("%s", ldap3.utils.conv.escape_filter_chars(test_username))
@@ -263,8 +407,13 @@ def render_toml(s, bind_pw):
     if s["root_ca_cert"]:
         L.append(f"root_ca_cert = {_q(_ca_path())}")
     L.append(f"bind_dn = {_q(s['bind_dn'])}")
-    # triple-quoted per Grafana docs so # and ; survive
-    L.append('bind_password = """' + (bind_pw or "") + '"""')
+    # Triple-quoted per Grafana docs so # and ; survive. Use the *literal* form:
+    # """...""" is a basic string, so a backslash in the password would be read
+    # as an escape and the bind would silently use the wrong secret.
+    if bind_pw and ("'''" in bind_pw or bind_pw.endswith("'")):
+        L.append("bind_password = " + _q(bind_pw))
+    else:
+        L.append("bind_password = '''" + (bind_pw or "") + "'''")
     L.append("timeout = 10")
     L.append(f"search_filter = {_q(s['search_filter'])}")
     L.append("search_base_dns = [" + ", ".join(_q(b) for b in _lines(s["search_base_dns"])) + "]")
