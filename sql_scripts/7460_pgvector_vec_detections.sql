@@ -31,7 +31,11 @@
 -- Add-only and idempotent: an issue is skipped once it has a postgresql path
 -- created by this file, so re-runs are no-ops.
 -- =============================================================================
-\set ON_ERROR_STOP on
+-- NOTE: `\set ON_ERROR_STOP on` removed. It is a psql CLIENT directive; this file is
+-- applied by processes/sql_script_runner.py through psycopg2, which cannot parse a
+-- backslash command and failed the whole script on it ("syntax error at or near \"\\\"").
+-- The behaviour it asked for is already guaranteed: the runner executes each file in one
+-- transaction and rolls the whole file back on the first error.
 
 BEGIN;
 
