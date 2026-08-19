@@ -30,6 +30,12 @@ RC_SYSCMD    = "SEC-SQL-AUD-031-RC05"   # system command / OLE automation
 RISK = "critical"
 _MON_USERS = ("dbdome_mon_usr", "dbd_mon_usr")
 
+# Root causes that metrics.login_authorizations may suppress: a login explicitly
+# authorised to run the statement does not raise these. RC01 (mass encryption) and
+# RC02 (modification velocity) stay ungated - they are volume/signature patterns no
+# allow-list should be able to wave through.
+_GATED_RCS = (RC_ARTIFACT, RC_EXFIL_DEL, RC_SYSCMD)
+
 _UPDATE_RE   = re.compile(r"\bupdate\b", re.I)
 _ENCRYPT_RE  = re.compile(r"(encryptby(key|passphrase|cert|asymkey)|0x[0-9a-f]{40,})", re.I)
 _ARTIFACT_RE = re.compile(
@@ -83,6 +89,30 @@ def _velocity_threshold(cur):
         return int(str(r[0]).strip()) if r and r[0] is not None else 50
     except (TypeError, ValueError):
         return 50
+
+
+def _statement_authorized(cur, login, server, sql_text):
+    """True when metrics.login_authorizations EXPLICITLY authorises this login to run
+    this statement on this server, in which case the finding is suppressed.
+
+    Deliberately fails CLOSED (returns False -> alert is still raised) if the check
+    itself cannot run - e.g. an install that has not yet applied 7500, where the
+    function does not exist. A monitoring gate that goes silent when its own
+    plumbing breaks is worse than one that stays noisy.
+
+    Note the function called here is is_statement_explicitly_authorized(), NOT
+    is_login_authorized(): the latter returns TRUE for any login with no rule at
+    all ("unrestricted"), which as a suppression test would silence the ransomware
+    guard for the whole estate. See 7500 for the full reasoning."""
+    try:
+        cur.execute("SELECT metrics.is_statement_explicitly_authorized(%s,%s,%s)",
+                    (login, server, sql_text))
+        r = cur.fetchone()
+        return bool(r and r[0])
+    except psycopg2.Error as e:
+        db_write_log(f"ransomware_guard: authorization gate unavailable, alerting anyway ({e})",
+                     1, "run_ransomware_guard", server)
+        return False
 
 
 def _already_alerted(cur, rc, server, sid):
@@ -158,10 +188,17 @@ def run_ransomware_guard():
         # rc -> {sid: rc}, server -> {sid: rc} for kill; also raise alert rows
         servers_hit = {}                # server -> {sid: rc_id}
         raised = set()                  # (rc, server, sid) to avoid dup in this run
+        suppressed = 0                  # findings waived by an explicit white rule
         for rc, m in hits:
             server = m["server"]
             sid = _sid(m["session_id"])
             if sid is None or (rc, server, sid) in raised:
+                continue
+            # An explicitly authorised statement is not an incident. Checked before
+            # the dedupe/alert write so an authorised login leaves no alert row and
+            # no session kill - only the gated RCs, and only on a positive rule.
+            if rc in _GATED_RCS and _statement_authorized(cur, m["login_name"], server, m["sql_text"]):
+                suppressed += 1
                 continue
             if _already_alerted(cur, rc, server, sid):
                 continue
@@ -175,6 +212,12 @@ def run_ransomware_guard():
             servers_hit.setdefault(server, {})[sid] = rc
             db_write_log(f"ransomware_guard {rc}: login={m['login_name']} session={sid} server={server}",
                          0, "run_ransomware_guard", server)
+
+        # One line per run, not per finding: enough to show the gate is working (and
+        # to explain "why did the alerts stop?") without flooding the log.
+        if suppressed:
+            db_write_log(f"ransomware_guard: {suppressed} finding(s) suppressed by "
+                         f"metrics.login_authorizations", 0, "run_ransomware_guard", None)
 
         if not servers_hit:
             return

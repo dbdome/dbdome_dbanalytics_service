@@ -11,6 +11,7 @@ Requires the migrated (partitioned) schema that has the surrogate `id` column
 cleanly.
 """
 import psycopg2
+import psycopg2.errors  # explicit: psycopg2/__init__ never imports this statically (the binding happens inside the compiled _psycopg), so a frozen build drops it and psycopg2.errors.* raises AttributeError at runtime
 
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log

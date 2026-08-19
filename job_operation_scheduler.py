@@ -63,7 +63,8 @@ def get_function_by_name(name):
         collect_metrics_operation_hlth,
         collect_metrics_operation_other,
         collect_metrics_operation_critical,
-    )    
+        collect_metrics_operation_active_tx,
+    )
     from widgets.monitoring_dashboard_widget_export import widget_dashboard_json_export
     from email_utils.email_handler import email_sender_operation
     from synch.synch_aggregations import execute_synch_aggregations
@@ -124,6 +125,9 @@ def get_function_by_name(name):
         "collect_metrics_operation_hlth": collect_metrics_operation_hlth,
         "collect_metrics_operation_other": collect_metrics_operation_other,
         "collect_metrics_operation_critical": collect_metrics_operation_critical,
+        # Dedicated 30s collector for SEC-SQL-ACC-011-RC02 - its query has a 60s
+        # lookback and the generic sweep only reaches it every 5.5-14 min.
+        "active_tx_fast_collect": collect_metrics_operation_active_tx,
         "widget_dashboard_json_export": widget_dashboard_json_export,
         "email_sender_operation": email_sender_operation,
         "synch_aggregations": execute_synch_aggregations,

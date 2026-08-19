@@ -1,5 +1,6 @@
 """GRC Phase 7: DDL / Schema-Change Audit Scanner"""
 import psycopg2
+import psycopg2.errors  # explicit: psycopg2/__init__ never imports this statically (the binding happens inside the compiled _psycopg), so a frozen build drops it and psycopg2.errors.* raises AttributeError at runtime
 from datetime import datetime, timedelta
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log

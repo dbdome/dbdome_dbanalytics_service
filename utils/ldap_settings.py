@@ -36,6 +36,11 @@ _IS_WIN = os.name == "nt"
 
 _ROLES = ("Viewer", "Editor", "Admin")
 _ENCRYPTIONS = ("none", "ldaps", "starttls")
+_DEPROVISION = ("none", "viewer", "remove", "disable")
+
+# Scheduled AD-sync columns (7510). Secrets are handled separately, like bind_password.
+_SYNC_COLS = ["sync_enabled", "sync_dry_run", "sync_deprovision",
+              "grafana_url", "grafana_admin_user"]
 
 # Columns the UI round-trips 1:1 (bind_password handled separately).
 _PLAIN_COLS = [
@@ -79,7 +84,10 @@ def _fetch_row():
                 "SELECT enabled, host, port, encryption, ssl_skip_verify, root_ca_cert, "
                 "       bind_dn, bind_password, search_base_dns, search_filter, "
                 "       group_search_base_dns, attr_username, attr_name, attr_surname, "
-                "       attr_email, attr_member_of, group_mappings, updated_at, applied_at "
+                "       attr_email, attr_member_of, group_mappings, updated_at, applied_at, "
+                "       sync_enabled, sync_dry_run, sync_deprovision, grafana_url, "
+                "       grafana_token, grafana_admin_user, grafana_admin_password, "
+                "       last_sync_at, last_sync_result, last_sync_error "
                 "FROM config.ldap_settings WHERE row_id = 1")
             row = cur.fetchone()
     if row is None:
@@ -87,7 +95,10 @@ def _fetch_row():
     keys = ["enabled", "host", "port", "encryption", "ssl_skip_verify", "root_ca_cert",
             "bind_dn", "bind_password", "search_base_dns", "search_filter",
             "group_search_base_dns", "attr_username", "attr_name", "attr_surname",
-            "attr_email", "attr_member_of", "group_mappings", "updated_at", "applied_at"]
+            "attr_email", "attr_member_of", "group_mappings", "updated_at", "applied_at",
+            "sync_enabled", "sync_dry_run", "sync_deprovision", "grafana_url",
+            "grafana_token", "grafana_admin_user", "grafana_admin_password",
+            "last_sync_at", "last_sync_result", "last_sync_error"]
     d = dict(zip(keys, row))
     if isinstance(d["group_mappings"], str):
         d["group_mappings"] = json.loads(d["group_mappings"])
@@ -95,12 +106,33 @@ def _fetch_row():
 
 
 def get_settings():
-    """Settings for the UI - bind_password is never returned, only whether one is set."""
+    """Settings for the UI - secrets are never returned, only whether one is set."""
     d = _fetch_row()
     d["bind_password_set"] = bool(d.pop("bind_password"))
-    d["updated_at"] = d["updated_at"].isoformat() if d["updated_at"] else None
-    d["applied_at"] = d["applied_at"].isoformat() if d["applied_at"] else None
+    d["grafana_token_set"] = bool(d.pop("grafana_token"))
+    d["grafana_admin_password_set"] = bool(d.pop("grafana_admin_password"))
+    for c in ("updated_at", "applied_at", "last_sync_at"):
+        d[c] = d[c].isoformat() if d.get(c) else None
     return d
+
+
+def _has_grafana_credential():
+    d = _fetch_row()
+    return bool(d.get("grafana_token") or d.get("grafana_admin_user"))
+
+
+def sync_now():
+    """Run one reconcile cycle immediately (the UI's 'Sync now' button), instead of
+    waiting up to the scheduler interval. Honours dry-run exactly like the
+    scheduled run - this is the same function the scheduler calls.
+
+    manual=True: the scheduled-sync switch does not gate this (the button exists to
+    inspect a cycle BEFORE enabling the timer), and anything that makes the run a
+    no-op is raised instead of returning quietly - a click that changes nothing must
+    say why, not report success."""
+    from processes.ldap_group_sync import run_ldap_group_sync
+    run_ldap_group_sync(manual=True)
+    return get_settings()
 
 
 def save_settings(payload):
@@ -150,6 +182,25 @@ def save_settings(payload):
     pw = payload.get("bind_password")
     if pw:  # empty/None = keep existing
         upd["bind_password"] = encrypt_secret(pw)
+
+    # --- scheduled AD sync (7510) ------------------------------------------
+    for col in _SYNC_COLS:
+        if col in payload:
+            upd[col] = payload[col]
+    if "sync_deprovision" in upd and upd["sync_deprovision"] not in _DEPROVISION:
+        raise ValueError(f"sync_deprovision must be one of {_DEPROVISION}")
+    if upd.get("sync_enabled") and not (
+            payload.get("grafana_token") or payload.get("grafana_admin_user")
+            or _has_grafana_credential()):
+        raise ValueError("a Grafana service-account token (or admin user/password) "
+                         "is required before the AD sync can be enabled")
+    # Same keep-existing-on-blank rule as bind_password, so the UI never has to
+    # round-trip a secret it is not allowed to read back.
+    for src, col in (("grafana_token", "grafana_token"),
+                     ("grafana_admin_password", "grafana_admin_password")):
+        v = payload.get(src)
+        if v:
+            upd[col] = encrypt_secret(v)
 
     if not upd:
         return get_settings()
@@ -293,16 +344,23 @@ def _transport_failure(err, host, port, encryption, ssl_skip_verify, has_ca,
     return "\n".join(parts)
 
 
-def test_connection(test_username=None, test_password=None):
-    """Bind with the SAVED service account; optionally locate a test user and
-    (if test_password given) verify their credentials; preview the role the
-    group mappings would assign. Raises with a readable message on failure."""
+def service_bind(s=None):
+    """Bind with the SAVED service account and return (conn, settings, endpoint).
+
+    Extracted from test_connection() so the scheduled AD sync
+    (processes/ldap_group_sync.py) uses the EXACT same connection, TLS and
+    error-diagnosis path. Two implementations would drift, and a sync that
+    connects differently from the tester is a sync nobody can debug with the
+    "Test connection" button.
+
+    Caller owns the connection and must unbind() it.
+    """
     import ssl
 
     import ldap3  # lazy: pure-python, but keep import cost off the hot path
     from ldap3.core.exceptions import LDAPExceptionError
 
-    s = _fetch_row()
+    s = s or _fetch_row()
     if not s["host"]:
         raise ValueError("no LDAP host configured - save settings first")
     host, port, encryption = normalize_endpoint(s["host"], s["port"], s["encryption"])
@@ -340,6 +398,31 @@ def test_connection(test_username=None, test_password=None):
     if not bound:
         raise RuntimeError(f"service-account bind failed: {conn.result.get('description')} "
                            f"{conn.result.get('message', '')}".strip())
+    return conn, s, (host, port, encryption)
+
+
+def resolve_role(member_of, mappings):
+    """(org_role, grafana_admin) for a user's group DNs, or (None, False).
+
+    THE single place group->role is decided. Grafana's own LDAP login applies the
+    same mappings from ldap.toml at login time; the sync must agree with it or the
+    two will fight - sync sets Editor, next login resets to Viewer. Keeping one
+    implementation here is what makes them agree by construction.
+    First match wins, '*' matches anyone (same order semantics as ldap.toml)."""
+    lowered = [g.lower() for g in (member_of or [])]
+    for m in (mappings or []):
+        if m.get("group_dn") == "*" or (m.get("group_dn") or "").lower() in lowered:
+            return m.get("org_role") or "Viewer", bool(m.get("grafana_admin"))
+    return None, False
+
+
+def test_connection(test_username=None, test_password=None):
+    """Bind with the SAVED service account; optionally locate a test user and
+    (if test_password given) verify their credentials; preview the role the
+    group mappings would assign. Raises with a readable message on failure."""
+    import ldap3
+
+    conn, s, (host, port, encryption) = service_bind()
 
     out = {"bind": "ok", "host": host, "port": port, "encryption": encryption}
 
@@ -358,11 +441,7 @@ def test_connection(test_username=None, test_password=None):
 
         member_of = [str(g) for g in (entry[s["attr_member_of"]].values
                                       if s["attr_member_of"] in entry else [])]
-        role = None
-        for m in s["group_mappings"]:
-            if m["group_dn"] == "*" or m["group_dn"].lower() in (g.lower() for g in member_of):
-                role = m["org_role"]
-                break
+        role, _is_admin = resolve_role(member_of, s["group_mappings"])
         out["user"] = {
             "dn": entry.entry_dn,
             "email": str(entry[s["attr_email"]]) if s["attr_email"] in entry else "",
@@ -373,7 +452,9 @@ def test_connection(test_username=None, test_password=None):
         }
 
         if test_password:
-            user_conn = ldap3.Connection(server, user=entry.entry_dn,
+            # conn.server: the ldap3 Server built inside service_bind(), reused so
+            # the credential check goes over the same endpoint/TLS as the bind.
+            user_conn = ldap3.Connection(conn.server, user=entry.entry_dn,
                                          password=test_password, receive_timeout=10)
             if s["encryption"] == "starttls":
                 user_conn.start_tls()
@@ -382,6 +463,90 @@ def test_connection(test_username=None, test_password=None):
 
     conn.unbind()
     return out
+
+
+# ---------------------------------------------------------------------------
+# Directory enumeration (for the scheduled AD sync)
+# ---------------------------------------------------------------------------
+
+# AD's "member of a group, including nested groups" matching rule. Without it a
+# user who is only an INDIRECT member (via a nested group) is invisible to the
+# sync while Grafana's own login WOULD see them through memberOf, which AD
+# expands transitively at login. That mismatch is the classic "works when I log
+# in, never gets pre-provisioned" bug, so nested is the default here.
+_LDAP_MATCHING_RULE_IN_CHAIN = "1.2.840.113556.1.4.1941"
+
+
+def fetch_directory_users(nested=True, page_size=500):
+    """Every user matched by the configured group_mappings, as a dict keyed by
+    the SAME attribute Grafana logs users in with (attr_username, lowercased).
+
+    Returns {login: {"login","name","email","dn","groups","org_role","grafana_admin"}}.
+
+    Keying on attr_username is not cosmetic: Grafana matches an LDAP login to an
+    existing user by login. Key on anything else (say email) and the sync creates
+    a second, local account that shadows the LDAP one.
+
+    A '*' mapping is skipped here on purpose - it means "any authenticated user",
+    which is a login-time concept with no member list to enumerate. Those users
+    still get their role from Grafana at login as before.
+    """
+    import ldap3
+
+    conn, s, _ = service_bind()
+    users = {}
+    try:
+        # Search the USER base: the filter is (memberOf=<group dn>), which matches
+        # user objects, so the base must be where users live. group_search_base_dns
+        # points at the GROUP container (Grafana uses it to resolve group entries) -
+        # searching there returns nothing, silently. Fall back to it only if no user
+        # base is configured at all.
+        bases = _lines(s["search_base_dns"]) or _lines(s["group_search_base_dns"])
+        attrs = [a for a in (s["attr_username"], s["attr_name"], s["attr_surname"],
+                             s["attr_email"], s["attr_member_of"]) if a]
+        rule = f":{_LDAP_MATCHING_RULE_IN_CHAIN}:" if nested else ""
+
+        for m in (s["group_mappings"] or []):
+            dn = (m.get("group_dn") or "").strip()
+            if not dn or dn == "*":
+                continue
+            flt = f"(memberOf{rule}={ldap3.utils.conv.escape_filter_chars(dn)})"
+            for base in bases:
+                # paged: AD caps a plain search at 1000 entries and silently
+                # truncates, which would look like "half the group vanished".
+                for entry in conn.extend.standard.paged_search(
+                        base, flt, attributes=attrs, paged_size=page_size,
+                        generator=True):
+                    if entry.get("type") != "searchResEntry":
+                        continue
+                    a = entry["attributes"]
+                    login = _first(a.get(s["attr_username"]))
+                    if not login:
+                        continue
+                    key = login.lower()
+                    if key in users:
+                        # already matched by an earlier (higher-precedence) mapping
+                        continue
+                    given, sur = _first(a.get(s["attr_name"])), _first(a.get(s["attr_surname"]))
+                    users[key] = {
+                        "login": login,
+                        "name": " ".join(x for x in (given, sur) if x) or login,
+                        "email": _first(a.get(s["attr_email"])) or "",
+                        "dn": entry.get("dn") or "",
+                        "groups": [dn],
+                        "org_role": m.get("org_role") or "Viewer",
+                        "grafana_admin": bool(m.get("grafana_admin")),
+                    }
+    finally:
+        conn.unbind()
+    return users
+
+
+def _first(v):
+    """ldap3 returns str or list depending on the attribute; normalise."""
+    if isinstance(v, (list, tuple)):
+        return str(v[0]) if v else ""
+    return str(v) if v is not None else ""
 
 
 # ---------------------------------------------------------------------------

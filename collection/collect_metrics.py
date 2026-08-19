@@ -410,9 +410,15 @@ def collect_metrics_operation():
 #   OTHER   = Legacy/custom metrics without domain prefix
 # ═══════════════════════════════════════════════════════════════
 
-def _dispatch_domain_row(row, domain_filter, risk_filter=None):
+def _dispatch_domain_row(row, domain_filter, risk_filter=None, rc_filter=None, skip_unchanged=False):
     """Run the right generic collector for one row, scoped to a domain and/or risk_level.
-    All exceptions caught and logged here so the pool's join sees a clean return."""
+    All exceptions caught and logged here so the pool's join sees a clean return.
+
+    rc_filter scopes the run to specific root causes (the dedicated fast collector).
+    Only the mssql collector implements it today: the other vendors filter their
+    metric set differently, and passing rc_filter to one that IGNORES it would run
+    a FULL sweep at the dedicated collector's cadence - so they are skipped
+    explicitly rather than silently mis-collected."""
     row_id       = row[0]
     server       = row[1]
     servername   = row[2]
@@ -432,7 +438,18 @@ def _dispatch_domain_row(row, domain_filter, risk_filter=None):
     server_label = f"{servername}:{port}" if port else servername
 
     scope_label = domain_filter or risk_filter or 'ALL'
+    if rc_filter:
+        scope_label = rc_filter if isinstance(rc_filter, str) else ','.join(rc_filter)
     op_name = f"{routine_name}_{scope_label}"
+
+    # rc_filter is only honoured by the mssql collector (see docstring). Skipping
+    # is the safe failure: the root cause keeps being collected by the normal
+    # sweep on those vendors, just at the slower cadence.
+    if rc_filter and routine_name != "collect_all_metrics_mssql_queries":
+        db_write_log(f"rc_filter '{scope_label}' not supported by {routine_name} - skipped "
+                     f"(vendor still collected by the generic sweep)",
+                     0, "_dispatch_domain_row", server_label)
+        return
 
     try:
         match routine_name:
@@ -440,7 +457,8 @@ def _dispatch_domain_row(row, domain_filter, risk_filter=None):
                 result = collect_all_metrics_mssql_queries(
                     server, database, username, password, driver, auth_type,
                     mssql_port=port, domain_filter=domain_filter,
-                    risk_filter=risk_filter, server_id=server_id)
+                    risk_filter=risk_filter, server_id=server_id,
+                    rc_filter=rc_filter, skip_unchanged=skip_unchanged)
 
             case "collect_all_metrics_postgres_queries":
                 result = collect_all_metrics_postgres_queries(
@@ -482,6 +500,20 @@ def _dispatch_domain_row(row, domain_filter, risk_filter=None):
                     domain_filter=domain_filter, risk_filter=risk_filter,
                     server_id=server_id)
 
+            case "collect_all_metrics_clickhouse_queries":
+                result = collect_all_metrics_clickhouse_queries(
+                    server, database, username, password, port,
+                    domain_filter=domain_filter, risk_filter=risk_filter,
+                    server_id=server_id)
+
+            case "collect_all_metrics_mongodb_queries":
+                # service_name carries the Mongo authSource (usually 'admin')
+                result = collect_all_metrics_mongodb_queries(
+                    server, database, username, password, port,
+                    service_name=service_name,
+                    domain_filter=domain_filter, risk_filter=risk_filter,
+                    server_id=server_id)
+
             case _:
                 # Specialized collectors handled by collect_metrics_operation.
                 return
@@ -496,13 +528,16 @@ def _dispatch_domain_row(row, domain_filter, risk_filter=None):
                      2, op_name, server_label)
 
 
-def _run_domain_collection(domain_filter, risk_filter=None):
+def _run_domain_collection(domain_filter, risk_filter=None, rc_filter=None, skip_unchanged=False):
     """
     Run generic query collectors for all active servers, filtered by domain
     and/or risk_level.
 
     domain_filter: 'SEC', 'PERF', 'HLTH', 'OTHER', or None (all domains)
     risk_filter:   'low', 'medium', 'high', 'critical', or None (all risks)
+    rc_filter:     root_cause_id (or list) to run EXCLUSIVELY - the dedicated
+                   collector path; None runs the normal sweep
+    skip_unchanged: store a sample only when it differs from the previous one
     """
     pg_connection_string = get_connection_string()
     conn = psycopg2.connect(pg_connection_string)
@@ -519,9 +554,39 @@ def _run_domain_collection(domain_filter, risk_filter=None):
 
     workers = min(_COLLECTOR_PARALLELISM, len(rows))
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='collect') as pool:
-        futures = [pool.submit(_dispatch_domain_row, r, domain_filter, risk_filter) for r in rows]
+        futures = [pool.submit(_dispatch_domain_row, r, domain_filter, risk_filter,
+                               rc_filter, skip_unchanged) for r in rows]
         for f in as_completed(futures):
             f.result()
+
+
+# Root causes with their own tight-cadence collector. Keep in step with
+# config.global_params('dedicated_collector_rcs'), which is what the generic
+# sweep reads to EXCLUDE them - if the two disagree, the RC is either collected
+# twice per cycle or not at all.
+ACTIVE_TX_RC = 'SEC-SQL-ACC-011-RC02'
+
+
+def collect_metrics_operation_active_tx():
+    """Dedicated fast collector for SEC-SQL-ACC-011-RC02 (active transactions).
+
+    WHY THIS EXISTS. The query itself costs 0.38s (measured against a live SQL
+    Server), but inside the generic SEC sweep it queues behind ~1,695 metrics and
+    only gets a turn every 5.5-14 minutes. Both branches of the query look back
+    just 60 SECONDS (`DATEADD(SECOND, -60, GETDATE())`), so at that spacing it
+    observes its own window ~7-18% of the time and misses over 80% of the
+    transactions and statements it exists to catch. Cadence must stay <= 60s.
+
+    Reuses the normal path in full - same per-server thread pool, same insert,
+    comparison and alert handling - scoped to one root cause. Volume is held down
+    by skip_unchanged: at 30s this metric would otherwise write ~2.3M rows/day
+    per server.
+    """
+    db_write_log(f"Starting dedicated collection for {ACTIVE_TX_RC}", 0,
+                 "collect_metrics_operation_active_tx", "")
+    _run_domain_collection(None, rc_filter=ACTIVE_TX_RC, skip_unchanged=True)
+    db_write_log(f"Dedicated collection for {ACTIVE_TX_RC} complete", 0,
+                 "collect_metrics_operation_active_tx", "")
 
 
 def collect_metrics_operation_sec():

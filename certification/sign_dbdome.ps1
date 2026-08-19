@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # sign_dbdome.ps1  — RUN AS ADMINISTRATOR (or any account that can write the exes)
 # Authenticode-signs all DBDOME-authored exes with dbdome_cert.pfx (SHA-256 +
 # RFC3161 timestamp). Run this AFTER every build / before packaging & shipping.

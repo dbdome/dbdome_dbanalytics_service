@@ -142,6 +142,13 @@ a = Analysis(
         'apscheduler.schedulers.background',
         'apscheduler.triggers.interval',
         'psycopg2',
+        # psycopg2/__init__.py never imports .errors statically - the binding is
+        # made inside the compiled _psycopg, which the analyzer cannot follow.
+        # Without this the submodule is absent from the PYZ and every
+        # `except psycopg2.errors.X` raises AttributeError while handling the
+        # original exception (seen live: ddl_audit_scanner failing every 2 min).
+        'psycopg2.errors',
+        'psycopg2.extras',
         'pyodbc',
         'oracledb',
         'pymysql',
@@ -228,6 +235,13 @@ a_svc = Analysis(
         'apscheduler.schedulers.background',
         'apscheduler.triggers.interval',
         'psycopg2',
+        # psycopg2/__init__.py never imports .errors statically - the binding is
+        # made inside the compiled _psycopg, which the analyzer cannot follow.
+        # Without this the submodule is absent from the PYZ and every
+        # `except psycopg2.errors.X` raises AttributeError while handling the
+        # original exception (seen live: ddl_audit_scanner failing every 2 min).
+        'psycopg2.errors',
+        'psycopg2.extras',
         'pyodbc',
         'oracledb',
         'pymysql',

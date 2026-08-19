@@ -317,7 +317,60 @@ def _test_mssql_engine(engine):
         return False
 
 
-def collect_all_metrics_mssql_queries(mssql_server, mssql_database, mssql_username, mssql_password, mssql_driver, auth_type, mssql_port=None, domain_filter=None, risk_filter=None, server_id=None):
+def _dedicated_rcs(pg_engine):
+    """Root causes handed off to a dedicated scheduled collector.
+
+    Read from config.global_params('dedicated_collector_rcs') as a comma-separated
+    list. The generic sweep must EXCLUDE these: their own process collects them at
+    a tighter cadence, and if both writers run, the same metric_name lands in gmmr
+    twice per cycle - duplicate rows and duplicate alerts with nothing in the row
+    to tell them apart. Returns [] when the param is absent, so behaviour is
+    unchanged on installs that never configured one.
+    """
+    try:
+        with pg_engine.connect() as conn:
+            row = conn.exec_driver_sql(
+                "SELECT value FROM config.global_params WHERE key = 'dedicated_collector_rcs'"
+            ).fetchone()
+        if not row or not row[0]:
+            return []
+        return [r.strip() for r in str(row[0]).split(',') if r.strip()]
+    except Exception:
+        # Never let a missing param/table stop collection.
+        return []
+
+
+def _sql_in_list(values):
+    return ", ".join("'" + str(v).replace("'", "''") + "'" for v in values)
+
+
+def _unchanged_since_last(pg_engine, server_key, metric_name, metric_metadata_json):
+    """True when this result is byte-identical to the last one stored.
+
+    Used only by the dedicated fast collector (skip_unchanged=True). At a 30s
+    cadence a metric returning ~800 rows would write ~2.3M rows/day/server; most
+    consecutive samples on a quiet server are identical. gmmr.entry_date is the
+    onset of a state, not a heartbeat, so suppressing an identical sample keeps
+    the semantics and drops the volume. Any read failure returns False - i.e.
+    store it - so a broken comparison can never silently lose data.
+    """
+    try:
+        with pg_engine.connect() as conn:
+            row = conn.exec_driver_sql(
+                "SELECT metric_metadata::text FROM monitoring.general_metric_metadata_results "
+                f"WHERE server = '{str(server_key).replace(chr(39), chr(39)*2)}' "
+                f"  AND metric_name = '{str(metric_name).replace(chr(39), chr(39)*2)}' "
+                "ORDER BY entry_date DESC LIMIT 1"
+            ).fetchone()
+        if not row or row[0] is None:
+            return False
+        import json as _json
+        return _json.loads(row[0]) == _json.loads(metric_metadata_json)
+    except Exception:
+        return False
+
+
+def collect_all_metrics_mssql_queries(mssql_server, mssql_database, mssql_username, mssql_password, mssql_driver, auth_type, mssql_port=None, domain_filter=None, risk_filter=None, server_id=None, rc_filter=None, skip_unchanged=False):
     """
     Retrieves metric queries from monitoring.metric_queries table, runs each against MSSQL,
     and stores results in monitoring.general_metric_metadata_results.
@@ -397,6 +450,21 @@ def collect_all_metrics_mssql_queries(mssql_server, mssql_database, mssql_userna
             risk_clause_main   = ""
             risk_clause_legacy = ""
 
+        # Root-cause scoping. Two mutually exclusive modes:
+        #   rc_filter set  -> the DEDICATED collector: run ONLY these root causes.
+        #   rc_filter None -> the generic sweep: run everything EXCEPT the ones a
+        #                     dedicated collector owns, so the two never both write
+        #                     the same metric_name into gmmr.
+        if rc_filter:
+            _rcs = rc_filter if isinstance(rc_filter, (list, tuple, set)) else [rc_filter]
+            _rcs = [str(r).strip() for r in _rcs if str(r).strip()]
+            rc_clause_main   = f"AND cm.metric_name IN ({_sql_in_list(_rcs)})" if _rcs else ""
+            rc_clause_legacy = f"AND metric_name IN ({_sql_in_list(_rcs)})" if _rcs else ""
+        else:
+            _ded = _dedicated_rcs(pg_engine)
+            rc_clause_main   = f"AND cm.metric_name NOT IN ({_sql_in_list(_ded)})" if _ded else ""
+            rc_clause_legacy = f"AND metric_name NOT IN ({_sql_in_list(_ded)})" if _ded else ""
+
         with pg_engine.connect() as conn:
             queries_df = pd.read_sql_query(
                 f"""  
@@ -435,6 +503,7 @@ from (
       AND rl.is_active IS TRUE
       {domain_clause}
       {risk_clause_main}
+      {rc_clause_main}
 ) sub
 WHERE seq = 1
 union all
@@ -449,6 +518,7 @@ union all
     where lower(db_vendor) in ('mssql', 'sqlserver')
       and is_active = true
 	  {risk_clause_legacy}
+	  {rc_clause_legacy}
 )
    ) u
  ) d
@@ -585,10 +655,21 @@ union all
                 metric_metadata_json = _sanitize_json(to_records_json(df))
                 comparison = _sanitize_json(_build_comparison(metric_metadata_json, query_row.get('expected'), step_params))
 
-                # If the metric returned no rows, replace the empty '[]' with
-                # a single all-null row showing the column shape.
-                if df.empty and len(df.columns) > 0:
-                    metric_metadata_json = _sanitize_json(json.dumps([{c: None for c in df.columns.tolist()}]))
+                # A metric that returned no rows is stored as an empty [] - NOT as a
+                # synthetic all-null row. Faking one row to "document the column shape"
+                # made every empty result look like a result: the monitoring views shred
+                # metric_metadata with jsonb_array_elements, so each empty sweep produced a
+                # phantom all-null row. Seen live on SEC-SQL-ACC-011-RC02 against
+                # 192.168.200.50 - 7 fake "active transactions", every column null.
+                # Condition evaluation never saw the fake row: _build_comparison runs
+                # ABOVE this point, on the real (empty) result.
+
+                # Change-detection (dedicated fast collector only). The alert
+                # comparison above has ALREADY run on this sample, so suppressing
+                # the row cannot suppress a finding - it only avoids storing the
+                # same picture twice.
+                if skip_unchanged and _unchanged_since_last(pg_engine, server_key, metric_name, metric_metadata_json):
+                    continue
 
                 insert_payloads.append({
                     "server_id": server_id ,

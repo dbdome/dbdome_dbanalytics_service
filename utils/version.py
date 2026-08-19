@@ -21,7 +21,7 @@ import os
 import sys
 
 VERSION_MAJOR = 2
-VERSION_MINOR = 1
+VERSION_MINOR = 2
 
 _BUILD_FILE = "version_build.json"
 

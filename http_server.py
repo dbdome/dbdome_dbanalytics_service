@@ -2141,6 +2141,42 @@ def ldap_settings_page(request: Request):
    <div class="note">Users in no mapped group are <b>denied login</b> (unless a <code>*</code> mapping exists).
      Roles: <b>Viewer</b> = dashboards read-only, <b>Editor</b> = edit dashboards, <b>Admin</b> = org admin.</div>
 
+   <h3>Directory sync <span class="note">(optional &mdash; pre-provision users and react to AD group changes without waiting for a login)</span></h3>
+   <div class="note">Grafana OSS resolves group&rarr;role only <i>at login</i>: a user who has never signed in
+     does not exist here yet, and an AD group change lands at their <b>next</b> login. Enabling sync reconciles
+     the mapped groups into Grafana on a timer instead. Mappings above drive both, so they cannot disagree.</div>
+   <div class="row">
+     <div class="field"><label>Scheduled sync</label>
+       <select id="sync_enabled" style="width:120px"><option value="false">disabled</option><option value="true">enabled</option></select></div>
+     <div class="field"><label>Mode</label>
+       <select id="sync_dry_run" style="width:220px">
+         <option value="true">dry run &mdash; log only, change nothing</option>
+         <option value="false">live &mdash; apply changes</option></select></div>
+     <div class="field"><label>When a user leaves every mapped group</label>
+       <select id="sync_deprovision" style="width:210px">
+         <option value="none">do nothing</option>
+         <option value="viewer">downgrade to Viewer</option>
+         <option value="remove">remove from org</option>
+         <option value="disable">disable the account</option></select></div>
+   </div>
+   <div class="row">
+     <div class="field"><label>Grafana URL</label><input type="text" id="grafana_url" placeholder="http://127.0.0.1:3000"></div>
+     <div class="field"><label>Service-account token <span id="gtokset"></span></label>
+       <input type="password" id="grafana_token" placeholder="leave blank to keep current"></div>
+   </div>
+   <div class="row">
+     <div class="field"><label>Admin user (fallback if no token)</label><input type="text" id="grafana_admin_user" placeholder="admin"></div>
+     <div class="field"><label>Admin password <span id="gpwset"></span></label>
+       <input type="password" id="grafana_admin_password" placeholder="leave blank to keep current"></div>
+   </div>
+   <div class="note"><b>admin</b> and <b>dbdome_user</b> are never created, changed or deprovisioned by the sync.
+     A directory read that returns no users is treated as a fault and skipped, never as &ldquo;remove everyone&rdquo;.
+     Prefer a service-account token: it is revocable without changing the admin password.</div>
+   <div class="row">
+     <div class="field"><button class="minor" onclick="syncNow()">Sync now</button></div>
+     <div class="field" style="flex:3"><label>Last run</label><div id="syncstat" class="note">&mdash;</div></div>
+   </div>
+
    <h3>Activate</h3>
    <div class="row">
      <div class="field"><label>Enable LDAP login</label>
@@ -2195,7 +2231,37 @@ def ldap_settings_page(request: Request):
      root_ca_cert:val('root_ca_cert').trim()||null,bind_dn:val('bind_dn').trim(),
      bind_password:val('bind_password'),search_base_dns:val('search_base_dns'),
      search_filter:val('search_filter').trim()||'(sAMAccountName=%s)',
-     group_search_base_dns:val('group_search_base_dns').trim()||null,group_mappings:readMaps()};
+     group_search_base_dns:val('group_search_base_dns').trim()||null,group_mappings:readMaps(),
+     sync_enabled:val('sync_enabled')==='true',sync_dry_run:val('sync_dry_run')==='true',
+     sync_deprovision:val('sync_deprovision'),
+     grafana_url:val('grafana_url').trim()||'http://127.0.0.1:3000',
+     grafana_token:val('grafana_token'),
+     grafana_admin_user:val('grafana_admin_user').trim()||null,
+     grafana_admin_password:val('grafana_admin_password')};
+ }
+ function renderSync(s){
+   document.getElementById('gtokset').innerHTML=s.grafana_token_set?'<span class="badge on">set</span>':'<span class="badge warn">not set</span>';
+   document.getElementById('gpwset').innerHTML=s.grafana_admin_password_set?'<span class="badge on">set</span>':'';
+   const el=document.getElementById('syncstat');
+   if(!s.last_sync_at){el.innerHTML='never run';return;}
+   const r=s.last_sync_result||{},when=esc(s.last_sync_at.replace('T',' ').slice(0,19));
+   let t=when+' \\u2014 '+(r.dry_run?'<span class="badge warn">dry run</span> ':'')
+     +esc(r.seen||0)+' in AD, '+esc(r.created||0)+' created, '+esc(r.role_set||0)+' roles set, '
+     +esc(r.admin_set||0)+' admin flags, '+esc(r.deprovisioned||0)+' deprovisioned';
+   if(r.errors)t+=' <span class="badge off">'+esc(r.errors)+' errors</span>';
+   if(s.last_sync_error)t+='<br><span class="badge off">'+esc(s.last_sync_error)+'</span>';
+   el.innerHTML=t;
+ }
+ async function syncNow(){
+   msg('Running one sync cycle\\u2026');
+   try{const r=await fetch('/api/ldap/sync_now',{method:'POST'});const j=await r.json();
+     if(!j.ok)throw new Error(j.error||'sync failed');
+     await load();
+     const rr=(j.settings&&j.settings.last_sync_result)||{};
+     msg((rr.dry_run?'Dry run complete (nothing changed). ':'Sync complete. ')
+       +(rr.seen||0)+' users in AD, '+(rr.created||0)+' created, '+(rr.role_set||0)+' roles set, '
+       +(rr.deprovisioned||0)+' deprovisioned, '+(rr.errors||0)+' errors.',(rr.errors?'err':'ok'));}
+   catch(e){msg('Sync failed: '+e.message,'err');}
  }
  async function load(){
    try{const r=await fetch('/api/ldap/status');const j=await r.json();
@@ -2208,6 +2274,9 @@ def ldap_settings_page(request: Request):
      setVal('enabled',String(s.enabled));portWarn();
      document.getElementById('pwset').innerHTML=s.bind_password_set?'<span class="badge on">set</span>':'<span class="badge warn">not set</span>';
      document.getElementById('maps').innerHTML='';(s.group_mappings||[]).forEach(m=>addMap(m.group_dn,m.org_role,m.grafana_admin));
+     setVal('sync_enabled',String(s.sync_enabled));setVal('sync_dry_run',String(s.sync_dry_run));
+     setVal('sync_deprovision',s.sync_deprovision||'none');setVal('grafana_url',s.grafana_url);
+     setVal('grafana_admin_user',s.grafana_admin_user);renderSync(s);
      document.getElementById('live').innerHTML=
        '<tr><th>LDAP in Grafana</th><td><span class="badge '+(l.ldap_enabled_in_ini?'on':'off')+'">'
        +(l.ldap_enabled_in_ini?'ACTIVE':'not active')+'</span>'
@@ -2223,7 +2292,7 @@ def ldap_settings_page(request: Request):
    msg('Saving\\u2026');
    try{const r=await fetch('/api/ldap/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
      const j=await r.json();if(!j.ok)throw new Error(j.error||'save failed');
-     setVal('bind_password','');await load();
+     setVal('bind_password','');setVal('grafana_token','');setVal('grafana_admin_password','');await load();
      if(alsoTest){await test();}else{msg('Saved. Use Test to verify, then Apply to activate.','ok');}}
    catch(e){msg('Save failed: '+e.message,'err');}
  }
@@ -2460,6 +2529,23 @@ async def api_ldap_test(request: Request):
         return JSONResponse({"ok": True, "result": result})
     except Exception as e:
         # bind/search failures are expected outcomes of a test — 200 with ok:false
+        return JSONResponse({"ok": False, "error": str(e)})
+
+
+@app.post("/api/ldap/sync_now")
+async def api_ldap_sync_now(request: Request):
+    """Run one AD->Grafana reconcile immediately, instead of waiting for the
+    scheduler. Same function the scheduled process calls, so dry-run and the
+    protected-account rules apply identically."""
+    try:
+        from utils.ldap_settings import sync_now
+        # LDAP paged search + a call per user to Grafana: seconds to minutes on a
+        # large directory. Off the event loop, exactly like /api/ldap/test.
+        settings = await asyncio.to_thread(sync_now)
+        db_write_log("ldap sync_now requested from the UI", "INFO", "api_ldap_sync_now", "")
+        return JSONResponse({"ok": True, "settings": settings})
+    except Exception as e:
+        db_write_log(f"ldap sync_now failed: {e}", "ERROR", "api_ldap_sync_now", "")
         return JSONResponse({"ok": False, "error": str(e)})
 
 
@@ -4342,6 +4428,26 @@ async def test_connection(
             resp.raise_for_status()
             version = resp.text.strip()
             return JSONResponse({"success": True, "message": f"Connected: ClickHouse {version[:80]}"})
+
+        elif dbVendor.lower() in ('mongodb', 'mongo'):
+            # service_name carries authSource here: Mongo users are scoped to the database
+            # they were created in (usually admin), and a wrong value fails as
+            # "Authentication failed" and gets mistaken for a bad password.
+            from processes.mongo_shim import connect_mongodb
+            client = connect_mongodb(ipAddress, None, user, password, port,
+                                     auth_source=service_name or None)
+            try:
+                try:
+                    version = str(client.server_info().get("version", ""))
+                except Exception:
+                    # buildInfo can be denied to a narrowly-scoped monitoring user;
+                    # a successful ping still proves the credentials work.
+                    client.admin.command("ping")
+                    version = ""
+            finally:
+                client.close()
+            msg = f"Connected: MongoDB {version}".strip() if version else "Connected: MongoDB"
+            return JSONResponse({"success": True, "message": msg[:100]})
 
         else:
             return JSONResponse({"success": False, "message": f"Unsupported vendor: {dbVendor}"})

@@ -281,10 +281,14 @@ def collect_all_metrics_oracle_queries(username, password, server, port, service
                     metric_metadata_json = to_records_json(df)
                     comparison = _build_comparison(metric_metadata_json, query_row.get('expected'), step_params)
 
-                    # If the metric returned no rows, replace the empty '[]'
-                    # with a single all-null row showing the column shape.
-                    if df.empty and len(df.columns) > 0:
-                        metric_metadata_json = json.dumps([{c: None for c in df.columns.tolist()}])
+                    # A metric that returned no rows is stored as an empty [] - NOT as a
+                    # synthetic all-null row. Faking one row to "document the column shape"
+                    # made every empty result look like a result: the monitoring views shred
+                    # metric_metadata with jsonb_array_elements, so each empty sweep produced a
+                    # phantom all-null row. Seen live on SEC-SQL-ACC-011-RC02 against
+                    # 192.168.200.50 - 7 fake "active transactions", every column null.
+                    # Condition evaluation never saw the fake row: _build_comparison runs
+                    # ABOVE this point, on the real (empty) result.
 
                     insert_payloads = []
                     insert_payloads.append({
