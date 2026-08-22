@@ -9,6 +9,16 @@ from sqlalchemy.dialects.postgresql import insert
 from utils.config_dotenv import get_connection_string
 from utils.metric_json import to_records_json
 from utils.log4dbexpert import db_write_log
+
+# Security-agent annotation. Optional by construction: if the package is absent
+# or fails to import, the shim returns the metadata untouched so collection is
+# completely unaffected. annotate() itself never raises and never suppresses an
+# alert -- it only adds `reason` to the payload.
+try:
+    from security_agent.runner import annotate as _sec_annotate
+except Exception:  # pragma: no cover - agent is optional
+    def _sec_annotate(*, metadata=None, **_kw):
+        return metadata
 from utils.secrets_crypto import decrypt_secret
 try:
     from analysis.self_activity_filter import (
@@ -382,7 +392,17 @@ def collect_all_metrics_postgres_queries(pg_server, pg_port, pg_database, pg_use
                                     "server": server_key,
                                     "rc": query_row.get('root_cause_id') or metric_name,
                                     "risk": _risk_level,
-                                    "meta": json.dumps(comparison_data),
+                                    # postgres writes comparison_data (not the raw
+                                    # rows) as its alert metadata - annotate that.
+                                    "meta": json.dumps(_sec_annotate(
+                                        server=server_key,
+                                        root_cause_id=query_row.get('root_cause_id') or metric_name,
+                                        query_text=metric_query,
+                                        metadata=comparison_data,
+                                        metric_name=metric_name,
+                                        risk_level=_risk_level,
+                                        domain=query_row.get('domain_name'),
+                                    )),
                                     "login_name": next((r.get('login_name') for r in metric_metadata_json if isinstance(r, dict)), None) if isinstance(metric_metadata_json, list) else metric_metadata_json.get('login_name') if isinstance(metric_metadata_json, dict) else None,
                                 }
                             ).scalar()

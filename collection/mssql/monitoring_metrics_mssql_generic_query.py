@@ -690,10 +690,15 @@ union all
                     )
                 })
                 _bulk_insert(insert_payloads, pg_engine, mssql_server, mssql_port)
-                # Queue alerts separately
+                # Queue alerts separately.
+                # metric_metadata_json travels IN the tuple. It used to be read off
+                # the loop variable down in the alert loop, which runs after this
+                # loop has finished - so every queued alert was written with the
+                # LAST metric's metadata instead of its own.
                 comparison_data = json.loads(comparison)
                 if comparison_data.get("matched") is True:
-                    alert_queue.append((metric_name, metric_query, query_row, comparison_data))
+                    alert_queue.append((metric_name, metric_query, query_row,
+                                        comparison_data, metric_metadata_json))
                     #manage_diagnosys_alerts(query_row.get('root_cause_id') or metric_name, metric_query, comparison, mssql_server, metric_metadata_json, _server_id=server_id)
 
                 print(f"✅ Metric '{metric_name}' collected.")
@@ -708,8 +713,36 @@ union all
                 _bulk_insert(insert_payloads, pg_engine, mssql_server, mssql_port)
             db_write_log("✅ All metrics inserted successfully (bulk).", 0, "collect_all_metrics_mssql_queries", mssql_server, port=mssql_port)        
             # ========== 5. Send queued alerts (if authorised) ==========
-            for metric_name, metric_query, query_row, comparison_data in alert_queue:
+            for metric_name, metric_query, query_row, comparison_data, metric_metadata_json in alert_queue:
                 _risk_level = query_row.get('risk_level') or 'medium'
+
+                # ===== security-agent triage (annotate only, never suppresses) =====
+                # Ask the offline agent whether the captured query looks like a
+                # genuine security finding or one of this server's known
+                # application statements, grounded on what the server has actually
+                # been observed running (general_metric_metadata_results). The
+                # answer is written into the alert's metadata as `reason`.
+                # annotate() returns the original payload on every failure path,
+                # so this cannot lose or delay an alert beyond its own timeout.
+                _alert_meta = metric_metadata_json
+                try:
+                    from security_agent.runner import annotate as _sec_annotate
+                    _alert_meta = _sec_annotate(
+                        server=server_key,
+                        root_cause_id=query_row.get('root_cause_id') or metric_name,
+                        query_text=metric_query,
+                        metadata=metric_metadata_json,
+                        metric_name=metric_name,
+                        risk_level=_risk_level,
+                        domain=query_row.get('domain_name'),
+                        rule_name=query_row.get('root_cause_name'),
+                    )
+                except Exception as _sec_ex:
+                    db_write_log(f"security_agent skipped for '{metric_name}': {_sec_ex}",
+                                 0, "collect_all_metrics_mssql_queries", mssql_server,
+                                 port=mssql_port)
+                # ===== end security-agent triage =====
+
                 # ===== add to alerts.alert_log =====
                 alert_row_id = None
                 try:
@@ -736,7 +769,7 @@ union all
                                 "server": server_key,
                                 "rc": query_row.get('root_cause_id') or metric_name,
                                 "risk": _risk_level,
-                                "meta": json.dumps(metric_metadata_json),
+                                "meta": json.dumps(_alert_meta),
                                 "login_name": next((r.get('login_name') for r in metric_metadata_json if isinstance(r, dict)), None) if isinstance(metric_metadata_json, list) else metric_metadata_json.get('login_name') if isinstance(metric_metadata_json, dict) else None,
                             }
                         ).scalar()

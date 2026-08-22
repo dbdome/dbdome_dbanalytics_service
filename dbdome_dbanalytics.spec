@@ -122,6 +122,13 @@ a = Analysis(
         ('icons', 'icons'),
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
+        # security_agent/rules.json is DATA, not code: PyInstaller compiles .py
+        # into the PYZ archive but would leave this out entirely, and rules.py
+        # would then silently fall back to its minimal built-in rule set -- the
+        # operator-editable rules would appear to work and do nothing. Shipping
+        # it into _internal/security_agent/ also makes it editable on the
+        # installed box, which is the point of having it in a file.
+        ('security_agent/rules.json', 'security_agent'),
         ('.env', '.'),
     ] + VERSION_STAMP + META_DATAS + PYTZ_DATAS,
     hiddenimports=[
@@ -214,6 +221,13 @@ a_svc = Analysis(
         ('icons', 'icons'),
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
+        # security_agent/rules.json is DATA, not code: PyInstaller compiles .py
+        # into the PYZ archive but would leave this out entirely, and rules.py
+        # would then silently fall back to its minimal built-in rule set -- the
+        # operator-editable rules would appear to work and do nothing. Shipping
+        # it into _internal/security_agent/ also makes it editable on the
+        # installed box, which is the point of having it in a file.
+        ('security_agent/rules.json', 'security_agent'),
         ('.env', '.'),
     ] + VERSION_STAMP + META_DATAS + PYTZ_DATAS,
     hiddenimports=[

@@ -49,3 +49,8 @@ dist_rd/
 build_rd/
 build_tester/
 *.log.err
+
+# security-agent sidecar build output (PyInstaller, ~85 MB)
+dist_secagent/
+build_secagent/
+
