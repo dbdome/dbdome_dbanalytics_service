@@ -138,6 +138,13 @@ def annotate(*, server, root_cause_id, query_text, metadata, metric_name=None,
     call site that can actually skip the insert -- so we warn rather than
     silently ignoring the setting.
     """
+    # Async by default: return immediately and let run_annotation_sweep() do the
+    # triage a few seconds later. Inline, every alert waited 20-135s for a model
+    # on CPU before it was dispatched - a latency cost paid by the alert path
+    # itself, which is the wrong thing to slow down.
+    if not config.annotate_inline():
+        return metadata
+
     if config.is_enabled() and config.suppression_enabled():
         db_write_log(
             "security_agent: SECURITY_AGENT_SUPPRESS is on but this call site is "
@@ -192,6 +199,120 @@ def review_alert(*, alert_row_id, server, root_cause_id, query_text,
                 conn.close()
             except Exception:
                 pass
+
+
+def run_annotation_sweep(server: str = None):
+    """Scheduler entry point: annotate alerts that were raised untriaged.
+
+    This is where triage happens now. The collector writes the alert and moves
+    on; this sweep picks up anything without a security_agent block and adds the
+    verdict a few seconds later. Alert dispatch is never delayed by a model.
+
+    Registered in metrics.registered_processes by sql_scripts/7640 so the
+    scheduler calls it on an interval. Returns the number annotated.
+
+    Bounded on purpose: annotate_batch_size() alerts per run, so a backlog
+    drains over several sweeps rather than one run holding the model for an
+    hour while everything else waits.
+    """
+    if not config.is_enabled():
+        return 0
+
+    conn = None
+    done = 0
+    try:
+        conn = _connect()
+
+        # Warm the model before the first classification rather than making the
+        # first alert of the sweep pay a ~62s load inside its own budget.
+        if config.warm_on_start():
+            try:
+                from security_agent import llm
+                if llm.available() and not llm.is_loaded():
+                    llm.warm()
+            except Exception as e:
+                db_write_log(f"security_agent: warm-up skipped ({e})", 0,
+                             "security_agent.runner", server or "")
+
+        with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = '60s'")
+            # metadata is jsonb but frequently a double-encoded string scalar, so
+            # `metadata ? 'security_agent'` alone misses those rows. Normalise
+            # first - the same reason monitoring.fn_metadata_object exists.
+            cur.execute(
+                """
+                SELECT a.row_id, a.entry_date, a.server, a.root_cause_id, a.risk_level
+                FROM alerts.alert_log a
+                WHERE a.entry_date > LOCALTIMESTAMP - make_interval(mins => %s)
+                  AND (%s IS NULL OR a.server = %s)
+                  AND NOT (monitoring.fn_metadata_object(a.metadata) ? 'security_agent')
+                ORDER BY a.entry_date DESC
+                LIMIT %s
+                """,
+                (config.annotate_lookback_minutes(), server, server,
+                 config.annotate_batch_size()),
+            )
+            pending = cur.fetchall()
+
+        for row_id, entry_date, srv, rc_id, risk in pending:
+            try:
+                # The query to judge is the alert's own captured statement.
+                q = _query_for_alert(conn, row_id, entry_date)
+                v = agent.classify(conn, {
+                    "server": srv, "query": q, "root_cause_id": rc_id,
+                    "metric_name": None, "risk_level": risk,
+                })
+                persist.record_verdict(
+                    conn, server=srv, root_cause_id=rc_id, metric_name=None,
+                    query_text=q, verdict=v, alert_row_id=row_id, raised=True)
+                if persist.annotate_alert_log(conn, row_id, entry_date, v):
+                    done += 1
+            except Exception as e:      # one bad alert must not kill the sweep
+                db_write_log(f"security_agent sweep: alert {row_id} failed: {e}",
+                             0, "security_agent.runner", srv or "")
+
+        if pending:
+            db_write_log(
+                f"security_agent sweep: annotated {done}/{len(pending)} alerts",
+                0, "security_agent.runner", server or "")
+    except Exception as e:
+        db_write_log(f"security_agent sweep failed: {e}", 0,
+                     "security_agent.runner", server or "")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    return done
+
+
+def _query_for_alert(conn, row_id, entry_date):
+    """Best-effort statement text for one alert, from its own payload."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = '20s'")
+            cur.execute(
+                """
+                SELECT string_agg(t.v #>> '{}', ' ')
+                FROM alerts.alert_log a
+                CROSS JOIN LATERAL (SELECT monitoring.fn_metadata_object(a.metadata)) md(o)
+                CROSS JOIN LATERAL jsonb_each(
+                    CASE WHEN jsonb_typeof(md.o -> 'sample_rows') = 'array'
+                          AND jsonb_array_length(md.o -> 'sample_rows') > 0
+                         THEN md.o #> '{sample_rows,0}'
+                         ELSE md.o
+                    END) AS t(k, v)
+                WHERE a.row_id = %s AND a.entry_date = %s
+                  AND lower(t.k) IN ('query_text','query','sql_text','statement',
+                                     'command_text','batch_text')
+                """,
+                (row_id, entry_date),
+            )
+            r = cur.fetchone()
+        return (r[0] or "") if r else ""
+    except Exception:
+        return ""
 
 
 def selftest(server=None, query=None):

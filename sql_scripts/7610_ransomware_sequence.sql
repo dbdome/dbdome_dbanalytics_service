@@ -206,19 +206,34 @@ COMMENT ON FUNCTION alerts.fn_ransomware_sequences(int, text) IS
 -- 5) Register the root cause so the finding is a first-class product object.
 --    SEC / SQL / ACC matches the existing anomalous-activity family.
 -- ----------------------------------------------------------------------------
+-- Only columns that have existed since the schema was created are named here.
+-- category_id is omitted for the same reason as is_informational below: naming
+-- a column that a given install has not yet acquired aborts the statement, and
+-- psql then carries on so the failure surfaces later as a confusing "root cause
+-- was not created". Both are nullable/defaulted where they exist.
 INSERT INTO rootcause.issues (issue_id, domain_code, database_type_code, area_code,
-                              name, slug, description, category_id)
+                              name, slug, description)
 SELECT 'SEC-SQL-ACC-040', 'SEC', 'SQL', 'ACC',
        'Ransomware-Pattern Activity',
        'ransomware-pattern-activity',
        'A single login performed several DIFFERENT destructive operations in '
        'quick succession - the behavioural signature of ransomware or a '
-       'destructive insider action, which no individual statement reveals.',
-       'c040'
+       'destructive insider action, which no individual statement reveals.'
 WHERE NOT EXISTS (SELECT 1 FROM rootcause.issues WHERE issue_id = 'SEC-SQL-ACC-040');
 
+-- is_informational is deliberately NOT listed.
+--
+-- It exists on some installs and not others (it arrives with a later migration),
+-- and naming it made this INSERT fail outright on an install that predates it:
+--   ERROR: column "is_informational" of relation "root_causes" does not exist
+-- Seen on a 2026-08-22 update run. psql continues past the error, so the script
+-- reported exit 0 while the root cause was never created and the verification
+-- block below then failed with a confusing second error.
+--
+-- Omitting it is correct rather than merely defensive: where the column exists
+-- it defaults to false, which is the value this root cause wants anyway.
 INSERT INTO rootcause.root_causes (root_cause_id, issue_id, name, slug, description,
-                                   topics, vendors_applicable, is_informational)
+                                   topics, vendors_applicable)
 SELECT 'SEC-SQL-ACC-040-RC01', 'SEC-SQL-ACC-040',
        'Destructive operation chain by a single login',
        'destructive-operation-chain',
@@ -229,8 +244,7 @@ SELECT 'SEC-SQL-ACC-040-RC01', 'SEC-SQL-ACC-040',
        'they are the ransomware signature. Scheduled archive and maintenance '
        'jobs produce a similar shape, which is what the security agent triages.',
        ARRAY['ransomware','destructive','insider','sequence'],
-       ARRAY['sqlserver','oracle','postgresql','mysql','mariadb'],
-       false
+       ARRAY['sqlserver','oracle','postgresql','mysql','mariadb']
 WHERE NOT EXISTS (SELECT 1 FROM rootcause.root_causes
                    WHERE root_cause_id = 'SEC-SQL-ACC-040-RC01');
 

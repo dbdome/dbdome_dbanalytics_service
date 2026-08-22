@@ -132,6 +132,80 @@ def _metric_metadata_table_html(meta, max_rows=100):
     )
 
 
+def _security_agent_html(v):
+    """Render the security agent's verdict as a block for the alert mail.
+
+    Returns '' when there is no verdict, so an untriaged alert's mail is
+    unchanged from what it was before the agent existed.
+
+    The verdict is shown WITH its provenance on purpose. decided_by says whether
+    a model actually judged this or whether the agent failed open, and the
+    precedent counts say what the judgement rested on. A bare verdict reads as
+    more authoritative than it is - the wrong impression for a small local model
+    triaging a security alert, and dangerous if someone acts on it.
+    """
+    if not v or not v.get("verdict"):
+        return ""
+
+    verdict = str(v.get("verdict"))
+    is_alert = verdict.upper() != "KNOWN_QUERY"
+    colour = "#e74c3c" if is_alert else "#27ae60"
+    label = "SECURITY ALERT" if is_alert else "KNOWN QUERY"
+
+    # Anything other than 'model' means the verdict was deterministic, usually a
+    # fail-open. Say so plainly rather than letting it pass as considered judgement.
+    decided_by = str(v.get("decided_by") or "")
+    caveat = ""
+    if decided_by and decided_by != "model":
+        caveat = {
+            "timeout": "the model exceeded its time budget, so this alert was raised without triage",
+            "model_unavailable": "no model was reachable, so this alert was raised without triage",
+            "generation_error": "the model failed, so this alert was raised without triage",
+            "privileged_shape": "privileged statement class - alerted without model triage",
+            "low_confidence_override": "the model was not confident enough to stay quiet",
+            "no_query": "no query text was available to triage",
+        }.get(decided_by, f"decided by: {decided_by}")
+
+    def row(k, val):
+        if val in (None, "", []):
+            return ""
+        return (f'<tr><td style="padding:6px 8px;color:#555;white-space:nowrap;'
+                f'vertical-align:top;">{html.escape(k)}</td>'
+                f'<td style="padding:6px 8px;">{html.escape(str(val))}</td></tr>')
+
+    conf = v.get("confidence")
+    try:
+        conf_txt = f"{float(conf):.2f}" if conf is not None else ""
+    except (TypeError, ValueError):
+        conf_txt = ""
+
+    prec = (f"{v.get('exact_matches') or 0} identical of "
+            f"{v.get('candidates_searched') or 0} prior calls examined; "
+            f"{v.get('distinct_shapes') or 0} distinct statements seen on this server")
+
+    conf_span = (f'<span style="color:#777;font-size:13px;"> &nbsp;confidence {conf_txt}</span>'
+                 if conf_txt else '')
+    caveat_div = (f'<div style="color:#b9770e;font-size:12px;margin-top:4px;">'
+                  f'&#9888; {html.escape(caveat)}</div>' if caveat else '')
+
+    return f"""
+    <h3 style="margin-top:20px;">Security Agent Verdict</h3>
+    <div style="border-left:4px solid {colour}; background:#fafafa; padding:12px 14px;
+                border-radius:4px;">
+      <div style="font-size:15px;"><b style="color:{colour};">{label}</b>{conf_span}</div>
+      {caveat_div}
+      <div style="margin-top:8px;font-size:13px;line-height:1.5;">
+        {html.escape(str(v.get('reason') or ''))}</div>
+      <table style="border-collapse:collapse;margin-top:10px;font-size:12px;">
+        {row('Indicators', v.get('indicators'))}
+        {row('Precedent', prec)}
+        {row('Model', v.get('model'))}
+        {row('Triage time', f"{v.get('elapsed_ms')} ms" if v.get('elapsed_ms') is not None else '')}
+      </table>
+    </div>
+    """
+
+
 def send_mail_alert_no_attachment(
                         server                  ,
                         domain_name             ,
@@ -295,6 +369,17 @@ def send_mail_alert_no_attachment(
     # Comparison block removed: show the alert's detection rows as a table
     # instead. expected / comparison_data are no longer rendered.
     metadata_html = _metric_metadata_table_html(display_results)
+
+    # Security-agent verdict. Renders nothing when the alert was not triaged -
+    # the agent may be off or unavailable, or the install may predate it - so
+    # those mails are unchanged rather than carrying an empty section.
+    security_agent_html = ""
+    try:
+        from utils.alert_resultset import fetch_security_agent_verdict
+        security_agent_html = _security_agent_html(fetch_security_agent_verdict(alert_id))
+    except Exception as sa_ex:
+        db_write_log(f"security agent block skipped: {sa_ex}", 0,
+                     "send_mail_alert_no_attachment", server)
 
 
     login_suffix = f", login: {login_name}" if login_name else ""

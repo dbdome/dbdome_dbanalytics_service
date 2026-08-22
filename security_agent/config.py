@@ -191,10 +191,63 @@ def ollama_model() -> str:
 def ollama_keep_alive() -> str:
     """How long Ollama keeps the model resident between alerts.
 
-    A cold load is ~60s here. Keeping it resident is the difference between a
-    60s first alert and a 120s one, so default well above the alert interval.
+    Was 30m; raised to 24h after production measurement. Alerts arrive in
+    bursts with long gaps, so a 30m window let the model unload between them
+    and every burst paid the ~62s load again: 11 timeouts averaging 135s
+    against 20.8s warm in isolation. Residency is the single biggest lever on
+    this latency.
+
+    '-1' keeps it loaded indefinitely. That costs ~3.6GB of RAM permanently,
+    which is the trade to make deliberately rather than by default.
     """
-    return _env("SECURITY_AGENT_OLLAMA_KEEP_ALIVE", "30m")
+    return _env("SECURITY_AGENT_OLLAMA_KEEP_ALIVE", "24h")
+
+
+def warm_on_start() -> bool:
+    """Load the model before the first alert needs it.
+
+    Without this the first classification after every service restart pays the
+    cold load (~62s) on top of generation, which alone exceeded the budget and
+    failed open for no reason but start-up cost.
+    """
+    return _flag("SECURITY_AGENT_WARM_ON_START", "true")
+
+
+# ---------------------------------------------------------------- where triage runs
+def annotate_inline() -> bool:
+    """Triage inside the collector's alert path (True) or afterwards (False).
+
+    DEFAULT FALSE, and this is the important one.
+
+    Inline, every alert waits for a model on CPU - 20-30s at best, 135s
+    observed in production - and that delay lands between the detection firing
+    and the alert being dispatched. Nothing is lost (the agent fails open) but
+    alerting gets slower, which is the opposite of what a security product
+    should trade away.
+
+    Off, the collector writes the alert immediately and a scheduled sweep
+    annotates it seconds later with the same verdict. Latency stops being
+    something to tune and becomes irrelevant.
+
+    Set true only where alert dispatch must already carry the reason - e.g. a
+    mail that must not go out unannotated.
+    """
+    return _flag("SECURITY_AGENT_ANNOTATE_INLINE", "false")
+
+
+def annotate_lookback_minutes() -> int:
+    """How far back the annotation sweep looks for untriaged alerts."""
+    return int(_env("SECURITY_AGENT_ANNOTATE_LOOKBACK_MIN", "120"))
+
+
+def annotate_batch_size() -> int:
+    """Cap on alerts annotated per sweep.
+
+    At ~25s each this bounds one sweep to about ten minutes of work, so a
+    backlog drains over several sweeps instead of one run monopolising the
+    model and starving everything else.
+    """
+    return int(_env("SECURITY_AGENT_ANNOTATE_BATCH", "25"))
 
 
 # ---------------------------------------------------------------- model

@@ -60,7 +60,22 @@ def merge_reason(metadata, verdict: dict):
             return {"sample_rows": metadata, REASON_KEY: reason, AGENT_KEY: block}
         if metadata is None:
             return {REASON_KEY: reason, AGENT_KEY: block}
-        # Scalar / string payload: keep it verbatim alongside the reason.
+        if isinstance(metadata, str):
+            # Several collectors hand us a JSON *string* rather than a parsed
+            # object -- the mssql one passes _sanitize_json(to_records_json(df)).
+            # Wrapping that verbatim produced
+            #     {"value": "[{\"session_id\":null,...}]", "reason": ...}
+            # i.e. the captured rows stringified inside a wrapper, which changed
+            # the metadata shape for exactly the alerts the agent annotates and
+            # made them render as one unreadable cell. Parse first, then merge
+            # into the real payload.
+            try:
+                parsed = json.loads(metadata)
+            except Exception:
+                parsed = None
+            if parsed is not None and isinstance(parsed, (dict, list)):
+                return merge_reason(parsed, verdict)
+        # Genuine scalar: keep it verbatim alongside the reason.
         return {"value": metadata, REASON_KEY: reason, AGENT_KEY: block}
     except Exception:
         # Whatever happens, the alert must still be insertable.

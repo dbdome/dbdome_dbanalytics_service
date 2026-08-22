@@ -45,3 +45,45 @@ def fetch_alert_resultset(alert_id, max_rows=100):
         db_write_log(f"fetch_alert_resultset({alert_id}) failed: {e}", 0,
                      "fetch_alert_resultset", "")
         return []
+
+
+def fetch_security_agent_verdict(alert_id):
+    """The security agent's verdict for alerts.alert_log.row_id `alert_id`.
+
+    Returns a dict of the columns monitoring.get_security_agent_byid() exposes,
+    or None when the alert was never triaged, the function is absent (the
+    install predates sql_scripts/7630), or the lookup fails.
+
+    Never raises: a mail must still go out if the verdict cannot be read. The
+    agent is an annotation on the alert, not the alert itself.
+    """
+    if not alert_id:
+        return None
+    try:
+        conn = psycopg2.connect(get_connection_string())
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT verdict, confidence, decided_by, reason, indicators, "
+                "       matched_precedent, exact_matches, distinct_shapes, "
+                "       candidates_searched, retrieval_method, model, "
+                "       elapsed_ms, triaged "
+                "FROM monitoring.get_security_agent_byid(%s)",
+                (int(alert_id),),
+            )
+            row = cur.fetchone()
+            cols = [d[0] for d in cur.description]
+            cur.close()
+        finally:
+            conn.close()
+        if not row:
+            return None
+        v = dict(zip(cols, row))
+        # triaged=False means the alert predates the agent, or it was disabled
+        # or unavailable - there is nothing to show, which is different from a
+        # verdict of "nothing found".
+        return v if v.get("triaged") else None
+    except Exception as e:
+        db_write_log(f"fetch_security_agent_verdict({alert_id}) failed: {e}", 0,
+                     "fetch_security_agent_verdict", "")
+        return None
