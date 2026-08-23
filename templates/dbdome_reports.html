@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports - dbdome</title>
+  <link rel="stylesheet" href="/static/css/dbdome_console.css">
+  <style>
+    .console.wide { max-width: 1400px; }
+    .console.wide .console-content { max-width: none; }
+    .mono { font-family: monospace; font-size: 11.5px; }
+    .scroll-x { overflow-x: auto; }
+    .act { display: flex; gap: 8px; justify-content: flex-end; white-space: nowrap; }
+    .act a {
+      font-size: 11.5px; padding: 3px 9px; border-radius: var(--radius);
+      border: 1px solid var(--border); color: var(--text-secondary); text-decoration: none;
+    }
+    .act a:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .cat-count { font-size: 11.5px; color: var(--text-secondary); font-weight: 400; margin-left: 8px; }
+    .kind { font-size: 10.5px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">dbdome</div>
+  </header>
+
+  <main class="console wide">
+    <h1>Reports</h1>
+    <p class="subtitle">Compliance, alert and activity reporting</p>
+
+    <div class="console-layout">
+      <nav class="rail" aria-label="Sections">
+        <a href="/dbdome">Overview</a>
+        <a href="/dbdome/alerts">Alerts</a>
+        <a href="/dbdome/reports" aria-current="page">Reports</a>
+        <a href="/dbdome/config">Configuration</a>
+        <a href="/dbdome/settings">Settings</a>
+
+        <div class="rail-heading">On this page</div>
+        <a href="#s-tools">Report tools</a>
+        <a href="#s-catalogue">Catalogue</a>
+      </nav>
+
+      <div class="console-content">
+
+        <div class="card" id="s-tools">
+          <h2>Report tools</h2>
+          <p class="card-hint">
+            The pages that generate, schedule and edit reports. Scheduled SQL
+            reports must be parameter-free, and are delivered as PDF and CSV.
+          </p>
+          <div class="tiles" id="tools"></div>
+        </div>
+
+        <div class="card" id="s-catalogue">
+          <h2>Catalogue <span class="cat-count" id="total"></span></h2>
+          <p class="card-hint">
+            Every configured report, grouped by kind. <strong>Generate</strong> opens
+            the send-by-mail form, <strong>Download</strong> produces the file, and
+            <strong>Capture</strong> renders the dashboard view behind it.
+          </p>
+          <div class="row" style="border:none;padding-top:0">
+            <span class="label">
+              <label style="cursor:pointer">
+                <input type="checkbox" id="show-all"> Include inactive reports
+              </label>
+            </span>
+            <span class="value"><button class="btn btn-secondary" id="refresh">Refresh</button></span>
+          </div>
+          <div id="catalogue"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+<script>
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// Built from the browser's hostname, not a baked-in global_ip - see the note in
+// dbdome_config.html.
+function app(p)  { return `https://${window.location.hostname}:8080${p}`; }
+function graf(p) { return `${window.location.protocol}//${window.location.hostname}:3000${p}`; }
+
+const TOOLS = [
+  { t: 'GRC Compliance Reports', p: '/grc/compliance-reports',
+    d: 'Generate and download the regulation packs (PCI-DSS, HIPAA, GDPR, SOC2 and the India set), and see what has already been produced' },
+  { t: 'DAM Compliance Report', p: '/dam_report',
+    d: 'Database activity monitoring compliance report' },
+  { t: 'Report Scheduling', p: '/report_schedule',
+    d: 'When each report runs and who receives it' },
+  { t: 'Report Definitions', p: '/reports?sender=/d/adnz9dq/configuration',
+    d: 'Edit the report JSON definitions' },
+  { t: 'Evidence Packages', p: '/grc/evidence-packages',
+    d: 'Audit evidence bundles with SHA-256 hashes',
+    warn: 'Needs sql_scripts/7650 applied - the table does not exist on older installs' },
+];
+
+document.getElementById('tools').innerHTML = TOOLS.map(it => `
+  <a class="tile" href="${esc(app(it.p))}" target="_blank" rel="noopener">
+    <span class="tile-body">
+      <span class="tile-title">${esc(it.t)}</span>
+      <span class="tile-desc">${esc(it.d)}${
+        it.warn ? ` &middot; <span style="color:var(--orange)">${esc(it.warn)}</span>` : ''}</span>
+    </span>
+    <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+  </a>`).join('');
+
+async function loadCatalogue() {
+  const el = document.getElementById('catalogue');
+  el.innerHTML = '<div class="empty">Loading&hellip;</div>';
+  const all = document.getElementById('show-all').checked;
+  try {
+    const r = await fetch(`/api/console/reports?active_only=${all ? 'false' : 'true'}`);
+    const j = await r.json();
+    if (!r.ok) { el.innerHTML = `<div class="empty">${esc(j.detail || 'failed')}</div>`; return; }
+    document.getElementById('total').textContent = `${j.total} report${j.total === 1 ? '' : 's'}`;
+    const groups = j.groups || [];
+    if (!groups.length) { el.innerHTML = '<div class="empty">No reports configured.</div>'; return; }
+    el.innerHTML = groups.map(g => `
+      <div style="margin-bottom:22px">
+        <div class="rail-heading" style="padding:0 0 6px">
+          ${esc(g.category)}<span class="cat-count">${g.reports.length}</span>
+        </div>
+        <div class="scroll-x">
+        <table class="grid">
+          <thead><tr><th>Report</th><th style="width:88px">Type</th>
+                     <th style="width:70px">Active</th><th></th></tr></thead>
+          <tbody>${g.reports.map(rep => {
+            const n = encodeURIComponent(rep.report_name);
+            return `<tr>
+              <td>${esc(rep.report_name)}</td>
+              <td><span class="pill kind ${rep.kind === 'template' ? 'editor' : 'viewer'}">${esc(rep.kind)}</span></td>
+              <td>${rep.is_active ? '<span class="on" style="color:var(--green-text)">yes</span>'
+                                  : '<span class="empty">no</span>'}</td>
+              <td><div class="act">
+                <a href="${esc(app('/generate_report/' + n))}" target="_blank" rel="noopener">Generate</a>
+                <a href="${esc(app('/download_report/' + n))}" target="_blank" rel="noopener">Download</a>
+                <a href="${esc(app('/capture_report/' + n))}" target="_blank" rel="noopener">Capture</a>
+              </div></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load the catalogue: ${esc(e.message)}</div>`;
+  }
+}
+
+document.getElementById('refresh').addEventListener('click', loadCatalogue);
+document.getElementById('show-all').addEventListener('change', loadCatalogue);
+loadCatalogue();
+</script>
+</body>
+</html>

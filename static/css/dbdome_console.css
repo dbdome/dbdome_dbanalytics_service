@@ -1,0 +1,248 @@
+/* =========================================================================
+   dbdome console -- main page and settings
+
+   Layout is modelled on the dbdiagnostics SettingsPage: a vertical section
+   rail on the left, a single column of cards on the right, capped narrow so
+   rows stay readable. Colours come from dbdome-theme.css rather than being
+   redefined here, so the console matches every other dbdome page and the
+   Grafana dashboards it links into.
+   ========================================================================= */
+
+@import url("dbdome-theme.css");
+
+.console {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.console h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-emphasis);
+  margin-bottom: 4px;
+}
+
+.console .subtitle {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 28px;
+}
+
+/* ------------------------------------------------------------ two columns */
+.console-layout { display: flex; gap: 36px; align-items: flex-start; }
+
+.rail {
+  width: 184px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.rail a:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+.rail a[aria-current="page"] {
+  background: var(--bg-secondary);
+  border-color: var(--border);
+  color: var(--text-emphasis);
+  font-weight: 500;
+}
+
+.rail .rail-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding: 14px 12px 6px;
+}
+
+.console-content { flex: 1; min-width: 0; max-width: 720px; }
+
+/* ------------------------------------------------------------------ cards */
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.card h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-emphasis);
+  margin-bottom: 4px;
+}
+
+.card .card-hint {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+  line-height: 1.55;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 0;
+  font-size: 13px;
+}
+
+.row + .row { border-top: 1px solid var(--border); }
+.row .label { color: var(--text-secondary); }
+.row .value { color: var(--text-primary); font-weight: 500; }
+
+/* ------------------------------------------- destination tiles (main page) */
+/* Each menu item renders as a settings-style link row: title, one line of
+   explanation, and a chevron. Deliberately NOT a grid of big tiles -- the
+   list reads faster and matches the settings rail it sits beside. */
+.tiles { display: flex; flex-direction: column; }
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 4px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--border);
+  transition: background 120ms ease;
+}
+
+.tiles .tile:last-child { border-bottom: none; }
+.tile:hover { background: var(--bg-hover); }
+
+.tile-icon {
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.tile-body { flex: 1; min-width: 0; }
+.tile-title { font-size: 13.5px; font-weight: 500; color: var(--text-emphasis); }
+.tile-desc  { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5; }
+.tile-go    { color: var(--text-secondary); font-size: 16px; flex-shrink: 0; }
+.tile:hover .tile-go { color: var(--blue); }
+
+/* ------------------------------------------------------------------ forms */
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.field input:focus,
+.field select:focus { outline: none; border-color: var(--blue); }
+
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+
+.btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 500;
+  color: #fff;
+  background: var(--blue-base);
+  border: 1px solid var(--blue-base);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.btn:hover { filter: brightness(1.12); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.btn-secondary:hover { background: var(--bg-hover); filter: none; }
+
+.btn-danger { background: transparent; color: var(--red-text); border-color: var(--border); }
+.btn-danger:hover { background: rgba(209, 14, 92, 0.12); filter: none; }
+
+.actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+
+/* ------------------------------------------------------------------ table */
+table.grid { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.grid th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.grid td { padding: 8px; border-bottom: 1px solid var(--border); }
+table.grid tr:last-child td { border-bottom: none; }
+table.grid tr:hover td { background: var(--bg-hover); }
+
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.pill.admin  { color: var(--yellow);    border-color: var(--yellow); }
+.pill.editor { color: var(--blue);      border-color: var(--blue); }
+.pill.viewer { color: var(--text-secondary); }
+.pill.pending { color: var(--orange);   border-color: var(--orange); }
+
+/* ------------------------------------------------------------- feedback */
+.notice {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  margin-bottom: 14px;
+  display: none;
+}
+.notice.show { display: block; }
+.notice.ok   { background: rgba(26, 127, 75, 0.15);  color: var(--green-text); border: 1px solid var(--green); }
+.notice.err  { background: rgba(209, 14, 92, 0.12);  color: var(--red-text);   border: 1px solid var(--red); }
+.notice.warn { background: rgba(235, 123, 24, 0.12); color: var(--orange);     border: 1px solid var(--orange); }
+
+.empty { color: var(--text-secondary); font-size: 12.5px; padding: 14px 4px; }
+
+@media (max-width: 860px) {
+  .console-layout { flex-direction: column; gap: 20px; }
+  .rail { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .rail .rail-heading { display: none; }
+  .console-content { max-width: 100%; }
+}

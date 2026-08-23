@@ -54,7 +54,18 @@ _SYSTEM_BASE = (
     "statement itself. Observed live: a verdict was justified with 'matches the "
     "precedent of normal application traffic' when the precedent count was "
     "zero, which would mislead the reviewer reading the alert.\n"
-    "(5) Return STRICT JSON only, no prose outside the JSON."
+    "(5) CORRELATION AND HISTORY, when given, is your second evidence arm. A "
+    "finding that arrives inside an unusual cluster of other findings on the "
+    "same host, or that is the first time this rule has ever fired here, or "
+    "that fires at an hour this rule never fires, is CORROBORATED and should "
+    "lean SECURITY_ALERT. A rule that has fired hundreds of times here across "
+    "many days is background: it is weak evidence on its own, so judge it on "
+    "the statement itself rather than on the fact that it fired.\n"
+    "(5a) Absence of correlation evidence is NOT evidence of innocence. If a "
+    "baseline was unavailable, or no login was attributed, say only that it "
+    "could not be assessed. Never treat a missing login as suspicious and never "
+    "treat an unassessable cluster as isolated.\n"
+    "(6) Return STRICT JSON only, no prose outside the JSON."
 )
 
 
@@ -118,9 +129,116 @@ def _clip(s, n):
     return s if len(s) <= n else s[:n] + "\n...[truncated]..."
 
 
-def build_user_prompt(candidate: dict, precedent: dict) -> str:
+_FLAG_MEANING = {
+    "first_occurrence_on_this_server":
+        "this rule has NEVER fired on this server before -- strong novelty",
+    "rare_on_this_server":
+        "this rule has fired only a handful of times here",
+    "routine_on_this_server":
+        "this rule fires here constantly; it is background noise unless the "
+        "statement itself is bad",
+    "burst_vs_own_history":
+        "firing far more in the last 24h than its own daily average -- a spike",
+    "clustered_with_other_findings":
+        "arrived alongside unusually many other findings on this host -- "
+        "corroborated",
+    "isolated_finding":
+        "arrived alone while this host is normally noisier -- weaker on its own",
+    "unusual_hour_for_this_rule":
+        "this rule almost never fires at this hour on this server",
+    "first_time_this_login_tripped_this_rule":
+        "this login has not tripped this rule here before",
+    "login_not_attributed":
+        "the alert carries no login, so nothing can be concluded about WHO did "
+        "this -- do not treat this as suspicious",
+    "co_occurrence_baseline_unavailable":
+        "no baseline for this host, so clustering could NOT be assessed -- this "
+        "is not evidence that the finding is isolated",
+    "no_history_for_rule_in_window":
+        "no prior firings of this rule on this server inside the history "
+        "window, so novelty could not be assessed from history",
+}
+
+
+def _correlation_block(corr: dict) -> str:
+    """Render the corroboration / novelty evidence for the model.
+
+    Counts are given WITH their baseline, never alone: on this data a one-hour
+    window on one server contained 1,488 distinct root causes, so a bare count
+    tells the model nothing about whether a cluster is unusual.
+    """
+    if not corr or not corr.get("enabled"):
+        return ""
+    lines = ["\n--- CORRELATED FINDINGS AND HISTORY ---"]
+
+    c = corr.get("concurrent") or {}
+    if c:
+        win = c.get("window_minutes")
+        lines.append(
+            f"Other findings on this server within +/-{win} min: "
+            f"{c.get('distinct_root_causes', 0)} distinct rules "
+            f"({c.get('alerts', 0)} alerts)."
+        )
+        base = c.get("baseline_distinct_per_window")
+        ratio = c.get("ratio_vs_baseline")
+        if base is not None:
+            lines.append(
+                f"This server normally shows {base} distinct rules per comparable "
+                f"window" + (f" -- so this is {ratio}x normal." if ratio is not None else ".")
+            )
+        else:
+            lines.append("No baseline is available for this server, so whether "
+                         "that is unusual could NOT be determined.")
+        for t in (c.get("top") or [])[:6]:
+            lines.append(f"  co-occurring: {t.get('root_cause_id')} "
+                         f"x{t.get('n')}"
+                         + (f" [{t.get('risk_level')}]" if t.get("risk_level") else ""))
+
+    h = corr.get("history") or {}
+    rs = h.get("rule_on_server") or {}
+    if rs.get("total") is not None:
+        lines.append(
+            f"This rule on this server: {rs.get('total', 0)} firings across "
+            f"{rs.get('days_seen', 0)} days, {rs.get('last_24h', 0)} in the last 24h"
+            + (f", first seen {rs['first_seen']}" if rs.get("first_seen") else "")
+            + "."
+        )
+    fw = h.get("rule_fleetwide") or {}
+    if fw.get("total"):
+        lines.append(f"Fleet-wide: {fw.get('total')} firings across "
+                     f"{fw.get('servers')} server(s).")
+    tm = h.get("timing") or {}
+    if tm.get("total"):
+        lines.append(f"Hour-of-day: {tm.get('at_this_hour', 0)} of "
+                     f"{tm.get('total')} firings occurred at hour "
+                     f"{tm.get('hour_of_alert')}.")
+    lg = h.get("login") or {}
+    if lg.get("available"):
+        lines.append(
+            f"Login {lg.get('login_name')!r} on this server: "
+            f"{lg.get('total_for_login', 0)} alerts across "
+            f"{lg.get('distinct_rules', 0)} distinct rules, "
+            f"{lg.get('this_rule', 0)} of them this rule."
+        )
+    else:
+        lines.append("No login is attributed to this alert.")
+
+    flags = corr.get("flags") or []
+    if flags:
+        lines.append("Signals:")
+        for f in flags:
+            lines.append(f"  - {f}: {_FLAG_MEANING.get(f, '')}")
+
+    if corr.get("error") or (c.get("error") or h.get("error")):
+        lines.append("(correlation was degraded; treat these counts as "
+                     "unreliable and lean toward SECURITY_ALERT)")
+    return "\n".join(lines)
+
+
+def build_user_prompt(candidate: dict, precedent: dict, correlation: dict = None) -> str:
     """candidate: server, query, root_cause_id, rule_name, risk_level, context.
-    precedent: output of retriever.find_precedent()."""
+    precedent:   output of retriever.find_precedent()
+    correlation: output of correlation.gather() -- optional, absent = omitted."""
     p = []
     p.append(f"SERVER: {candidate.get('server')}")
     p.append(f"RULE THAT FIRED: {candidate.get('root_cause_id')}"
@@ -179,6 +297,12 @@ def build_user_prompt(candidate: dict, precedent: dict) -> str:
         if cat.get("risk"):
             line += f"\n(catalogued risk level: {cat['risk']})"
         p.append(line)
+
+    # Corroboration + novelty. Placed after the rule definition so the model has
+    # read what the rule MEANS before it weighs how usual this firing is.
+    corr_block = _correlation_block(correlation or {})
+    if corr_block:
+        p.append(corr_block)
 
     if candidate.get("detection_desc"):
         p.append("\n--- WHY THE RULE FIRED ---\n" + _clip(candidate["detection_desc"], 1200))

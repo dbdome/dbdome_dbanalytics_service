@@ -351,3 +351,43 @@ def use_embeddings() -> bool:
     cheaper and needs no model at all for the retrieval half.
     """
     return _flag("SECURITY_AGENT_USE_EMBEDDINGS", "true")
+
+
+# -------------------------------------------------------------- correlation
+def correlation_enabled() -> bool:
+    """Correlate the finding with other findings, and with its own history.
+
+    Adds two evidence arms beyond statement precedent: what else fired on this
+    server in the same window, and how usual this root cause / login / hour is
+    on this server. Pure SQL against alerts.alert_log -- no model time.
+    """
+    return _flag("SECURITY_AGENT_CORRELATION", "true")
+
+
+def correlation_window_min() -> int:
+    """Half-width of the co-occurrence window, in minutes.
+
+    Kept tight on purpose. Measured on the development database, a one-hour
+    window returned 1,489 distinct root causes on one server, which corroborates
+    nothing because it corroborates everything.
+    """
+    return int(_env("SECURITY_AGENT_CORRELATION_WINDOW_MIN", "15"))
+
+
+def correlation_baseline_days() -> int:
+    """Days of history used to compute a server's normal co-occurrence density.
+
+    The cluster size is only meaningful against this baseline; see
+    correlation.concurrent_findings.
+    """
+    return int(_env("SECURITY_AGENT_CORRELATION_BASELINE_DAYS", "14"))
+
+
+def correlation_history_days() -> int:
+    """Lookback for the novelty arm (rule / login / hour-of-day history)."""
+    return int(_env("SECURITY_AGENT_CORRELATION_HISTORY_DAYS", "30"))
+
+
+def correlation_top_n() -> int:
+    """How many co-occurring root causes are listed to the model."""
+    return int(_env("SECURITY_AGENT_CORRELATION_TOP_N", "8"))

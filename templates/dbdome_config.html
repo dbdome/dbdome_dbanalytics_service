@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration - dbdome</title>
+  <link rel="stylesheet" href="/static/css/dbdome_console.css">
+  <style>
+    .console.wide { max-width: 1400px; }
+    .console.wide .console-content { max-width: none; }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+    .stat {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .stat .n { font-size: 24px; font-weight: 600; color: var(--text-emphasis); line-height: 1.1; }
+    .stat .k { font-size: 11.5px; color: var(--text-secondary); margin-top: 5px; }
+    .stat.bad .n { color: var(--red-text); font-size: 15px; }
+
+    .mono { font-family: monospace; font-size: 11.5px; }
+    .scroll-x { overflow-x: auto; }
+    .on  { color: var(--green-text); font-weight: 500; }
+    .off { color: var(--text-secondary); }
+    .bar { height: 5px; background: var(--blue-base); border-radius: 3px; display: block; min-width: 2px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">dbdome</div>
+  </header>
+
+  <main class="console wide">
+    <h1>Configuration</h1>
+    <p class="subtitle">How this installation is set up</p>
+
+    <div class="console-layout">
+      <nav class="rail" aria-label="Sections">
+        <a href="/dbdome">Overview</a>
+        <a href="/dbdome/alerts">Alerts</a>
+        <a href="/dbdome/config" aria-current="page">Configuration</a>
+        <a href="/dbdome/reports">Reports</a>
+        <a href="/dbdome/settings">Settings</a>
+
+        <div class="rail-heading">On this page</div>
+        <a href="#s-tools">Tools</a>
+        <a href="#s-summary">Summary</a>
+        <a href="#s-servers">Servers</a>
+        <a href="#s-rules">Detection rules</a>
+        <a href="#s-reports">Reports</a>
+        <a href="#s-notify">Notifications</a>
+        <a href="#s-system">System</a>
+
+        <div class="rail-heading">Dashboards</div>
+        <a id="rail-incidents" href="#">Incidents</a>
+        <a id="rail-activity" href="#">Data activity</a>
+        <a id="rail-config" href="#">Configuration board</a>
+      </nav>
+
+      <div class="console-content">
+
+        <div class="card" id="s-tools">
+          <h2>Configuration tools</h2>
+          <p class="card-hint">
+            The pages that change how dbdome behaves. Several of these write to
+            monitored databases or alter detection coverage &mdash; read the note
+            beside a tool before using it.
+          </p>
+          <div id="tools"></div>
+        </div>
+
+        <div class="card" id="s-summary">
+          <h2>Summary</h2>
+          <p class="card-hint">
+            Read the two rule breakdowns together: by vendor tells you whether every
+            platform you run is covered, by domain whether that coverage is lopsided.
+            A high total can still hide a vendor with almost no rules.
+          </p>
+          <div class="stats" id="stats"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+        <div class="card" id="s-servers">
+          <h2>Monitored servers</h2>
+          <p class="card-hint">Every registered target. Inactive rows are kept but not collected from.</p>
+          <div class="scroll-x" data-section="servers"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+        <div class="card" id="s-rules">
+          <h2>Detection rules</h2>
+          <p class="card-hint">Active detection paths, by database platform and by security domain.</p>
+          <div style="display:flex;gap:28px;flex-wrap:wrap">
+            <div style="flex:1;min-width:260px" class="scroll-x" data-section="rules_by_vendor"><div class="empty">Loading&hellip;</div></div>
+            <div style="flex:1;min-width:260px" class="scroll-x" data-section="rules_by_domain"><div class="empty">Loading&hellip;</div></div>
+          </div>
+        </div>
+
+        <div class="card" id="s-reports">
+          <h2>Reports</h2>
+          <p class="card-hint">Configured reports and their schedule. "not scheduled" means it exists but never runs on its own.</p>
+          <div class="scroll-x" data-section="reports"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+        <div class="card" id="s-notify">
+          <h2>Notifications</h2>
+          <p class="card-hint">Where alerts go. Verify recipients after any change &mdash; misdirected alerts are a disclosure risk, not just a delivery failure.</p>
+          <div class="scroll-x" data-section="mail" style="margin-bottom:20px"><div class="empty">Loading&hellip;</div></div>
+          <div class="scroll-x" data-section="mail_groups" style="margin-bottom:20px"><div class="empty">Loading&hellip;</div></div>
+          <div class="scroll-x" data-section="channels"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+        <div class="card" id="s-system">
+          <h2>System</h2>
+          <p class="card-hint">
+            Scheduled processes drive everything the platform does. A process can be
+            active here and still never run if the build does not map its name to a
+            function &mdash; the symptom is silence, not an error.
+          </p>
+          <div class="scroll-x" data-section="processes" style="margin-bottom:20px"><div class="empty">Loading&hellip;</div></div>
+          <div class="scroll-x" data-section="risk_levels" style="margin-bottom:20px"><div class="empty">Loading&hellip;</div></div>
+          <div class="scroll-x" data-section="global_params"><div class="empty">Loading&hellip;</div></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+<script>
+const DASHBOARDS = {
+  incidents: { uid: 'advb58n',              slug: 'open-alerts' },
+  activity:  { uid: 'adbcsrw',              slug: 'activity-monitoring-audit' },
+  config:    { uid: 'dbdome-configuration', slug: 'configuration' },
+};
+for (const [k, d] of Object.entries(DASHBOARDS)) {
+  const el = document.getElementById(`rail-${k}`);
+  if (el) el.href =
+    `${window.location.protocol}//${window.location.hostname}:3000/d/${d.uid}/${d.slug}?orgId=1&from=now-24h&to=now`;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------------------------------------------------------------- tools
+// group: how the link is built.
+//   'app'  -> this server, over HTTPS on 8080 (the config pages)
+//   'graf' -> Grafana on 3000
+// Both are derived from the browser's own hostname rather than a baked-in
+// global_ip, so the links keep working over a hostname, a VPN address or the
+// LAN IP, and survive an ORG_IP change.
+const TOOLS = [
+  { grp: 'Targets & collection', items: [
+    { t: 'Servers',            p: '/serverform',        d: 'Register and edit monitored databases' },
+    { t: 'Processes',          p: '/processform',       d: 'Enable, disable and re-interval scheduled processes' },
+    { t: 'Custom Metrics',     p: '/custom_metrics',    d: 'Define your own metrics and comparisons' },
+  ]},
+  { grp: 'Detection & alerting', items: [
+    { t: 'Alert Rules',        p: '/alert_rules',       d: 'Which root causes raise an alert',
+      warn: 'Changes detection coverage' },
+    { t: 'Alert Thresholds',   p: '/alert_thresholds',  d: 'Severity bands per alert' },
+    { t: 'Alert Dashboard',    p: '/alert_dashboard',   d: 'Security alerts, in the app UI' },
+    { t: 'Excluded Logins',    p: '/d/exclude-logins/excluded-logins-self-activity', g: 'graf',
+      d: 'Logins suppressed from alerting',
+      warn: 'Every row here silences detection - review monthly' },
+    { t: 'Security Issues',    p: '/d/sec-explorer/security-issues-explorer', g: 'graf',
+      d: 'Browse the issue hierarchy and its alerts' },
+    { t: 'App Login Guard',    p: '/app_login_guard',   d: 'Watchlists of applicative logins and programs',
+      warn: 'Can kill sessions when armed' },
+    { t: 'Login Authorizations', p: '/login_authorizations', d: 'Which logins are authorised where' },
+    { t: 'Rootcause',          p: '/d/rootcauses/rootcauses', g: 'graf',
+      d: 'The root-cause catalogue - toggle a cause active and set its risk level',
+      warn: 'Deactivating a root cause stops that detection' },
+  ]},
+  { grp: 'Data protection', items: [
+    { t: 'Sensitive Schema',   p: '/sensitive_schema',  d: 'PII discovery and classification' },
+    { t: 'Sensitive Columns Explorer', p: '/d/adpiicol/sensitive-columns-explorer', g: 'graf',
+      d: 'Server to column drill-down, with masking activity and a masked preview - connects what is sensitive to what is actually protected' },
+    { t: 'Retention Policy',   p: '/retention_policy',  d: 'How long data is kept',
+      warn: 'Governs deletion - aged-out data is gone' },
+    { t: 'Retention',          p: '/d/adretn001/retention', g: 'graf',
+      d: 'Retention overview, dump location, dumps catalogue, apply and restore',
+      warn: 'Applies dumps and deletions' },
+  ]},
+  { grp: 'Notifications', items: [
+    { t: 'Mail Config',        p: '/mailconfiguration', d: 'SMTP server and sender' },
+    { t: 'Webhook Alerts',     p: '/webhook_alerts',    d: 'Alert channels and the global dry-run switches',
+      warn: 'Dry-run OFF arms live blocking and masking' },
+    { t: 'SIEM',               p: '/siem_configuration', d: 'Forwarding format and transport' },
+  ]},
+  { grp: 'Reporting', items: [
+    { t: 'Report Scheduling',  p: '/report_schedule',   d: 'When reports run and who receives them' },
+    { t: 'Report Definitions', p: '/reports?sender=/d/adnz9dq/configuration', d: 'Edit report JSON' },
+    { t: 'DAM Compliance Report', p: '/dam_report',     d: 'Database activity monitoring report' },
+  ]},
+  { grp: 'System', items: [
+    { t: 'Global Parameters',  p: '/global_params',     d: 'System settings' },
+    { t: 'TLS Certificate',    p: '/ssl_certificate',   d: 'Replace the web certificate' },
+    { t: 'LDAP Login',         p: '/ldap_settings',     d: 'Active Directory sign-in for the UI' },
+  ]},
+];
+
+function toolHref(it) {
+  const h = window.location.hostname;
+  return it.g === 'graf' ? `${window.location.protocol}//${h}:3000${it.p}`
+                         : `https://${h}:8080${it.p}`;
+}
+
+function renderTools() {
+  document.getElementById('tools').innerHTML = TOOLS.map(g => `
+    <div style="margin-bottom:18px">
+      <div class="rail-heading" style="padding:0 0 6px">${esc(g.grp)}</div>
+      <div class="tiles">
+        ${g.items.map(it => `
+          <a class="tile" href="${esc(toolHref(it))}" target="_blank" rel="noopener">
+            <span class="tile-body">
+              <span class="tile-title">${esc(it.t)}</span>
+              <span class="tile-desc">${esc(it.d)}${
+                it.warn ? ` &middot; <span style="color:var(--orange)">${esc(it.warn)}</span>` : ''}</span>
+            </span>
+            <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+          </a>`).join('')}
+      </div>
+    </div>`).join('');
+}
+renderTools();
+
+function cell(col, v) {
+  if (v === true)  return '<span class="on">yes</span>';
+  if (v === false) return '<span class="off">no</span>';
+  if (v === 'ON')  return '<span class="on">ON</span>';
+  if (v === 'OFF') return '<span class="off">OFF</span>';
+  if (v === null || v === undefined || v === '') return '<span class="empty">-</span>';
+  const mono = /server|key|value|interval|port|version|id$/i.test(col);
+  return `<span class="${mono ? 'mono' : ''}">${esc(v)}</span>`;
+}
+
+async function loadSection(el) {
+  const name = el.dataset.section;
+  try {
+    const r = await fetch(`/api/console/config/${name}`);
+    const j = await r.json();
+    if (!r.ok) {
+      el.innerHTML = `<div class="empty">${esc(j.title || name)}: ${esc(j.detail || 'failed')}</div>`;
+      return;
+    }
+    const rows = j.rows || [];
+    const cols = j.columns || (rows[0] ? Object.keys(rows[0]) : []);
+    // Small two-column count tables read better as bars than as a grid.
+    const isCount = cols.length === 2 && /rules|count|n$/i.test(cols[1]);
+    if (!rows.length) {
+      el.innerHTML = `<h2 style="font-size:13px">${esc(j.title)}</h2>
+                      <div class="empty">Nothing configured.</div>`;
+      return;
+    }
+    if (isCount) {
+      const max = Math.max(...rows.map(r => Number(r[cols[1]]) || 0)) || 1;
+      el.innerHTML = `
+        <h2 style="font-size:13px;margin-bottom:10px">${esc(j.title)}</h2>
+        <table class="grid"><tbody>${rows.map(r => `
+          <tr>
+            <td style="width:38%">${esc(r[cols[0]])}</td>
+            <td style="width:14%;text-align:right" class="mono">${esc(r[cols[1]])}</td>
+            <td><span class="bar" style="width:${Math.round(100*(Number(r[cols[1]])||0)/max)}%"></span></td>
+          </tr>`).join('')}</tbody></table>`;
+      return;
+    }
+    el.innerHTML = `
+      <h2 style="font-size:13px;margin-bottom:10px">${esc(j.title)}</h2>
+      <table class="grid">
+        <thead><tr>${cols.map(c => `<th>${esc(c.replace(/_/g,' '))}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${cell(c, r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      ${rows.length >= 500 ? '<div class="empty">Showing the first 500 rows.</div>' : ''}`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load ${esc(name)}: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadStats() {
+  const el = document.getElementById('stats');
+  try {
+    const j = await (await fetch('/api/console/config/summary')).json();
+    el.innerHTML = (j.stats || []).map(s => `
+      <div class="stat ${s.value === null ? 'bad' : ''}">
+        <div class="n">${s.value === null ? 'error' : esc(s.value)}</div>
+        <div class="k">${esc(s.label)}</div>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load the summary: ${esc(e.message)}</div>`;
+  }
+}
+
+loadStats();
+document.querySelectorAll('[data-section]').forEach(loadSection);
+</script>
+</body>
+</html>

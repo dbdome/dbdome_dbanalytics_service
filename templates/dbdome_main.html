@@ -1,0 +1,168 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dbdome</title>
+  <link rel="stylesheet" href="/static/css/dbdome_console.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">dbdome</div>
+  </header>
+
+  <main class="console">
+    <h1>dbdome</h1>
+    <p class="subtitle">Database security and monitoring</p>
+
+    <div class="console-layout">
+      <nav class="rail" aria-label="Sections">
+        <a href="/dbdome" aria-current="page">Overview</a>
+        <a href="/dbdome/settings">Settings</a>
+
+        <div class="rail-heading">Go to</div>
+        <a href="/dbdome/alerts">Alerts</a>
+        <a id="rail-incidents" href="#">Incidents</a>
+        <a id="rail-activity" href="#">Data activity</a>
+        <a href="/dbdome/config">Configuration</a>
+        <a id="rail-config" href="#">Configuration board</a>
+      </nav>
+
+      <div class="console-content">
+        <div class="card">
+          <h2>Where to go</h2>
+          <p class="card-hint">
+            Each destination opens its dashboard. Alerts and Incidents are the
+            day-to-day views; Configuration is where the platform itself is set up.
+          </p>
+
+          <div class="tiles">
+            <a class="tile" href="/dbdome/alerts">
+              <span class="tile-icon" aria-hidden="true">&#9888;</span>
+              <span class="tile-body">
+                <span class="tile-title">Alerts</span>
+                <span class="tile-desc">
+                  The latest alert per server and root cause. Select one to see the
+                  detection result set, the security agent's verdict and the values
+                  that tripped the rule.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+
+            <a class="tile" id="tile-incidents" href="#">
+              <span class="tile-icon" aria-hidden="true">&#9873;</span>
+              <span class="tile-body">
+                <span class="tile-title">Incidents</span>
+                <span class="tile-desc">
+                  The unresolved queue &mdash; open alerts awaiting triage, with the
+                  resolve control. This is the shift's work list.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+
+            <a class="tile" id="tile-activity" href="#">
+              <span class="tile-icon" aria-hidden="true">&#9636;</span>
+              <span class="tile-body">
+                <span class="tile-title">Data activity monitoring</span>
+                <span class="tile-desc">
+                  Who is doing what: active transactions, unique users and the top
+                  users by volume. Establishes what normal looks like.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+
+            <a class="tile" href="/dbdome/config">
+              <span class="tile-icon" aria-hidden="true">&#9881;</span>
+              <span class="tile-body">
+                <span class="tile-title">Configuration</span>
+                <span class="tile-desc">
+                  Monitored servers, active detection rules by vendor and domain,
+                  reports, notification routing and scheduled processes.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+
+            <a class="tile" href="/dbdome/reports">
+              <span class="tile-icon" aria-hidden="true">&#9776;</span>
+              <span class="tile-body">
+                <span class="tile-title">Reports</span>
+                <span class="tile-desc">
+                  GRC and compliance packs, the DAM compliance report, alert and
+                  data-activity reports, and their schedules.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+
+            <a class="tile" href="/dbdome/settings">
+              <span class="tile-icon" aria-hidden="true">&#9783;</span>
+              <span class="tile-body">
+                <span class="tile-title">Settings</span>
+                <span class="tile-desc">
+                  Create and invite users, and review who has access to dbdome.
+                </span>
+              </span>
+              <span class="tile-go" aria-hidden="true">&rsaquo;</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>This installation</h2>
+          <div class="row"><span class="label">Version</span><span class="value" id="v-version">&mdash;</span></div>
+          <div class="row"><span class="label">Host</span><span class="value" id="v-host">&mdash;</span></div>
+          <div class="row"><span class="label">Dashboards</span><span class="value" id="v-graf">&mdash;</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+// Dashboard UIDs. Grafana runs on :3000 on the same host as this page, so the
+// links are built from the browser's own hostname rather than a value baked in
+// at render time -- a page reached over a hostname, a VPN address or the LAN IP
+// all produce working links, and nothing breaks when ORG_IP changes.
+// Alerts is deliberately absent: it is a console page (/dbdome/alerts), not a
+// Grafana dashboard, and its link is static in the markup. Listing it here
+// would make the loop below overwrite that href with a dashboard URL.
+const DASHBOARDS = {
+  incidents: { uid: 'advb58n',              slug: 'open-alerts' },
+  activity:  { uid: 'adbcsrw',              slug: 'activity-monitoring-audit' },
+  config:    { uid: 'dbdome-configuration', slug: 'configuration' },
+};
+
+function grafanaBase() {
+  return `${window.location.protocol}//${window.location.hostname}:3000`;
+}
+
+function dashUrl(key) {
+  const d = DASHBOARDS[key];
+  return `${grafanaBase()}/d/${d.uid}/${d.slug}?orgId=1&from=now-24h&to=now`;
+}
+
+for (const key of Object.keys(DASHBOARDS)) {
+  const url = dashUrl(key);
+  for (const id of [`tile-${key}`, `rail-${key}`]) {
+    const el = document.getElementById(id);
+    if (el) el.href = url;
+  }
+}
+
+document.getElementById('v-host').textContent = window.location.hostname;
+document.getElementById('v-graf').textContent = `${window.location.hostname}:3000`;
+
+fetch('/api/version')
+  .then(r => r.ok ? r.json() : null)
+  .then(j => {
+    if (!j) return;
+    document.getElementById('v-version').textContent =
+      j.label || j.version || '-';
+  })
+  .catch(() => {});
+</script>
+</body>
+</html>

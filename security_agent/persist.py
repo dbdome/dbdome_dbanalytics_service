@@ -46,6 +46,25 @@ def merge_reason(metadata, verdict: dict):
         "elapsed_ms": verdict.get("elapsed_ms"),
         "decided_by": verdict.get("decided_by"),
     }
+
+    # Corroboration / novelty, compact. The DBA reading the alert wants the
+    # signals and the two numbers that make the cluster interpretable, not the
+    # whole document -- the full structure is on the verdict row.
+    corr = verdict.get("correlation") or {}
+    if corr.get("enabled"):
+        conc = corr.get("concurrent") or {}
+        rs = (corr.get("history") or {}).get("rule_on_server") or {}
+        block["correlation"] = {
+            "flags": corr.get("flags") or [],
+            "concurrent_root_causes": conc.get("distinct_root_causes"),
+            "window_minutes": conc.get("window_minutes"),
+            # NULL ratio means "no baseline", not "isolated" -- keep the
+            # distinction visible rather than defaulting it to a number.
+            "ratio_vs_baseline": conc.get("ratio_vs_baseline"),
+            "rule_firings_on_server": rs.get("total"),
+            "rule_days_seen": rs.get("days_seen"),
+        }
+
     reason = verdict.get("reason") or ""
 
     try:
@@ -86,6 +105,9 @@ def record_verdict(conn, *, server, root_cause_id, metric_name, query_text,
                    verdict: dict, alert_row_id=None, raised: bool):
     """Append one decision to alerts.security_agent_verdict. Best-effort."""
     prec = verdict.get("precedent") or {}
+    corr = verdict.get("correlation") or {}
+    conc = corr.get("concurrent") or {}
+    rs = (corr.get("history") or {}).get("rule_on_server") or {}
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -95,8 +117,11 @@ def record_verdict(conn, *, server, root_cause_id, metric_name, query_text,
                      verdict, confidence, reason, indicators, matched_precedent,
                      exact_matches, distinct_shapes, candidates_searched,
                      retrieval_method, model, elapsed_ms, decided_by, raised,
-                     alert_row_id)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     alert_row_id,
+                     correlation, correlation_flags, concurrent_root_causes,
+                     correlation_ratio, rule_history_count, rule_history_days)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,%s,%s)
                 RETURNING verdict_id
                 """,
                 (
@@ -110,6 +135,14 @@ def record_verdict(conn, *, server, root_cause_id, metric_name, query_text,
                     prec.get("searched", 0), prec.get("method"),
                     verdict.get("model"), verdict.get("elapsed_ms"),
                     verdict.get("decided_by"), raised, alert_row_id,
+                    # default=str so the datetimes inside the history payload
+                    # (first_seen/last_seen) serialize instead of raising and
+                    # losing the whole verdict row.
+                    json.dumps(corr, default=str),
+                    corr.get("flags") or [],
+                    conc.get("distinct_root_causes"),
+                    conc.get("ratio_vs_baseline"),
+                    rs.get("total"), rs.get("days_seen"),
                 ),
             )
             vid = cur.fetchone()[0]

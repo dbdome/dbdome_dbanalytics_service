@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts - dbdome</title>
+  <link rel="stylesheet" href="/static/css/dbdome_console.css">
+  <style>
+    /* Alerts is a working screen, not a settings form: it needs the width. */
+    .console.wide { max-width: 1500px; }
+    .console.wide .console-content { max-width: none; }
+
+    .filters { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
+    .filters .field { margin-bottom: 0; min-width: 150px; }
+
+    table.grid tbody tr { cursor: pointer; }
+    table.grid tbody tr.selected td { background: rgba(51, 162, 229, 0.14); }
+    table.grid tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+
+    .risk { font-weight: 500; }
+    .risk-critical { color: var(--red-text); }
+    .risk-high     { color: var(--orange); }
+    .risk-medium   { color: var(--yellow); }
+    .risk-low      { color: var(--text-secondary); }
+
+    .detail-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+    .detail-head .rc { font-family: monospace; font-size: 12px; color: var(--blue); }
+    .mono { font-family: monospace; font-size: 11.5px; }
+    .scroll-x { overflow-x: auto; }
+    .verdict-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; }
+    .vg-item .k { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    .vg-item .v { font-size: 13px; color: var(--text-primary); font-weight: 500; margin-top: 2px; }
+    .reason { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius);
+              padding: 11px 13px; font-size: 12.5px; line-height: 1.6; margin-top: 14px; }
+    .v-alert { color: var(--red-text); }
+    .v-known { color: var(--green-text); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">dbdome</div>
+  </header>
+
+  <main class="console wide">
+    <h1>Alerts</h1>
+    <p class="subtitle">Security-domain alerts, most recent per server and root cause</p>
+
+    <div class="console-layout">
+      <nav class="rail" aria-label="Sections">
+        <a href="/dbdome">Overview</a>
+        <a href="/dbdome/alerts" aria-current="page">Alerts</a>
+        <a href="/dbdome/reports">Reports</a>
+        <a href="/dbdome/settings">Settings</a>
+        <div class="rail-heading">Dashboards</div>
+        <a id="rail-incidents" href="#">Incidents</a>
+        <a id="rail-activity" href="#">Data activity</a>
+        <a id="rail-config" href="#">Configuration</a>
+      </nav>
+
+      <div class="console-content">
+        <div id="notice" class="notice"></div>
+
+        <div class="card">
+          <div class="filters">
+            <div class="field">
+              <label for="f-risk">Risk level</label>
+              <select id="f-risk">
+                <option value="All" selected>All</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-range">Time range</label>
+              <select id="f-range">
+                <option value="6">Last 6 hours</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+                <option value="720">Last 30 days</option>
+                <option value="0">All time</option>
+              </select>
+            </div>
+            <div class="actions"><button class="btn" id="refresh">Refresh</button></div>
+            <div style="flex:1"></div>
+            <div class="field" style="min-width:auto">
+              <label>&nbsp;</label>
+              <span class="value" id="count">&mdash;</span>
+            </div>
+          </div>
+
+          <div class="scroll-x">
+            <table class="grid" id="alerts-table">
+              <thead>
+                <tr>
+                  <th>Occurred</th><th>Server</th><th>Risk</th><th>Area</th>
+                  <th>Issue</th><th>Root cause</th><th>Sent</th><th>Blocked</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="8" class="empty">Loading&hellip;</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ---------------------------------------------- selected alert -->
+        <div id="detail" style="display:none;">
+
+          <div class="card">
+            <div class="detail-head">
+              <h2 id="d-title">Alert</h2>
+              <span class="rc" id="d-rc"></span>
+            </div>
+            <div class="row"><span class="label">Server</span><span class="value" id="d-server">&mdash;</span></div>
+            <div class="row"><span class="label">Occurred</span><span class="value" id="d-when">&mdash;</span></div>
+            <div class="row"><span class="label">Risk level</span><span class="value" id="d-risk">&mdash;</span></div>
+            <div class="row"><span class="label">Mail recipients</span><span class="value" id="d-rcpt">&mdash;</span></div>
+          </div>
+
+          <div class="card">
+            <h2>Detection result set</h2>
+            <p class="card-hint">The rows the detection returned &mdash; the evidence the alert was raised on.</p>
+            <div id="p-resultset" class="scroll-x"><div class="empty">&mdash;</div></div>
+          </div>
+
+          <div class="card">
+            <h2>Security agent verdict</h2>
+            <p class="card-hint">
+              The local model's assessment. Read the value below before the verdict:
+              this is a starting hypothesis, not a finding.
+            </p>
+            <div id="p-verdict"><div class="empty">&mdash;</div></div>
+          </div>
+
+          <div class="card">
+            <h2>Alert value</h2>
+            <p class="card-hint">The specific fields that tripped the rule.</p>
+            <div id="p-value" class="scroll-x"><div class="empty">&mdash;</div></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+const DASHBOARDS = {
+  incidents: { uid: 'advb58n',              slug: 'open-alerts' },
+  activity:  { uid: 'adbcsrw',              slug: 'activity-monitoring-audit' },
+  config:    { uid: 'dbdome-configuration', slug: 'configuration' },
+};
+for (const [k, d] of Object.entries(DASHBOARDS)) {
+  const el = document.getElementById(`rail-${k}`);
+  if (el) el.href =
+    `${window.location.protocol}//${window.location.hostname}:3000/d/${d.uid}/${d.slug}?orgId=1&from=now-24h&to=now`;
+}
+
+const noticeEl = document.getElementById('notice');
+function notice(kind, msg) { noticeEl.className = `notice show ${kind}`; noticeEl.textContent = msg; }
+function clearNotice() { noticeEl.className = 'notice'; }
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(ts) { return ts ? String(ts).replace('T', ' ').slice(0, 19) : ''; }
+
+async function api(url) {
+  const r = await fetch(url);
+  let b = null;
+  try { b = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error((b && b.detail) || `HTTP ${r.status}`);
+  return b;
+}
+
+// ------------------------------------------------------------- alert list
+let selectedId = null;
+
+async function loadAlerts() {
+  clearNotice();
+  const tb = document.querySelector('#alerts-table tbody');
+  tb.innerHTML = '<tr><td colspan="8" class="empty">Loading&hellip;</td></tr>';
+  const risk  = document.getElementById('f-risk').value;
+  const hours = document.getElementById('f-range').value;
+  try {
+    const j = await api(`/api/console/alerts?risk_level=${encodeURIComponent(risk)}&hours=${hours}`);
+    const rows = j.alerts || [];
+    document.getElementById('count').textContent =
+      `${rows.length} alert${rows.length === 1 ? '' : 's'}`;
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="8" class="empty">No alerts in this range.</td></tr>';
+      document.getElementById('detail').style.display = 'none';
+      return;
+    }
+    tb.innerHTML = rows.map(a => `
+      <tr data-id="${esc(a.row_id)}"
+          data-server="${esc(a.servername || a.server)}"
+          data-rc="${esc(a.root_cause)}"
+          data-rcname="${esc(a.root_cause_name)}"
+          data-when="${esc(fmt(a.occured_at))}"
+          data-risk="${esc(a.risk_level)}"
+          data-rcpt="${esc(a.recipients || '')}">
+        <td class="mono">${esc(fmt(a.occured_at))}</td>
+        <td>${esc(a.servername || a.server)}</td>
+        <td><span class="risk risk-${esc((a.risk_level||'').toLowerCase())}">${esc(a.risk_level||'-')}</span></td>
+        <td>${esc(a.area)}</td>
+        <td>${esc(a.issue)}</td>
+        <td>${esc(a.root_cause_name || a.root_cause)}</td>
+        <td class="mono">${esc(fmt(a.sent_at)) || '<span class="empty">-</span>'}</td>
+        <td class="mono">${esc(fmt(a.blocked_at)) || '<span class="empty">-</span>'}</td>
+      </tr>`).join('');
+    tb.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => selectAlert(tr));
+    });
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="8" class="empty">Could not load alerts: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+// --------------------------------------------------------- drill-down x3
+function selectAlert(tr) {
+  document.querySelectorAll('#alerts-table tr.selected').forEach(x => x.classList.remove('selected'));
+  tr.classList.add('selected');
+  selectedId = tr.dataset.id;
+
+  document.getElementById('detail').style.display = '';
+  document.getElementById('d-title').textContent  = tr.dataset.rcname || 'Alert';
+  document.getElementById('d-rc').textContent     = tr.dataset.rc;
+  document.getElementById('d-server').textContent = tr.dataset.server;
+  document.getElementById('d-when').textContent   = tr.dataset.when;
+  document.getElementById('d-risk').textContent   = tr.dataset.risk;
+  document.getElementById('d-rcpt').textContent   = tr.dataset.rcpt || '-';
+
+  loadResultset(selectedId);
+  loadVerdict(selectedId);
+  loadValue(selectedId);
+}
+
+async function loadResultset(id) {
+  const el = document.getElementById('p-resultset');
+  el.innerHTML = '<div class="empty">Loading&hellip;</div>';
+  try {
+    const j = await api(`/api/console/alerts/${id}/resultset`);
+    const rows = j.rows || [];
+    if (!rows.length) { el.innerHTML = '<div class="empty">No result rows recorded.</div>'; return; }
+    const cols = j.columns || Object.keys(rows[0]);
+    el.innerHTML = `
+      <table class="grid">
+        <thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r => `<tr>${cols.map(c =>
+          `<td class="mono">${esc(r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      ${rows.length >= (j.limit || 0) ? `<div class="empty">Showing the first ${rows.length} rows.</div>` : ''}`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadVerdict(id) {
+  const el = document.getElementById('p-verdict');
+  el.innerHTML = '<div class="empty">Loading&hellip;</div>';
+  try {
+    const j = await api(`/api/console/alerts/${id}/verdict`);
+    const v = j.verdict;
+    // triaged=false is the normal state for an alert the sweep has not reached
+    // yet. Say so plainly instead of rendering an empty grid of dashes.
+    if (!v || v.triaged === false || v.triaged === 'False') {
+      el.innerHTML = `<div class="empty">Not triaged yet. The annotation sweep adds a
+        verdict after the alert is dispatched; alerts raised while the agent was
+        disabled are never backfilled.</div>`;
+      return;
+    }
+    const cls = (v.verdict || '').toUpperCase().includes('KNOWN') ? 'v-known' : 'v-alert';
+    const item = (k, val) => `<div class="vg-item"><div class="k">${esc(k)}</div>
+      <div class="v">${esc(val ?? '-')}</div></div>`;
+    el.innerHTML = `
+      <div class="verdict-grid">
+        <div class="vg-item"><div class="k">Verdict</div>
+          <div class="v ${cls}">${esc(v.verdict || '-')}</div></div>
+        ${item('Confidence', v.confidence)}
+        ${item('Decided by', v.decided_by)}
+        ${item('Model', v.model)}
+        ${item('Elapsed', v.elapsed_ms != null ? v.elapsed_ms + ' ms' : null)}
+        ${item('Exact precedent', v.exact_matches)}
+        ${item('Distinct shapes', v.distinct_shapes)}
+        ${item('Candidates searched', v.candidates_searched)}
+        ${item('Retrieval', v.retrieval_method)}
+      </div>
+      ${v.reason ? `<div class="reason">${esc(v.reason)}</div>` : ''}
+      ${v.indicators ? `<div class="reason mono">${esc(v.indicators)}</div>` : ''}`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadValue(id) {
+  const el = document.getElementById('p-value');
+  el.innerHTML = '<div class="empty">Loading&hellip;</div>';
+  try {
+    const j = await api(`/api/console/alerts/${id}/value`);
+    const rows = j.rows || [];
+    if (!rows.length) { el.innerHTML = '<div class="empty">No fields recorded.</div>'; return; }
+    el.innerHTML = `
+      <table class="grid">
+        <thead><tr><th style="width:34%">Field</th><th>Value</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr><td>${esc(r.field)}</td><td class="mono">${esc(r.value)}</td></tr>`).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load: ${esc(e.message)}</div>`;
+  }
+}
+
+document.getElementById('refresh').addEventListener('click', loadAlerts);
+document.getElementById('f-risk').addEventListener('change', loadAlerts);
+document.getElementById('f-range').addEventListener('change', loadAlerts);
+loadAlerts();
+</script>
+</body>
+</html>

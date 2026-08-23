@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import sqlite3
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -59,12 +59,12 @@ app = FastAPI(
         "return JSON, and accept optional `from`/`to` query parameters (Grafana "
         "epoch-milliseconds, e.g. `1784020822440`, or an ISO / `YYYY-MM-DD HH:MM` "
         "local datetime).\n\n"
-        "OpenAPI spec: `/openapi.json` · Swagger UI: `/docs` · ReDoc: `/redoc`. "
+        "OpenAPI spec: `/openapi.json` Â· Swagger UI: `/docs` Â· ReDoc: `/redoc`. "
         "The legacy unversioned `/api/...` paths remain for backward compatibility."
     ),
     openapi_tags=[{
         "name": "v1",
-        "description": "Versioned read / data-extraction API — alerts, IPS report, "
+        "description": "Versioned read / data-extraction API â€” alerts, IPS report, "
                        "retention, blocker activity, and detection views.",
     }],
 )
@@ -183,7 +183,7 @@ def update_dashboard_ip():
             # Keep the scheme of the DBDOME API links (:8080) in sync with how the
             # web server actually serves: once TLS is on, http://<ip>:8080 links
             # must become https:// or the dashboard buttons hit a closed HTTP port.
-            # Grafana (:3000) is untouched — it has its own scheme.
+            # Grafana (:3000) is untouched â€” it has its own scheme.
             try:
                 _api_https = _web_scheme() == "https"
             except Exception:
@@ -219,24 +219,22 @@ def update_dashboard_ip():
 # Run on startup
 update_dashboard_ip()
 
-@app.get("/dbdome", response_class=RedirectResponse)
+@app.get("/dbdome", response_class=HTMLResponse)
 async def dbdome_main(request: Request):
-    host_header = request.headers.get("host")
-    db_write_log(f"/dbdome success host_header :{host_header}"   ,0,"get/dbdome","" )
-    # request.url.hostname strips the port and unwraps IPv6 brackets. The old
-    # host_header.split(":") raised TypeError -> 500 whenever a client sent no
-    # Host header (HTTP/1.0 clients, port scanners, some health probes).
-    # With no Host header Starlette falls back to the ASGI server address, which
-    # is the wildcard bind here, so redirect to the configured address instead.
-    host = request.url.hostname
-    if not host or host in ("0.0.0.0", "::"):
-        host = get_public_or_ip()
-    if ":" in host:                      # IPv6 literal must stay bracketed in a URL
-        host = f"[{host}]"
-    db_write_log(f"/dbdome success host :{host}"   ,0,"get/dbdome","" )
-    target_url = f"http://{host}:3000/d/ad7kkx7/dbdome?orgId=1&from=now-1h&to=now&timezone=browser"
-    db_write_log(f"/dbdome success target_url :{target_url}"   ,0,"get/dbdome","" )
-    return RedirectResponse(url=target_url, status_code=302)
+    """dbdome console home.
+
+    This used to 302 straight to the Grafana Alerts dashboard, which made
+    /dbdome an alias for one dashboard rather than an entry point -- there was
+    nowhere to put anything that is not a dashboard, and no way in to Settings.
+    It now serves the console: Alerts, Incidents, Data activity monitoring,
+    Configuration and Settings.
+
+    The old destination is still one click away as the Alerts tile. Note that
+    "/" is unchanged and still redirects to Grafana.
+    """
+    with open(os.path.join(TEMPLATE_DIR, "dbdome_main.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
 
 @app.get("/", response_class=RedirectResponse)
 async def dbdome_main(request: Request):
@@ -672,15 +670,15 @@ def addrecipients(request:Request):
 
       btn.disabled = true;
       res.className = '';
-      res.textContent = 'Sending test email…';
+      res.textContent = 'Sending test emailâ€¦';
       try {{
         var r = await fetch('/api/mailconfiguration/test', {{ method: 'POST', body: data }});
         var j = await r.json();
         res.className = j.ok ? 'ok' : 'err';
-        res.textContent = (j.ok ? '✓ ' : '✗ ') + j.message;
+        res.textContent = (j.ok ? 'âœ“ ' : 'âœ— ') + j.message;
       }} catch (e) {{
         res.className = 'err';
-        res.textContent = '✗ Request failed: ' + e;
+        res.textContent = 'âœ— Request failed: ' + e;
       }} finally {{
         btn.disabled = false;
       }}
@@ -717,7 +715,7 @@ async def mailconfigure(
     }
     # Two SEPARATE transactions on purpose: a failing recipients-group save must
     # not roll back the SMTP config insert (they used to share one engine.begin(),
-    # so a group failure silently undid the config row — sequence advanced, table
+    # so a group failure silently undid the config row â€” sequence advanced, table
     # empty, and the old `finally` still logged "mail_config succeeded").
     def _error_page(stage, err):
         import html as _html
@@ -735,7 +733,7 @@ async def mailconfigure(
     pg_postgres_home_engine = create_engine(get_connection_string())
     p_row_id = int(row_id) if row_id else None
 
-    # 1) SMTP config — its own transaction, committed before the group save.
+    # 1) SMTP config â€” its own transaction, committed before the group save.
     try:
         with pg_postgres_home_engine.begin() as conn:
             result = conn.execute(
@@ -757,7 +755,7 @@ async def mailconfigure(
     except Exception as e:
         return _error_page("saving the SMTP configuration (config.save_mail_config)", e)
 
-    # 2) Recipients group — separate transaction; the config above stays saved
+    # 2) Recipients group â€” separate transaction; the config above stays saved
     #    even if this fails, and the operator is told exactly what happened.
     if recipients and recipients.strip():
         try:
@@ -781,7 +779,7 @@ async def mailconfigure(
 
     if referer:
         return RedirectResponse(url=f"http://{get_public_or_ip()}:3000{referer}", status_code=302)
-    # No referer (page opened directly) — fall back to the configuration dashboard
+    # No referer (page opened directly) â€” fall back to the configuration dashboard
     # instead of returning None, which FastAPI renders as the literal `null`.
     grafana_url = f"http://{get_public_or_ip()}:3000/d/adnz9dq/configuration?orgId=1&from=now-1h&to=now&timezone=browser"
     return RedirectResponse(url=grafana_url, status_code=302)
@@ -798,7 +796,7 @@ async def mailconfiguration_test(
     test_recipient: str = Form(""),
 ):
     """Send a test email using the SMTP settings currently in the form, WITHOUT
-    saving them — so the operator can validate credentials before committing.
+    saving them â€” so the operator can validate credentials before committing.
 
     The password arrives as plaintext from the form (the GET decrypts it for
     prefill), so it is used as-is. Returns JSON {ok, message}."""
@@ -807,7 +805,7 @@ async def mailconfiguration_test(
 
     to_addr = (test_recipient or "").strip() or (smtp_user or "").strip() or (smtp_sender or "").strip()
     if not to_addr:
-        return JSONResponse({"ok": False, "message": "No recipient — set a test recipient, SMTP user or sender."}, status_code=400)
+        return JSONResponse({"ok": False, "message": "No recipient â€” set a test recipient, SMTP user or sender."}, status_code=400)
     recipients = [r.strip() for r in re.split(r"[,;]", to_addr) if r.strip()]
 
     msg = EmailMessage()
@@ -1210,7 +1208,7 @@ def server_enable(request: Request):
             ""
         )
 
-    # 🔐 Safe redirect handling
+    # ðŸ” Safe redirect handling
     base_url = f"http://{get_public_or_ip()}:3000"
 
     if referer and not referer.startswith("http"):
@@ -1839,7 +1837,7 @@ def ssl_certificate_page(request: Request):
    if(!cf||!kf){msg('Choose both a certificate and a private key file.','err');return;}
    const fd=new FormData();fd.append('cert',cf);fd.append('key',kf);
    fd.append('password',document.getElementById('key_pw').value||'');
-   msg('Validating and installing…');
+   msg('Validating and installingâ€¦');
    try{const r=await fetch('/api/ssl/upload',{method:'POST',body:fd});const j=await r.json();
      if(!j.ok)throw new Error(j.error||'install failed');
      msg('Installed. Subject: '+esc(j.summary&&j.summary.subject)+'. Restart the DBDOME web service to serve it.','ok');
@@ -1848,7 +1846,7 @@ def ssl_certificate_page(request: Request):
  }
  async function revert(){
    if(!confirm('Revert to the self-signed personal certificate?'))return;
-   msg('Reverting…');
+   msg('Revertingâ€¦');
    try{const r=await fetch('/api/ssl/revert',{method:'POST'});const j=await r.json();
      if(!j.ok)throw new Error(j.error||'revert failed');
      msg('Reverted to personal certificate. Restart the DBDOME web service to serve it.','ok');load();}
@@ -1887,7 +1885,7 @@ async def api_ssl_upload(cert: UploadFile = File(...),
                      "INFO", "api_ssl_upload", "")
         return JSONResponse({"ok": True, "summary": summary})
     except ValueError as e:
-        # validation failure — expected, not a server error
+        # validation failure â€” expected, not a server error
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     except Exception as e:
         db_write_log(f"ssl upload failed: {e}", "ERROR", "api_ssl_upload", "")
@@ -1907,7 +1905,7 @@ def api_ssl_revert(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# LDAP / Active Directory login (Grafana) — config UI + apply
+# LDAP / Active Directory login (Grafana) â€” config UI + apply
 #   /ldap_settings        config page (status + settings + group mappings)
 #   /api/ldap/status      saved settings + live ini/toml/service state
 #   /api/ldap/save        persist settings (bind password enc:v1:)
@@ -2450,7 +2448,7 @@ async def api_login_auth_test(request: Request):
 
 @app.get("/api/login-authorizations/violations")
 def api_login_auth_violations():
-    """Current unauthorised statements — the same view the root cause reads."""
+    """Current unauthorised statements â€” the same view the root cause reads."""
     try:
         conn = psycopg2.connect(get_connection_string())
         try:
@@ -2528,7 +2526,7 @@ async def api_ldap_test(request: Request):
             test_connection, payload.get("test_username"), payload.get("test_password"))
         return JSONResponse({"ok": True, "result": result})
     except Exception as e:
-        # bind/search failures are expected outcomes of a test — 200 with ok:false
+        # bind/search failures are expected outcomes of a test â€” 200 with ok:false
         return JSONResponse({"ok": False, "error": str(e)})
 
 
@@ -2755,7 +2753,7 @@ def dp_anonymize_preview(request: Request):
     def _td(v):
         s = "" if v is None else str(v)
         if len(s) > 200:
-            s = s[:200] + "…"
+            s = s[:200] + "â€¦"
         return f"<td>{_html.escape(s)}</td>"
     thead = "".join(f"<th>{_html.escape(c)}</th>" for c in res["columns"])
     tbody = "".join("<tr>" + "".join(_td(v) for v in r) + "</tr>" for r in res["rows"])
@@ -2774,7 +2772,7 @@ def dp_anonymize_preview(request: Request):
 
 @app.get("/dp_tokenize", response_class=HTMLResponse)
 def dp_tokenize(request: Request):
-    """Tokenization (production, §4.2). Caller selects column + encryption type:
+    """Tokenization (production, Â§4.2). Caller selects column + encryption type:
     passphrase | aes256. Real value -> encrypted TokenVault; column holds a token.
     <table> carries the schema (e.g. 'dbo.Cards'); no separate schema param.
     ?server=&db=&table=&column=&encryption=&referer="""
@@ -3411,7 +3409,7 @@ async def api_delete_mail_group(request: Request):
 
 
 # ============================================================
-# Report editor — enable/disable/reorder columns in rpt_*.json
+# Report editor â€” enable/disable/reorder columns in rpt_*.json
 # ============================================================
 
 REPORTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -3432,7 +3430,7 @@ def _safe_report_path(name: str) -> str:
     if not _REPORT_NAME_RE.match(name or ""):
         raise ValueError(f"invalid report name: {name}")
     path = os.path.join(REPORTS_DIR, name)
-    # Extra defense in depth — prevent symlink / .. trickery.
+    # Extra defense in depth â€” prevent symlink / .. trickery.
     if os.path.commonpath([os.path.abspath(path), REPORTS_DIR]) != REPORTS_DIR:
         raise ValueError("path escapes reports dir")
     return path
@@ -3712,9 +3710,9 @@ def risklevel_toggle(request: Request):
     """
     Toggle (or set) is_active on a single rootcause.risk_level row.
     Query params:
-        risk_level (required) — name e.g. 'low', 'medium', 'high', 'critical'
-        action     (optional) — 'enable' | 'disable' | 'toggle' (default: toggle)
-        sender     (optional) — Grafana dashboard return path
+        risk_level (required) â€” name e.g. 'low', 'medium', 'high', 'critical'
+        action     (optional) â€” 'enable' | 'disable' | 'toggle' (default: toggle)
+        sender     (optional) â€” Grafana dashboard return path
     """
     risk_level = (request.query_params.get("risk_level") or "").strip()
     action     = (request.query_params.get("action") or "toggle").strip().lower()
@@ -3899,7 +3897,7 @@ async def submit_mail_report(
 
 @app.post("/submit_custom_metrics")
 async def submit_custom_metrics(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     metric_name : str = Form (...) , 
     metric_desc : str = Form (...) , 
     query : str = Form (...) , 
@@ -3946,7 +3944,7 @@ async def submit_custom_metrics(
 
 @app.post("/submit_custom_metric_enable")
 async def submit_custom_metric_enable(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     row_id : str = Form (...)     
 ):
     
@@ -3994,7 +3992,7 @@ def metric_enable(request : Request):
 
 @app.post("/submit_metrics_enable")
 async def submit_metrics_enable(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     action_select : str = Form (...) , 
     row_id: int = Form(...)          
 ):
@@ -4035,7 +4033,7 @@ def metric_enable(request : Request):
 
 @app.post("/submit_metrics_enable_all_servers")
 async def submit_metrics_enable(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     action_select : str = Form (...) , 
     row_id: int = Form(...)          
 ):
@@ -4112,7 +4110,7 @@ def update_schema_column(request: Request):
 
 @app.post("/submit_email_configuration")
 async def submit_email_configuration(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     smtp_server : str = Form (...) , 
     smtp_port : int = Form (...) , 
     smtp_user: str = Form (...) , 
@@ -4191,7 +4189,7 @@ def submit(row_id: int,request: Request):
 
 @app.post("/submit-processform")
 async def show_processform(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     process_name: str = Form(...),        
     interval: int = Form(...), 
     active: bool = Form(...)
@@ -4231,7 +4229,7 @@ async def show_processform(
 
 @app.post("/submit_custom_metrics_update")
 async def show_custom_metrics_update(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     row_id: int               
 ):
             pg_home_connection_string = get_connection_string()
@@ -4242,7 +4240,7 @@ async def show_custom_metrics_update(
 
 @app.post("/submit_custom_metrics")
 async def show_custom_metrics(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     process_name: str = Form(...),        
     interval: int = Form(...), 
     active: bool = Form(...)
@@ -4283,7 +4281,7 @@ async def show_custom_metrics(
 
 @app.post("/submit_metrics_enable")
 async def show_metrics_enable(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     process_name: str = Form(...),        
     interval: int = Form(...), 
     active: bool = Form(...)
@@ -4324,7 +4322,7 @@ async def show_metrics_enable(
 
 @app.post("/submit_retention_policy")
 async def show_submit_retention_policy(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     process_name: str = Form(...),        
     interval: int = Form(...), 
     active: bool = Form(...)
@@ -4534,7 +4532,7 @@ async def show_server_form(
    
 @app.post("/submit_siem_configuration")
 async def show_siem_configuration(
-    request: Request,                 # ⬅ REQUIRED
+    request: Request,                 # â¬… REQUIRED
     select_vendor : str = Form (...) ,
     url: str = Form(...),
     secret: str = Form(default=""),
@@ -4568,7 +4566,7 @@ async def show_siem_configuration(
     if select_vendor == "crowdstrike":
         # The crowdstrike sender (siem.crowdstrike.crowdstrike_sender) reads its
         # config from config.siem (service_type='crowdstrike', service_name=mode)
-        # plus config.global_params crowdstrike_* keys — keep those in sync here.
+        # plus config.global_params crowdstrike_* keys â€” keep those in sync here.
         mode = (cs_mode or "logscale").lower()
         port = int(cs_port) if str(cs_port).strip().isdigit() else None
         try:
@@ -4734,7 +4732,7 @@ async def report_capture(
 
 
 # ---------------------------------------------------------------------------
-# Alert Dashboard — Security alert flowchart
+# Alert Dashboard â€” Security alert flowchart
 # ---------------------------------------------------------------------------
 
 ALERT_DASHBOARD_SQL = """
@@ -5058,7 +5056,7 @@ async def submit_report_schedule(
         else:
             cur.execute("INSERT INTO config.reports_jobs (report_id, job_id) VALUES (%s, %s)", (rid, job_id))
 
-        # Link job to a mail config — monitoring.v_job_scheduler INNER JOINs
+        # Link job to a mail config â€” monitoring.v_job_scheduler INNER JOINs
         # config.mail_jobs, so without this row the schedule never runs.
         cur.execute("SELECT row_id FROM config.mail_jobs WHERE job_id = %s", (job_id,))
         if not cur.fetchone():
@@ -5569,7 +5567,7 @@ async def api_delete_webhook_alert(request: Request):
 # and returns a generated PDF. Wired up to a "Print PDF" Panel Link added
 # to each table panel by tools/add_print_links_to_panels.py.
 #
-# NOTE: only dashboard variables (e.g. $server, $risk_level) are honored —
+# NOTE: only dashboard variables (e.g. $server, $risk_level) are honored â€”
 # Grafana panel links can't pass the table's local row-search field.
 # ---------------------------------------------------------------------------
 def _grafana_db_path():
@@ -5678,7 +5676,7 @@ def _utc_tstz_literal(dt):
     behaves correctly when the macro is a timestamptz. Emitting a bare naive
     literal instead made PostgreSQL treat the UTC instant as local wall-clock
     (and, for the AT-TIME-ZONE panels, convert the wrong way), shifting every
-    window by the UTC offset (~3h on Asia/Jerusalem) — hiding the most recent
+    window by the UTC offset (~3h on Asia/Jerusalem) â€” hiding the most recent
     rows and returning nothing for a narrow recent window. A naive input is
     assumed to be UTC (Grafana epochs are)."""
     if dt.tzinfo is not None:
@@ -5872,7 +5870,7 @@ def print_panel(request: Request):
     All other query params are treated as Grafana template variable
     values (e.g. ?server=foo&risk_level=high). Variables found in the
     panel's SQL but not in the request stay as $name and will likely
-    fail at execute time — pass everything the panel needs.
+    fail at execute time â€” pass everything the panel needs.
     """
     params = dict(request.query_params)
     dashboard_uid = params.pop("dashboard", None)
@@ -5940,7 +5938,7 @@ def email_panel_form(request: Request):
     )
     default_subject = f"DBDOME report: {title}"
     page = f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>Email {fmt} — {_html.escape(title)}</title>
+<html><head><meta charset="utf-8"><title>Email {fmt} â€” {_html.escape(title)}</title>
 <style>
  body {{ font-family: Arial, sans-serif; background:#f4f6f8; margin:0;
         display:flex; align-items:center; justify-content:center; min-height:100vh; }}
@@ -5977,7 +5975,7 @@ def email_panel_form(request: Request):
 
     <label for="body">Message (optional)</label>
     <textarea id="body" name="body"
-              placeholder="Optional note to include in the email body…"></textarea>
+              placeholder="Optional note to include in the email bodyâ€¦"></textarea>
 
     <div class="actions">
       <button type="button" class="cancel" onclick="window.close()">Cancel</button>
@@ -6026,7 +6024,7 @@ async def email_panel(request: Request):
         mc = _load_mail_config()
         if mc is None:
             raise HTTPException(status_code=500,
-                                detail="config.mail_config has no rows — SMTP not configured")
+                                detail="config.mail_config has no rows â€” SMTP not configured")
         _send_pdf_email(pdf_path, pdf_filename, recipients, subject, body, mc)
         db_write_log(
             f"email-panel sent '{title}' to {recipients}",
@@ -6044,7 +6042,7 @@ button{{margin-top:18px;padding:8px 18px;border:none;border-radius:4px;
 background:#1f4e79;color:#fff;font-size:14px;cursor:pointer;}}
 </style></head><body>
 <div class="box">
-  <h2>✅ Email sent</h2>
+  <h2>âœ… Email sent</h2>
   <div>Report: <b>{_html.escape(title or '')}</b></div>
   <div class="recipients">To: {_html.escape(', '.join(recipients))}</div>
   <button onclick="window.close()">Close</button>
@@ -6065,7 +6063,7 @@ background:#1f4e79;color:#fff;font-size:14px;cursor:pointer;}}
 # GET renders a small form (resolved_by prefilled from the Grafana ${__user.login},
 # a resolution-type choice, and a required description); POST flips the incident to
 # resolved via alerts.resolve_incident_ui (migration 6610). The gate is Grafana
-# authentication — the resolver name is the Grafana username, not a web.users email.
+# authentication â€” the resolver name is the Grafana username, not a web.users email.
 # ---------------------------------------------------------------------------
 _RESOLUTION_TYPES = ["Fixed", "False Positive", "Mitigated", "Acknowledged", "Other"]
 
@@ -6154,7 +6152,7 @@ background:#1f4e79;color:#fff;cursor:pointer;">Close</button></div></body></html
 
     <label for="resolution_description">Description</label>
     <textarea id="resolution_description" name="resolution_description" required
-              placeholder="What was done / why this is resolved…"></textarea>
+              placeholder="What was done / why this is resolvedâ€¦"></textarea>
 
     <div class="actions">
       <button type="button" class="cancel" onclick="window.close()">Cancel</button>
@@ -6203,8 +6201,8 @@ display:flex;align-items:center;justify-content:center;min-height:100vh;}}.box{{
 border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.12);text-align:center;max-width:480px;}}
 h2{{color:#2e7d32;margin:0 0 12px;}}button{{margin-top:18px;padding:8px 18px;border:none;border-radius:4px;
 background:#1f4e79;color:#fff;cursor:pointer;}}</style></head><body><div class="box">
-<h2>✅ Alert #{_html.escape(incident_id)} resolved</h2>
-<div style="font-size:13px;color:#555;">By <b>{_html.escape(resolved_by)}</b> — {_html.escape(rtype or 'manual')}</div>
+<h2>âœ… Alert #{_html.escape(incident_id)} resolved</h2>
+<div style="font-size:13px;color:#555;">By <b>{_html.escape(resolved_by)}</b> â€” {_html.escape(rtype or 'manual')}</div>
 <button onclick="window.close()">Close</button></div></body></html>""")
     except HTTPException:
         raise
@@ -6226,7 +6224,7 @@ background:#1f4e79;color:#fff;cursor:pointer;}}</style></head><body><div class="
 # GRC Phase 5: Policy Management UI
 # ---------------------------------------------------------------------------
 
-# ── Page routes ──────────────────────────────────────────────────────────────
+# â”€â”€ Page routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/grc/policies", response_class=HTMLResponse)
 async def grc_policies_page(request: Request):
@@ -6254,7 +6252,7 @@ async def grc_masking_rules_page(request: Request):
         return HTMLResponse(content=f.read())
 
 
-# ── Firewall Policies API ────────────────────────────────────────────────────
+# â”€â”€ Firewall Policies API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/firewall-policies")
 async def api_get_policies(
@@ -6456,7 +6454,7 @@ async def api_apply_template(request: Request):
         cur.close(); conn.close()
 
 
-# ── Firewall Audit Log API ───────────────────────────────────────────────────
+# â”€â”€ Firewall Audit Log API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/audit-log")
 async def api_audit_log(
@@ -6517,7 +6515,7 @@ async def api_audit_log(
         cur.close(); conn.close()
 
 
-# ── Compliance Reports API ───────────────────────────────────────────────────
+# â”€â”€ Compliance Reports API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/compliance-reports/schedules")
 async def api_get_schedules():
@@ -6572,7 +6570,7 @@ async def api_update_schedule(schedule_id: int, request: Request):
         cur.close(); conn.close()
 
 
-# ── Alert incident lifecycle API ─────────────────────────────────────────────
+# â”€â”€ Alert incident lifecycle API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # open -> resolved (manual, by a customer user, with a description) or auto after
 # a configurable timeout. Backed by alerts.alert_incidents + the SQL functions in
 # migration 6550. See processes/alert_auto_resolve.py for the timer.
@@ -6715,7 +6713,7 @@ async def api_alerts_summary(request: Request):
 
 @app.get("/api/alerts/open")
 async def api_alerts_open(request: Request):
-    """The Open Alerts feed (dashboard panel 120) as JSON — one row per
+    """The Open Alerts feed (dashboard panel 120) as JSON â€” one row per
     server+root_cause (latest), joined to server name and root-cause metadata,
     with mail-sent and blocked timestamps.
     Query params (all optional): from, to (Grafana epoch-ms or ISO local),
@@ -6786,7 +6784,7 @@ async def api_alerts_open(request: Request):
 
 @app.get("/api/alerts/log/{alert_id}")
 async def api_alert_log_detail(alert_id: str, request: Request):
-    """Active Detection Findings for one alert (dashboard panel 455) as JSON —
+    """Active Detection Findings for one alert (dashboard panel 455) as JSON â€”
     i.e. SELECT * FROM monitoring.get_alert_log_resultset_byid(alert_id), with an
     optional entry_date window. Each finding's `result` json is expanded to a
     dict (matching the dashboard's field extraction).
@@ -6975,14 +6973,14 @@ async def api_database_restore(request: Request):
 
 
 # =============================================================================
-# IPS Report (dashboard 'ips-fortianalyzer') — one endpoint per panel.
+# IPS Report (dashboard 'ips-fortianalyzer') â€” one endpoint per panel.
 # All accept optional from/to (epoch-ms or ISO local); aggregations default to
 # the last 7 days when no window is given.
 # =============================================================================
 @app.get("/api/ips/summary")
 async def api_ips_summary(request: Request):
     """IPS header stats: total / critical / high / medium intrusion events,
-    blocked (FortiAnalyzer IPS), and monitored (mailed) — panels 1-6."""
+    blocked (FortiAnalyzer IPS), and monitored (mailed) â€” panels 1-6."""
     p = request.query_params
     cl, pr = _entry_clause("entry_date", p, default_days=7)
     win = " AND ".join(cl) if cl else "TRUE"
@@ -7108,7 +7106,7 @@ async def api_ips_top_sources(request: Request):
 
 
 # =============================================================================
-# Retention (dashboard 'adretn001') — read views.
+# Retention (dashboard 'adretn001') â€” read views.
 # =============================================================================
 @app.get("/api/retention/overview")
 async def api_retention_overview():
@@ -7252,7 +7250,7 @@ async def api_stored_proc_slow(request: Request):
 @app.post("/api/alerts/incidents/{incident_id}/resolve")
 async def api_resolve_incident(incident_id: int, request: Request):
     """Manually resolve an open incident. ONLY a valid, active customer user may
-    do this, and a description is required — both enforced in alerts.resolve_incident().
+    do this, and a description is required â€” both enforced in alerts.resolve_incident().
     Body: {"resolved_by": "user@customer.com", "description": "what was done"}."""
     data = await request.json()
     resolved_by = str(data.get("resolved_by", "")).strip()
@@ -7274,7 +7272,7 @@ async def api_resolve_incident(incident_id: int, request: Request):
     except Exception as e:
         conn.rollback()
         # the SQL function RAISEs a clear message for bad user / missing description /
-        # already-resolved — surface it as a 400, not a 500.
+        # already-resolved â€” surface it as a 400, not a 500.
         msg = str(e).split("\n")[0].replace("CONTEXT:", "").strip()
         return JSONResponse({"detail": msg}, status_code=400)
     finally:
@@ -7284,7 +7282,7 @@ async def api_resolve_incident(incident_id: int, request: Request):
 @app.post("/api/alerts/incidents/{incident_id}/resolve-ui")
 async def api_resolve_incident_ui(incident_id: int, request: Request):
     """Resolve an open incident with resolver name, resolution type, an optional
-    resolved-at timestamp, and a description — the same capability as the Open Alerts
+    resolved-at timestamp, and a description â€” the same capability as the Open Alerts
     dashboard resolve form, exposed as JSON. resolved_by is stored as-is (e.g. the
     Grafana username); the gate is the caller's own authentication, not web.users.
     Body: {"resolved_by": "...", "resolution_type": "Fixed",
@@ -7524,7 +7522,7 @@ def email_dam_form(request: Request):
     <label for="subject">Subject</label>
     <input id="subject" name="subject" type="text" value="{default_subject}">
     <label for="body">Message (optional)</label>
-    <textarea id="body" name="body" placeholder="Optional note to include in the email body…"></textarea>
+    <textarea id="body" name="body" placeholder="Optional note to include in the email bodyâ€¦"></textarea>
     <div class="actions">
       <button type="button" class="cancel" onclick="window.close()">Cancel</button>
       <button type="submit" class="send">Send</button>
@@ -7554,7 +7552,7 @@ async def email_dam(request: Request):
         mc = _load_mail_config()
         if mc is None:
             raise HTTPException(status_code=500,
-                                detail="config.mail_config has no rows — SMTP not configured")
+                                detail="config.mail_config has no rows â€” SMTP not configured")
         _send_pdf_email(pdf_path, filename, recipients, subject, body, mc)
         db_write_log(f"email-dam sent to {recipients}", 0, "email_dam", "")
         ok_html = f"""<!doctype html>
@@ -7605,7 +7603,7 @@ async def api_run_report(request: Request):
         return JSONResponse({"detail": str(e)}, status_code=500)
 
 
-# ── Risk Scores API ──────────────────────────────────────────────────────────
+# â”€â”€ Risk Scores API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/risk-scores")
 async def api_risk_scores(
@@ -7672,7 +7670,7 @@ async def api_risk_events(server_name: str, login_name: str):
         cur.close(); conn.close()
 
 
-# ── Masking Rules API ────────────────────────────────────────────────────────
+# â”€â”€ Masking Rules API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/masking-rules")
 async def api_get_masking_rules(
@@ -7788,7 +7786,7 @@ async def api_sync_masking_rules():
         from processes.data_masking_engine import sync_masking_rules
         sync_masking_rules()
         db_write_log("Masking rules synced via UI", 0, "api_sync_masking_rules", "")
-        return JSONResponse({"message": "Sync complete — rules reloaded from sensitive_schema"})
+        return JSONResponse({"message": "Sync complete â€” rules reloaded from sensitive_schema"})
     except Exception as e:
         db_write_log(f"api_sync_masking_rules failed: {e}", 0, "api_sync_masking_rules", "")
         return JSONResponse({"detail": str(e)}, status_code=500)
@@ -7804,7 +7802,7 @@ async def grc_threat_response_page(request: Request):
         return HTMLResponse(content=f.read())
 
 
-# ── Security Incidents ───────────────────────────────────────────────────────
+# â”€â”€ Security Incidents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/threat-response/incidents")
 async def api_get_incidents(status: str = None, severity: str = None):
@@ -7902,7 +7900,7 @@ async def api_update_incident(incident_id: int, request: Request):
         cur.close(); conn.close()
 
 
-# ── Blocked IPs ──────────────────────────────────────────────────────────────
+# â”€â”€ Blocked IPs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/threat-response/blocked-ips")
 async def api_get_blocked_ips():
@@ -7981,7 +7979,7 @@ async def api_release_ip(block_id: int):
         cur.close(); conn.close()
 
 
-# ── Suspended Users ──────────────────────────────────────────────────────────
+# â”€â”€ Suspended Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/threat-response/suspended-users")
 async def api_get_suspended_users():
@@ -8062,7 +8060,7 @@ async def api_release_user(suspension_id: int):
         cur.close(); conn.close()
 
 
-# ── Playbooks ────────────────────────────────────────────────────────────────
+# â”€â”€ Playbooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/threat-response/playbooks")
 async def api_get_playbooks():
@@ -8149,7 +8147,7 @@ async def api_update_playbook(playbook_id: int, request: Request):
         cur.close(); conn.close()
 
 
-# ── Response Log ─────────────────────────────────────────────────────────────
+# â”€â”€ Response Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/threat-response/response-log")
 async def api_get_response_log():
@@ -9246,7 +9244,7 @@ async def api_siem_ips_dashboard():
 async def api_siem_ips_email(request: Request):
     data       = await request.json()
     recipients = (data.get("recipients") or "").strip()
-    subject    = (data.get("subject") or "IPS Report — dbdome").strip()
+    subject    = (data.get("subject") or "IPS Report â€” dbdome").strip()
     if not recipients:
         return JSONResponse({"detail": "recipients is required"}, status_code=400)
 
@@ -9515,6 +9513,611 @@ app.include_router(_v1)
 
 
 # This is the key addition - run the server when the script is executed
+
+# =============================================================================
+# dbdome console: main page, settings, and user management
+# -----------------------------------------------------------------------------
+# The console is a thin shell over Grafana. dbdome has no user directory of its
+# own -- sign-in for both the dashboards and this console is Grafana's, so
+# "create a user" here means "create a Grafana user". Doing it any other way
+# would produce two directories that drift apart.
+#
+# Calls go out through urllib rather than requests/httpx on purpose: neither is
+# imported by this module today, and adding a dependency would mean a spec
+# change and a rebuild for what is a handful of JSON calls.
+# =============================================================================
+import base64 as _b64
+import json as _cjson
+import urllib.error as _curlerr
+import urllib.request as _curlreq
+
+
+def _grafana_base() -> str:
+    """Where Grafana listens. Loopback by default -- these are admin calls and
+    they should not leave the box."""
+    return os.environ.get("GRAFANA_URL", "http://127.0.0.1:3000").rstrip("/")
+
+
+def _grafana_auth_header() -> str:
+    user = os.environ.get("GRAFANA_ADMIN_USER", "admin")
+    pwd = os.environ.get("GRAFANA_ADMIN_PASSWORD", "admin")
+    token = _b64.b64encode(f"{user}:{pwd}".encode()).decode()
+    return f"Basic {token}"
+
+
+def _grafana(method: str, path: str, payload=None, timeout: int = 20):
+    """One Grafana API call. Returns (status, parsed_body).
+
+    Never raises for an HTTP error status -- the caller decides what a 4xx
+    means, because Grafana uses 409/412 for ordinary outcomes like "that login
+    already exists", which is a message for the operator rather than a fault.
+    """
+    url = f"{_grafana_base()}{path}"
+    data = _cjson.dumps(payload).encode() if payload is not None else None
+    req = _curlreq.Request(url, data=data, method=method)
+    req.add_header("Authorization", _grafana_auth_header())
+    req.add_header("Content-Type", "application/json")
+    try:
+        with _curlreq.urlopen(req, timeout=timeout) as r:
+            raw = r.read().decode("utf-8", "replace")
+            try:
+                return r.status, _cjson.loads(raw) if raw else {}
+            except Exception:
+                return r.status, {"raw": raw}
+    except _curlerr.HTTPError as e:
+        raw = e.read().decode("utf-8", "replace")
+        try:
+            return e.code, _cjson.loads(raw) if raw else {}
+        except Exception:
+            return e.code, {"message": raw[:400]}
+    except Exception as e:
+        # Grafana down / wrong port / refused. Surfaced as 502 by the callers.
+        return 0, {"message": str(e)}
+
+
+def _grafana_error(status, body, fallback):
+    msg = ""
+    if isinstance(body, dict):
+        msg = body.get("message") or body.get("error") or ""
+    if status == 0:
+        return (502, f"Could not reach Grafana at {_grafana_base()}. "
+                     f"Is the DBDOME_Grafana service running? ({msg})")
+    if status in (401, 403):
+        return (502, "Grafana rejected the console's credentials. Set "
+                     "GRAFANA_ADMIN_USER and GRAFANA_ADMIN_PASSWORD in bin\\.env "
+                     "to an account with admin rights.")
+    return (status if 400 <= status < 500 else 502, msg or fallback)
+
+
+# ------------------------------------------------------------------ pages
+# NOTE: GET /dbdome itself is registered much earlier in this file (it existed
+# before the console did, as a redirect to the Grafana Alerts dashboard, and was
+# repointed there to serve dbdome_main.html). Registering it again here would be
+# dead code -- FastAPI matches the FIRST route that matches, so the earlier one
+# always wins.
+
+
+@app.get("/dbdome/settings", response_class=HTMLResponse)
+def dbdome_settings_page():
+    """dbdome console settings: list users, create a user, invite a user."""
+    with open(os.path.join(TEMPLATE_DIR, "dbdome_settings.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+# ------------------------------------------------------------------ users
+@app.get("/api/console/users")
+def api_console_users_list():
+    """Users in the Grafana organization backing dbdome, with their roles."""
+    status, body = _grafana("GET", "/api/org/users")
+    if status != 200:
+        code, msg = _grafana_error(status, body, "Could not list users")
+        return JSONResponse({"detail": msg}, status_code=code)
+    users = [
+        {
+            "userId": u.get("userId"),
+            "login": u.get("login"),
+            "email": u.get("email"),
+            "name": u.get("name"),
+            "role": u.get("role"),
+        }
+        for u in (body or [])
+    ]
+    return JSONResponse({"users": users})
+
+
+@app.post("/api/console/users")
+async def api_console_users_create(request: Request):
+    """Create a Grafana user and set its organization role."""
+    try:
+        p = await request.json()
+    except Exception:
+        return JSONResponse({"detail": "Expected a JSON body"}, status_code=400)
+
+    login = (p.get("login") or "").strip()
+    email = (p.get("email") or "").strip()
+    password = p.get("password") or ""
+    name = (p.get("name") or "").strip()
+    role = (p.get("role") or "Viewer").strip()
+
+    if not login or not email or not password:
+        return JSONResponse({"detail": "login, email and password are required"},
+                            status_code=400)
+    if len(password) < 8:
+        return JSONResponse({"detail": "Password must be at least 8 characters"},
+                            status_code=400)
+    if role not in ("Viewer", "Editor", "Admin"):
+        return JSONResponse({"detail": "role must be Viewer, Editor or Admin"},
+                            status_code=400)
+
+    status, body = _grafana("POST", "/api/admin/users", {
+        "name": name or login, "email": email, "login": login, "password": password,
+    })
+    if status not in (200, 201):
+        code, msg = _grafana_error(status, body, "Could not create the user")
+        return JSONResponse({"detail": msg}, status_code=code)
+
+    user_id = (body or {}).get("id")
+
+    # Grafana creates every user as a Viewer in the default org; the role is a
+    # second call. A failure here leaves a usable account with the WRONG role,
+    # so it is reported rather than swallowed.
+    role_note = None
+    if role != "Viewer" and user_id:
+        st2, b2 = _grafana("PATCH", f"/api/org/users/{user_id}", {"role": role})
+        if st2 != 200:
+            role_note = (f"User created, but the role could not be set to {role} "
+                         f"({(b2 or {}).get('message', st2)}). It is Viewer for now.")
+
+    db_write_log(f"console: created Grafana user {login} ({role})", 0,
+                 "http_server.console", "")
+    out = {"created": True, "userId": user_id, "login": login, "role": role}
+    if role_note:
+        out["warning"] = role_note
+    return JSONResponse(out)
+
+
+@app.delete("/api/console/users/{user_id}")
+def api_console_users_delete(user_id: int):
+    """Remove a user from the dbdome organization."""
+    status, body = _grafana("DELETE", f"/api/org/users/{user_id}")
+    if status != 200:
+        code, msg = _grafana_error(status, body, "Could not remove the user")
+        return JSONResponse({"detail": msg}, status_code=code)
+    db_write_log(f"console: removed Grafana org user id={user_id}", 0,
+                 "http_server.console", "")
+    return JSONResponse({"removed": True})
+
+
+# ---------------------------------------------------------------- invites
+@app.get("/api/console/invites")
+def api_console_invites_list():
+    """Invitations that have not been accepted yet."""
+    status, body = _grafana("GET", "/api/org/invites")
+    if status != 200:
+        code, msg = _grafana_error(status, body, "Could not list invitations")
+        return JSONResponse({"detail": msg}, status_code=code)
+    invites = [
+        {
+            "code": i.get("code"),
+            "email": i.get("email"),
+            "name": i.get("name"),
+            "role": i.get("role"),
+            "createdOn": str(i.get("createdOn") or ""),
+        }
+        for i in (body or [])
+    ]
+    return JSONResponse({"invites": invites})
+
+
+@app.post("/api/console/invites")
+async def api_console_invites_create(request: Request):
+    """Invite someone by email. Falls back to returning the link.
+
+    If SMTP is not configured Grafana refuses to send and returns an error. That
+    is a mail problem, not an invitation problem, so the invitation is retried
+    with sendEmail=false and the link handed back for the operator to pass on --
+    otherwise the feature is unusable on an air-gapped install, which is most of
+    them.
+    """
+    try:
+        p = await request.json()
+    except Exception:
+        return JSONResponse({"detail": "Expected a JSON body"}, status_code=400)
+
+    email = (p.get("email") or "").strip()
+    name = (p.get("name") or "").strip()
+    role = (p.get("role") or "Viewer").strip()
+    send = bool(p.get("sendEmail", True))
+
+    if not email:
+        return JSONResponse({"detail": "email is required"}, status_code=400)
+    if role not in ("Viewer", "Editor", "Admin"):
+        return JSONResponse({"detail": "role must be Viewer, Editor or Admin"},
+                            status_code=400)
+
+    payload = {"loginOrEmail": email, "name": name or email,
+               "role": role, "sendEmail": send}
+    status, body = _grafana("POST", "/api/org/invites", payload)
+
+    emailed = send and status == 200
+    if status != 200 and send:
+        payload["sendEmail"] = False
+        status, body = _grafana("POST", "/api/org/invites", payload)
+        emailed = False
+
+    if status != 200:
+        code, msg = _grafana_error(status, body, "Could not create the invitation")
+        return JSONResponse({"detail": msg}, status_code=code)
+
+    # Find the code Grafana just issued so the link can be shown.
+    url = None
+    st2, invites = _grafana("GET", "/api/org/invites")
+    if st2 == 200:
+        for i in (invites or []):
+            if (i.get("email") or "").lower() == email.lower():
+                host = get_public_or_ip()
+                url = f"http://{host}:3000/invite/{i.get('code')}"
+                break
+
+    db_write_log(f"console: invited {email} as {role} (emailed={emailed})", 0,
+                 "http_server.console", "")
+    return JSONResponse({"invited": True, "emailed": emailed, "url": url})
+
+
+@app.delete("/api/console/invites/{code}")
+def api_console_invites_revoke(code: str):
+    """Revoke a pending invitation."""
+    status, body = _grafana("DELETE", f"/api/org/invites/{code}/revoke")
+    if status != 200:
+        code_, msg = _grafana_error(status, body, "Could not revoke the invitation")
+        return JSONResponse({"detail": msg}, status_code=code_)
+    return JSONResponse({"revoked": True})
+
+
+# =============================================================================
+# Console: alerts list and its three drill-downs
+# =============================================================================
+_CONSOLE_ROWS_LIMIT = 500
+
+
+def _console_rows(sql, params=None):
+    """Run one read-only query and return (columns, list-of-dicts)."""
+    conn = psycopg2.connect(get_connection_string())
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = '30s'")
+            cur.execute(sql, params or {})
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        return cols, rows
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+@app.get("/dbdome/alerts", response_class=HTMLResponse)
+def dbdome_alerts_page():
+    """Console alert list with drill-down into the detection result set, the
+    security-agent verdict and the alert value."""
+    with open(os.path.join(TEMPLATE_DIR, "dbdome_alerts.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/api/console/alerts")
+def api_console_alerts(risk_level: str = "All", hours: int = 24):
+    """Security-domain alerts, most recent per (server, root cause).
+
+    ROW_NUMBER()...=1 collapses a rule that fires repeatedly on one server into
+    its latest occurrence, so the list is a picture of what is wrong now rather
+    than a firehose - one server in this data produced 660 alerts in an hour.
+    """
+    if risk_level not in ("All", "critical", "high", "medium", "low"):
+        return JSONResponse({"detail": "invalid risk_level"}, status_code=400)
+    try:
+        hours = max(0, min(int(hours), 24 * 365))
+    except Exception:
+        hours = 24
+
+    # hours = 0 means "all time"; the interval predicate is dropped rather than
+    # widened, so the planner still prunes partitions when a range IS given.
+    time_pred = ("AND l.entry_date >= LOCALTIMESTAMP - make_interval(hours => %(hours)s)"
+                 if hours else "")
+    sql = f"""
+        SELECT row_id, server, servername, risk_level, area, issue,
+               root_cause, root_cause_name, recipients,
+               occured_at, sent_at, blocked_at
+        FROM (
+          SELECT ROW_NUMBER() OVER (PARTITION BY l.server, l.root_cause_id
+                                    ORDER BY l.entry_date DESC) AS seq,
+                 l.row_id, l.server, s.servername, l.risk_level,
+                 COALESCE(a.name, '') AS area,
+                 COALESCE(i.name, '') AS issue,
+                 l.root_cause_id      AS root_cause,
+                 rc.name              AS root_cause_name,
+                 mal.recipients,
+                 l.entry_date         AS occured_at,
+                 mal.entry_date       AS sent_at,
+                 blc.entry_date       AS blocked_at
+          FROM alerts.alert_log l
+          JOIN (SELECT server_id, servername, server, db_vendor
+                  FROM metrics.servers WHERE is_active IS TRUE) s
+            ON s.server = l.server
+          LEFT JOIN alerts.mail_alert_log mal
+            ON mal.server = l.server AND mal.metric_name = l.root_cause_id
+           AND mal.entry_date = l.entry_date
+          LEFT JOIN alerts.blocks blc
+            ON blc.server = l.server AND blc.metric_name = l.root_cause_id
+           AND blc.entry_date = l.entry_date
+          JOIN rootcause.root_causes rc ON rc.root_cause_id = l.root_cause_id
+          JOIN rootcause.issues i       ON i.issue_id = rc.issue_id
+          JOIN rootcause.areas a        ON a.code = i.area_code
+           AND (%(risk)s = 'All' OR l.risk_level = %(risk)s)
+          WHERE i.domain_code = 'SEC'
+            {time_pred}
+        ) q
+        WHERE seq = 1
+        ORDER BY occured_at DESC
+        LIMIT {_CONSOLE_ROWS_LIMIT}
+    """
+    try:
+        _, rows = _console_rows(sql, {"risk": risk_level, "hours": hours})
+        for r in rows:
+            for k in ("occured_at", "sent_at", "blocked_at"):
+                if r.get(k) is not None:
+                    r[k] = str(r[k])
+            r["row_id"] = str(r.get("row_id"))
+        return JSONResponse({"alerts": rows})
+    except Exception as e:
+        db_write_log(f"console alerts list failed: {e}", 0, "http_server.console", "")
+        return JSONResponse({"detail": str(e)[:300]}, status_code=500)
+
+
+@app.get("/api/console/alerts/{row_id}/resultset")
+def api_console_alert_resultset(row_id: int):
+    """The detection's own result rows for one alert."""
+    try:
+        cols, rows = _console_rows(
+            "SELECT * FROM monitoring.get_alert_log_resultset_byid(%(rid)s)",
+            {"rid": str(row_id)})
+        for r in rows:
+            for k, v in list(r.items()):
+                if v is not None and not isinstance(v, (str, int, float, bool)):
+                    r[k] = str(v)
+        return JSONResponse({"columns": cols, "rows": rows[:_CONSOLE_ROWS_LIMIT],
+                             "limit": _CONSOLE_ROWS_LIMIT})
+    except Exception as e:
+        return JSONResponse({"detail": str(e)[:300]}, status_code=500)
+
+
+@app.get("/api/console/alerts/{row_id}/verdict")
+def api_console_alert_verdict(row_id: int):
+    """The security agent's verdict for one alert, if it has been triaged."""
+    try:
+        _, rows = _console_rows("""
+            SELECT verdict, confidence, decided_by, reason, indicators,
+                   exact_matches, distinct_shapes, candidates_searched,
+                   retrieval_method, model, elapsed_ms, triaged
+            FROM monitoring.get_security_agent_byid(%(rid)s::bigint)
+        """, {"rid": row_id})
+        if not rows:
+            return JSONResponse({"verdict": None})
+        v = rows[0]
+        for k, val in list(v.items()):
+            if val is not None and not isinstance(val, (str, int, float, bool)):
+                v[k] = str(val)
+        return JSONResponse({"verdict": v})
+    except Exception as e:
+        return JSONResponse({"detail": str(e)[:300]}, status_code=500)
+
+
+@app.get("/api/console/alerts/{row_id}/value")
+def api_console_alert_value(row_id: int):
+    """The field/value pairs that tripped the rule."""
+    try:
+        _, rows = _console_rows(
+            "SELECT field, value FROM monitoring.get_alert_value_byid(%(rid)s::bigint)",
+            {"rid": row_id})
+        for r in rows:
+            for k, v in list(r.items()):
+                if v is not None and not isinstance(v, str):
+                    r[k] = str(v)
+        return JSONResponse({"rows": rows[:_CONSOLE_ROWS_LIMIT]})
+    except Exception as e:
+        return JSONResponse({"detail": str(e)[:300]}, status_code=500)
+
+
+# =============================================================================
+# Console: configuration
+# -----------------------------------------------------------------------------
+# A fixed registry of named read-only queries. The endpoint takes a NAME, never
+# SQL -- an endpoint that executes caller-supplied SQL against the repository
+# database would be a far worse hole than anything this product detects.
+#
+# Mirrors the Configuration dashboard's panels, with one correction: its
+# "Monitored Servers" table selects db_name, which does not exist in
+# metrics.servers (the column is `database`), so that panel errors on the
+# dashboard today. Fixed here.
+#
+# metrics.servers also holds a `password` column. Every column is listed
+# explicitly and that one is never among them.
+# =============================================================================
+_CONSOLE_CONFIG = {
+    "servers": ("Monitored servers", """
+        SELECT server, servername, database, port, db_vendor AS vendor,
+               db_version AS version, auth_type, is_active
+        FROM metrics.servers ORDER BY is_active DESC, server"""),
+
+    "rules_by_vendor": ("Detection rules by vendor", """
+        SELECT vendor_slug AS vendor, COUNT(*) AS rules
+        FROM rootcause.detection_paths WHERE is_active = true
+        GROUP BY vendor_slug ORDER BY rules DESC"""),
+
+    "rules_by_domain": ("Detection rules by domain", """
+        SELECT d.name AS domain, COUNT(DISTINCT dp.id) AS rules
+        FROM rootcause.detection_paths dp
+        JOIN rootcause.root_causes rc ON rc.root_cause_id = dp.root_cause_id
+        JOIN rootcause.issues i       ON i.issue_id = rc.issue_id
+        JOIN rootcause.domains d      ON d.code = i.domain_code
+        WHERE dp.is_active = true GROUP BY d.name ORDER BY rules DESC"""),
+
+    "reports": ("Configured reports", """
+        SELECT r.report_name, r.is_active,
+               COALESCE(j.occurance, 'not scheduled') AS schedule,
+               j.occurs_at::text AS run_time
+        FROM config.reports r
+        LEFT JOIN config.reports_jobs rj ON rj.report_id = r.row_id
+        LEFT JOIN jobs.jobs j ON j.row_id = rj.job_id
+        ORDER BY r.is_active DESC, r.report_name"""),
+
+    "channels": ("Alert channels", """
+        SELECT metric_type,
+               CASE WHEN send_mail_alert THEN 'ON' ELSE 'OFF' END AS mail,
+               CASE WHEN send_siem_alert THEN 'ON' ELSE 'OFF' END AS siem,
+               CASE WHEN send_diagnosis_evidence THEN 'ON' ELSE 'OFF' END AS diagnosis
+        FROM config.webook_alerts ORDER BY metric_type"""),
+
+    "mail": ("Mail configuration", """
+        SELECT mail_sender, smtp_server, smtp_port,
+               CASE WHEN smtp_user IS NOT NULL THEN 'Configured' ELSE 'None' END AS auth,
+               tls
+        FROM config.mail_config ORDER BY row_id"""),
+
+    "mail_groups": ("Mail groups", """
+        SELECT group_name, recipients, is_active
+        FROM config.mail_groups ORDER BY group_name"""),
+
+    "risk_levels": ("Risk levels", """
+        SELECT trim(risk_level) AS risk_level, is_active
+        FROM rootcause.risk_level ORDER BY row_id"""),
+
+    "processes": ("Scheduled processes", """
+        SELECT process_name, is_active, interval AS interval_secs,
+               LEFT(COALESCE(description, ''), 160) AS description
+        FROM metrics.registered_processes ORDER BY is_active DESC, process_name"""),
+
+    # Secrets are masked in SQL, not in the browser -- a value that never leaves
+    # the database cannot be read out of the response by anyone watching it.
+    "global_params": ("Global parameters", """
+        SELECT key,
+               CASE WHEN key ILIKE '%password%' OR key ILIKE '%api_key%'
+                      OR key ILIKE '%secret%'   OR key ILIKE '%token%'
+                    THEN '********' ELSE value END AS value
+        FROM config.global_params ORDER BY key"""),
+}
+
+
+@app.get("/dbdome/config", response_class=HTMLResponse)
+def dbdome_config_page():
+    """Console configuration: servers, detection rules, reports, notifications
+    and system parameters."""
+    with open(os.path.join(TEMPLATE_DIR, "dbdome_config.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/api/console/config/summary")
+def api_console_config_summary():
+    """The headline counts shown at the top of the configuration page."""
+    stats = [
+        ("Monitored servers", "SELECT COUNT(*) AS n FROM metrics.servers WHERE is_active = true"),
+        ("Active detection rules", "SELECT COUNT(*) AS n FROM rootcause.detection_paths WHERE is_active = true"),
+        ("Alert rules", "SELECT COUNT(*) AS n FROM config.alerts_issue_root_causes"),
+        ("Sensitive columns", "SELECT COUNT(*) AS n FROM monitoring.sensitive_schema"),
+        ("Scheduled reports", "SELECT COUNT(*) AS n FROM config.reports WHERE is_active = true"),
+        ("Alerts sent (7d)", "SELECT COUNT(*) AS n FROM alerts.mail_alert_log "
+                             "WHERE entry_date >= NOW() - INTERVAL '7 days'"),
+    ]
+    out = []
+    for label, sql in stats:
+        try:
+            _, rows = _console_rows(sql)
+            out.append({"label": label, "value": rows[0]["n"] if rows else None})
+        except Exception as e:
+            # One broken count must not blank the whole strip.
+            out.append({"label": label, "value": None, "error": str(e)[:120]})
+    return JSONResponse({"stats": out})
+
+
+@app.get("/dbdome/reports", response_class=HTMLResponse)
+def dbdome_reports_page():
+    """Console reports: the report catalogue grouped by kind, plus the GRC
+    compliance and DAM report tools."""
+    with open(os.path.join(TEMPLATE_DIR, "dbdome_reports.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/api/console/reports")
+def api_console_reports(active_only: bool = True):
+    """The report catalogue from config.reports, bucketed by kind.
+
+    Buckets are derived from the name and template path rather than stored,
+    because config.reports has no category column -- 151 rows with no grouping
+    is a list nobody reads. Anything that does not match a rule lands in
+    'Other' rather than being dropped, so the page still accounts for every row.
+    """
+    sql = """
+        SELECT row_id, report_name, report_url, is_active,
+               CASE
+                 WHEN report_name ILIKE '%%compliance%%' OR report_url ILIKE '%%compliance%%'
+                   OR report_name ILIKE '%%dam%%'
+                   THEN 'Compliance and DAM'
+                 WHEN report_name ILIKE '%%grc%%'
+                   THEN 'GRC'
+                 WHEN report_name ILIKE '%%alert%%'   OR report_url ILIKE '%%alert%%'
+                   OR report_name ILIKE '%%injection%%' OR report_name ILIKE '%%threat%%'
+                   THEN 'Alerts'
+                 WHEN report_name ILIKE '%%activity%%'    OR report_url ILIKE '%%activity%%'
+                   OR report_name ILIKE '%%transaction%%' OR report_url ILIKE '%%transaction%%'
+                   OR report_name ILIKE '%%audit%%'       OR report_url ILIKE '%%audit%%'
+                   OR report_name ILIKE '%%connections%%'
+                   THEN 'Data activity monitoring'
+                 ELSE 'Other'
+               END AS category
+        FROM config.reports
+        WHERE (%(active_only)s IS FALSE OR is_active IS TRUE)
+        ORDER BY category, report_name
+    """
+    try:
+        _, rows = _console_rows(sql, {"active_only": bool(active_only)})
+        for r in rows:
+            r["row_id"] = str(r.get("row_id"))
+            # A template-backed report renders a definition; a NULL url is one of
+            # the older SQL-defined reports. The page needs to tell them apart.
+            r["kind"] = "template" if r.get("report_url") else "sql"
+        order = ["Compliance and DAM", "GRC", "Alerts",
+                 "Data activity monitoring", "Other"]
+        groups = []
+        for cat in order:
+            items = [r for r in rows if r["category"] == cat]
+            if items:
+                groups.append({"category": cat, "reports": items})
+        return JSONResponse({"groups": groups, "total": len(rows)})
+    except Exception as e:
+        db_write_log(f"console reports list failed: {e}", 0, "http_server.console", "")
+        return JSONResponse({"detail": str(e)[:300]}, status_code=500)
+
+
+@app.get("/api/console/config/{name}")
+def api_console_config_section(name: str):
+    """One named configuration table. `name` must be a key of _CONSOLE_CONFIG."""
+    entry = _CONSOLE_CONFIG.get(name)
+    if not entry:
+        return JSONResponse(
+            {"detail": f"unknown section '{name}'",
+             "available": sorted(_CONSOLE_CONFIG.keys())}, status_code=404)
+    title, sql = entry
+    try:
+        cols, rows = _console_rows(sql)
+        for r in rows:
+            for k, v in list(r.items()):
+                if v is not None and not isinstance(v, (str, int, float, bool)):
+                    r[k] = str(v)
+        return JSONResponse({"title": title, "columns": cols,
+                             "rows": rows[:_CONSOLE_ROWS_LIMIT]})
+    except Exception as e:
+        return JSONResponse({"title": title, "detail": str(e)[:300]}, status_code=500)
+
 if __name__ == "__main__":
     _ip = get_public_or_ip ()
     print(f"Starting FastAPI server...")

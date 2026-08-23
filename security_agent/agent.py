@@ -1,4 +1,4 @@
-"""Classify one candidate alert. Never raises, never blocks forever.
+﻿"""Classify one candidate alert. Never raises, never blocks forever.
 
 This runs inside the collector's alert path, so two properties matter more than
 accuracy:
@@ -17,14 +17,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 from utils.log4dbexpert import db_write_log
-from security_agent import config, fingerprint as fp, llm, prompts, classifier, retriever
+from security_agent import (config, fingerprint as fp, llm, prompts, classifier,
+                            retriever, correlation)
 
 # One shared worker: generation is serialized behind llm._GEN_LOCK anyway, so a
 # bigger pool would only queue threads instead of futures.
 _POOL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="secagent")
 
 
-def _fail_open(reason, precedent, query_text, *, decided_by, privileged=False):
+def _fail_open(reason, precedent, query_text, *, decided_by, privileged=False,
+               correlation_data=None):
     return {
         "verdict": classifier.VERDICT_ALERT,
         "confidence": 0.0,
@@ -32,6 +34,10 @@ def _fail_open(reason, precedent, query_text, *, decided_by, privileged=False):
         "indicators": [],
         "matched_precedent": bool((precedent or {}).get("exact_matches")),
         "precedent": precedent or {},
+        # Carried on the fail-open paths too: correlation is pure SQL and
+        # succeeds even when the model is missing or timed out, so the reviewer
+        # still gets the corroboration evidence on an untriaged alert.
+        "correlation": correlation_data or {},
         "fingerprint": fp.fingerprint(query_text or ""),
         "model": None,
         "elapsed_ms": 0,
@@ -67,23 +73,34 @@ def classify(conn, candidate: dict) -> dict:
         precedent = {"exact_matches": 0, "distinct_shapes": 0, "neighbours": [],
                      "searched": 0, "method": "none", "error": str(e)}
 
+    # Second evidence arm: what else fired on this host in this window, and how
+    # usual this rule / login / hour is here. Pure SQL against alerts.alert_log
+    # (measured 35-335 ms), so it is gathered even when the model is absent --
+    # the flags go into the deterministic reason and the verdict record too.
+    try:
+        corr = correlation.gather(conn, candidate)
+    except Exception as e:
+        corr = {"enabled": True, "error": str(e), "concurrent": {},
+                "history": {}, "flags": []}
+
     # Rule 2 short-circuit: a privileged statement is alerted without spending
     # model time. Precedent cannot excuse GRANT/DROP/ALTER-class actions, so
     # there is no verdict the model could return that would change the outcome.
     if privileged:
         v = _fail_open(classifier.deterministic_reason(precedent, True),
                        precedent, query_text, decided_by="privileged_shape",
-                       privileged=True)
+                       privileged=True, correlation_data=corr)
         v["elapsed_ms"] = int((time.time() - t0) * 1000)
         return v
 
     if not llm.available():
         v = _fail_open(classifier.deterministic_reason(precedent, False),
-                       precedent, query_text, decided_by="model_unavailable")
+                       precedent, query_text, decided_by="model_unavailable",
+                       correlation_data=corr)
         v["elapsed_ms"] = int((time.time() - t0) * 1000)
         return v
 
-    user_prompt = prompts.build_user_prompt(candidate, precedent)
+    user_prompt = prompts.build_user_prompt(candidate, precedent, corr)
 
     # A cold sidecar must load ~2.2GB before it can generate. Charging that to
     # the steady-state budget meant the first alert after every service restart
@@ -118,18 +135,20 @@ def classify(conn, candidate: dict) -> dict:
         v = _fail_open(
             f"Model triage exceeded its {budget:.0f}s budget, so the "
             f"alert was raised without suppression (fail-open).",
-            precedent, query_text, decided_by="timeout")
+            precedent, query_text, decided_by="timeout", correlation_data=corr)
         v["elapsed_ms"] = int((time.time() - t0) * 1000)
         return v
     except Exception as e:
         v = _fail_open(f"Model triage failed ({e}), so the alert was raised "
                        f"unchanged (fail-open).",
-                       precedent, query_text, decided_by="generation_error")
+                       precedent, query_text, decided_by="generation_error",
+                       correlation_data=corr)
         v["elapsed_ms"] = int((time.time() - t0) * 1000)
         return v
 
     v = classifier.normalize(raw, precedent)
     v["precedent"] = precedent
+    v["correlation"] = corr
     v["fingerprint"] = fp.fingerprint(query_text)
     v["model"] = llm.model_name()
     v["prompt_tokens"] = prompt_tokens

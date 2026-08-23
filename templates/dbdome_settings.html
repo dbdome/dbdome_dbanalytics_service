@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - dbdome</title>
+  <link rel="stylesheet" href="/static/css/dbdome_console.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">dbdome</div>
+  </header>
+
+  <main class="console">
+    <h1>Settings</h1>
+    <p class="subtitle">Access to dbdome</p>
+
+    <div class="console-layout">
+      <nav class="rail" aria-label="Sections">
+        <a href="/dbdome">Overview</a>
+        <a href="/dbdome/settings" aria-current="page">Settings</a>
+
+        <div class="rail-heading">Go to</div>
+        <a href="/dbdome/alerts">Alerts</a>
+        <a id="rail-incidents" href="#">Incidents</a>
+        <a id="rail-activity" href="#">Data activity</a>
+        <a id="rail-config" href="#">Configuration</a>
+      </nav>
+
+      <div class="console-content">
+        <div id="notice" class="notice"></div>
+
+        <!-- ----------------------------------------------------- users -->
+        <div class="card">
+          <h2>Users</h2>
+          <p class="card-hint">
+            People who can sign in to dbdome. Accounts are Grafana accounts &mdash;
+            the dashboards and this console share one directory, so a user created
+            here can sign in to both.
+          </p>
+          <div id="users-wrap">
+            <div class="empty" id="users-loading">Loading&hellip;</div>
+          </div>
+        </div>
+
+        <!-- ------------------------------------------------ create user -->
+        <div class="card">
+          <h2>Create a user</h2>
+          <p class="card-hint">
+            Creates the account immediately with a password you set. Use this when
+            you can hand the credentials over directly &mdash; no mail server is
+            involved.
+          </p>
+          <form id="create-form" autocomplete="off">
+            <div class="field-row">
+              <div class="field">
+                <label for="c-name">Name</label>
+                <input type="text" id="c-name" name="name" placeholder="Dana Cohen" required>
+              </div>
+              <div class="field">
+                <label for="c-login">Username</label>
+                <input type="text" id="c-login" name="login" placeholder="dana" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="c-email">Email</label>
+              <input type="email" id="c-email" name="email" placeholder="dana@example.com" required>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="c-password">Password</label>
+                <input type="password" id="c-password" name="password" minlength="8" required>
+              </div>
+              <div class="field">
+                <label for="c-role">Role</label>
+                <select id="c-role" name="role">
+                  <option value="Viewer" selected>Viewer &mdash; read dashboards</option>
+                  <option value="Editor">Editor &mdash; edit dashboards</option>
+                  <option value="Admin">Admin &mdash; full control</option>
+                </select>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn" id="create-btn">Create user</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ------------------------------------------------ invite user -->
+        <div class="card">
+          <h2>Invite a user</h2>
+          <p class="card-hint">
+            Sends an invitation link instead of setting a password yourself. The
+            recipient chooses their own. Requires SMTP to be configured &mdash; if it
+            is not, the invitation is still created and the link is shown here for
+            you to pass on.
+          </p>
+          <form id="invite-form" autocomplete="off">
+            <div class="field-row">
+              <div class="field">
+                <label for="i-email">Email</label>
+                <input type="email" id="i-email" name="email" placeholder="dana@example.com" required>
+              </div>
+              <div class="field">
+                <label for="i-name">Name (optional)</label>
+                <input type="text" id="i-name" name="name" placeholder="Dana Cohen">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="i-role">Role</label>
+                <select id="i-role" name="role">
+                  <option value="Viewer" selected>Viewer</option>
+                  <option value="Editor">Editor</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="i-send">Send by email</label>
+                <select id="i-send" name="sendEmail">
+                  <option value="true" selected>Yes &mdash; email the invitation</option>
+                  <option value="false">No &mdash; just give me the link</option>
+                </select>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn" id="invite-btn">Send invitation</button>
+            </div>
+          </form>
+          <div id="invite-link-wrap" style="display:none;margin-top:16px;">
+            <div class="row">
+              <span class="label">Invitation link</span>
+              <span class="value" style="font-size:12px;word-break:break-all;" id="invite-link"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- --------------------------------------------- pending invites -->
+        <div class="card">
+          <h2>Pending invitations</h2>
+          <p class="card-hint">Invitations that have not been accepted yet.</p>
+          <div id="invites-wrap"><div class="empty">Loading&hellip;</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+// ---- dashboard links in the rail (same rule as the main page) -------------
+// Alerts is a console page, not a dashboard - see the note in dbdome_main.html.
+const DASHBOARDS = {
+  incidents: { uid: 'advb58n',              slug: 'open-alerts' },
+  activity:  { uid: 'adbcsrw',              slug: 'activity-monitoring-audit' },
+  config:    { uid: 'dbdome-configuration', slug: 'configuration' },
+};
+for (const [k, d] of Object.entries(DASHBOARDS)) {
+  const el = document.getElementById(`rail-${k}`);
+  if (el) el.href =
+    `${window.location.protocol}//${window.location.hostname}:3000/d/${d.uid}/${d.slug}?orgId=1&from=now-24h&to=now`;
+}
+
+// ---- helpers -------------------------------------------------------------
+const noticeEl = document.getElementById('notice');
+function notice(kind, msg) {
+  noticeEl.className = `notice show ${kind}`;
+  noticeEl.textContent = msg;
+  noticeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearNotice() { noticeEl.className = 'notice'; }
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  let body = null;
+  try { body = await r.json(); } catch (e) { /* non-JSON error page */ }
+  if (!r.ok) {
+    throw new Error((body && (body.detail || body.message)) || `HTTP ${r.status}`);
+  }
+  return body;
+}
+
+// ---- users ---------------------------------------------------------------
+async function loadUsers() {
+  const wrap = document.getElementById('users-wrap');
+  try {
+    const j = await api('/api/console/users');
+    const users = j.users || [];
+    if (!users.length) { wrap.innerHTML = '<div class="empty">No users.</div>'; return; }
+    wrap.innerHTML = `
+      <table class="grid">
+        <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th></th></tr></thead>
+        <tbody>${users.map(u => `
+          <tr>
+            <td>${esc(u.name) || '<span class="empty">-</span>'}</td>
+            <td>${esc(u.login)}</td>
+            <td>${esc(u.email)}</td>
+            <td><span class="pill ${esc((u.role||'').toLowerCase())}">${esc(u.role||'-')}</span></td>
+            <td style="text-align:right">
+              ${u.login === 'admin' ? ''
+                : `<button class="btn btn-danger" data-remove="${esc(u.userId)}"
+                     data-label="${esc(u.login)}">Remove</button>`}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    wrap.querySelectorAll('[data-remove]').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!confirm(`Remove ${b.dataset.label} from dbdome?`)) return;
+        b.disabled = true;
+        try {
+          await api(`/api/console/users/${b.dataset.remove}`, { method: 'DELETE' });
+          notice('ok', `Removed ${b.dataset.label}.`);
+          loadUsers();
+        } catch (e) { notice('err', `Could not remove: ${e.message}`); b.disabled = false; }
+      });
+    });
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">Could not load users: ${esc(e.message)}</div>`;
+  }
+}
+
+// ---- invites -------------------------------------------------------------
+async function loadInvites() {
+  const wrap = document.getElementById('invites-wrap');
+  try {
+    const j = await api('/api/console/invites');
+    const inv = j.invites || [];
+    if (!inv.length) { wrap.innerHTML = '<div class="empty">No pending invitations.</div>'; return; }
+    wrap.innerHTML = `
+      <table class="grid">
+        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Invited</th><th></th></tr></thead>
+        <tbody>${inv.map(i => `
+          <tr>
+            <td>${esc(i.email)}</td>
+            <td>${esc(i.name) || '<span class="empty">-</span>'}</td>
+            <td><span class="pill ${esc((i.role||'').toLowerCase())}">${esc(i.role||'-')}</span></td>
+            <td>${esc((i.createdOn || '').replace('T',' ').slice(0,16))}</td>
+            <td style="text-align:right">
+              <button class="btn btn-danger" data-revoke="${esc(i.code)}"
+                data-label="${esc(i.email)}">Revoke</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    wrap.querySelectorAll('[data-revoke]').forEach(b => {
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          await api(`/api/console/invites/${encodeURIComponent(b.dataset.revoke)}`, { method: 'DELETE' });
+          notice('ok', `Revoked the invitation for ${b.dataset.label}.`);
+          loadInvites();
+        } catch (e) { notice('err', `Could not revoke: ${e.message}`); b.disabled = false; }
+      });
+    });
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">Could not load invitations: ${esc(e.message)}</div>`;
+  }
+}
+
+// ---- create --------------------------------------------------------------
+document.getElementById('create-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  clearNotice();
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true;
+  const f = ev.target;
+  try {
+    const j = await api('/api/console/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: f.name.value.trim(),
+        login: f.login.value.trim(),
+        email: f.email.value.trim(),
+        password: f.password.value,
+        role: f.role.value,
+      }),
+    });
+    notice('ok', `Created ${esc(f.login.value.trim())} as ${esc(f.role.value)}.`);
+    f.reset();
+    loadUsers();
+  } catch (e) {
+    notice('err', `Could not create the user: ${e.message}`);
+  } finally { btn.disabled = false; }
+});
+
+// ---- invite --------------------------------------------------------------
+document.getElementById('invite-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  clearNotice();
+  const btn = document.getElementById('invite-btn');
+  btn.disabled = true;
+  const f = ev.target;
+  try {
+    const j = await api('/api/console/invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: f.email.value.trim(),
+        name: f.name.value.trim(),
+        role: f.role.value,
+        sendEmail: f.sendEmail.value === 'true',
+      }),
+    });
+    if (j && j.emailed) {
+      notice('ok', `Invitation emailed to ${esc(f.email.value.trim())}.`);
+    } else if (j && j.url) {
+      notice('warn', 'Invitation created, but it was not emailed. Pass the link below to the recipient.');
+      document.getElementById('invite-link').textContent = j.url;
+      document.getElementById('invite-link-wrap').style.display = '';
+    } else {
+      notice('ok', 'Invitation created.');
+    }
+    f.reset();
+    loadInvites();
+  } catch (e) {
+    notice('err', `Could not send the invitation: ${e.message}`);
+  } finally { btn.disabled = false; }
+});
+
+loadUsers();
+loadInvites();
+</script>
+</body>
+</html>

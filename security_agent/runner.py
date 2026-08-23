@@ -1,4 +1,4 @@
-"""Entry points.
+﻿"""Entry points.
 
 `decide()` is the one collectors call. It is written so that adding it to a
 collector is a two-line change and so that EVERY failure mode -- disabled,
@@ -54,7 +54,7 @@ def _domain_allowed(conn, root_cause_id, domain=None) -> bool:
 
 def decide(*, server, root_cause_id, query_text, metadata, metric_name=None,
            risk_level=None, domain=None, rule_name=None, detection_desc=None,
-           conn=None):
+           conn=None, entry_date=None, login_name=None):
     """Returns (raise_alert: bool, metadata_to_write).
 
     metadata_to_write carries `reason` when the alert is raised after triage.
@@ -82,6 +82,12 @@ def decide(*, server, root_cause_id, query_text, metadata, metric_name=None,
             "root_cause_id": root_cause_id,
             "metric_name": metric_name,
             "risk_level": risk_level,
+            # Correlation inputs. On the inline collector path entry_date is
+            # usually None because the alert row does not exist yet; the
+            # co-occurrence window then falls back to nothing rather than
+            # guessing a timestamp.
+            "entry_date": entry_date,
+            "login_name": login_name,
             "rule_name": rule_name,
             "detection_desc": detection_desc,
         })
@@ -126,7 +132,8 @@ def decide(*, server, root_cause_id, query_text, metadata, metric_name=None,
 
 
 def annotate(*, server, root_cause_id, query_text, metadata, metric_name=None,
-             risk_level=None, domain=None, rule_name=None, detection_desc=None):
+             risk_level=None, domain=None, rule_name=None, detection_desc=None,
+             entry_date=None, login_name=None):
     """Metadata enriched with the agent's `reason`. NEVER suppresses.
 
     This is what the collectors call. It is the annotate-only face of decide():
@@ -156,6 +163,7 @@ def annotate(*, server, root_cause_id, query_text, metadata, metric_name=None,
             server=server, root_cause_id=root_cause_id, query_text=query_text,
             metadata=metadata, metric_name=metric_name, risk_level=risk_level,
             domain=domain, rule_name=rule_name, detection_desc=detection_desc,
+            entry_date=entry_date, login_name=login_name,
         )
         return meta
     except Exception as e:
@@ -165,7 +173,8 @@ def annotate(*, server, root_cause_id, query_text, metadata, metric_name=None,
 
 
 def review_alert(*, alert_row_id, server, root_cause_id, query_text,
-                 entry_date=None, metric_name=None, risk_level=None):
+                 entry_date=None, metric_name=None, risk_level=None,
+                 login_name=None):
     """Triage an alert that is ALREADY in alerts.alert_log and annotate it.
 
     Used by the analysis/* writers, which insert first. Suppression is not
@@ -181,6 +190,7 @@ def review_alert(*, alert_row_id, server, root_cause_id, query_text,
             "server": server, "query": query_text,
             "root_cause_id": root_cause_id, "metric_name": metric_name,
             "risk_level": risk_level,
+            "entry_date": entry_date, "login_name": login_name,
         })
         persist.record_verdict(
             conn, server=server, root_cause_id=root_cause_id,
@@ -241,7 +251,8 @@ def run_annotation_sweep(server: str = None):
             # first - the same reason monitoring.fn_metadata_object exists.
             cur.execute(
                 """
-                SELECT a.row_id, a.entry_date, a.server, a.root_cause_id, a.risk_level
+                SELECT a.row_id, a.entry_date, a.server, a.root_cause_id,
+                       a.risk_level, a.login_name
                 FROM alerts.alert_log a
                 WHERE a.entry_date > LOCALTIMESTAMP - make_interval(mins => %s)
                   AND (%s IS NULL OR a.server = %s)
@@ -254,13 +265,19 @@ def run_annotation_sweep(server: str = None):
             )
             pending = cur.fetchall()
 
-        for row_id, entry_date, srv, rc_id, risk in pending:
+        for row_id, entry_date, srv, rc_id, risk, login in pending:
             try:
                 # The query to judge is the alert's own captured statement.
                 q = _query_for_alert(conn, row_id, entry_date)
+                # entry_date and login_name are what the correlation arm needs:
+                # entry_date anchors the co-occurrence window and the
+                # hour-of-day comparison, login_name enables the per-login
+                # history. Without them correlation silently degrades to
+                # nothing, which is why they are threaded explicitly.
                 v = agent.classify(conn, {
                     "server": srv, "query": q, "root_cause_id": rc_id,
                     "metric_name": None, "risk_level": risk,
+                    "entry_date": entry_date, "login_name": login,
                 })
                 persist.record_verdict(
                     conn, server=srv, root_cause_id=rc_id, metric_name=None,
