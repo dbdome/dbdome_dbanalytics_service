@@ -1,0 +1,627 @@
+================================================================================
+DBDOME - THIRD PARTY SOFTWARE NOTICES AND INFORMATION
+================================================================================
+
+Product:         DBDOME Database Security and Monitoring Platform
+Notices version: 1.0
+Date:            2026-08-22
+Contact:         legal@dbexpert.ai  /  opensource@dbexpert.ai
+
+This file is provided to satisfy the attribution, notice, pass-through and
+source-availability obligations of the licenses under which the components below
+are distributed. It forms part of the DBDOME End User License Agreement
+(EULA.txt).
+
+DBDOME incorporates, is distributed with, or its installers install, the
+third-party components listed below. EACH IS LICENSED TO YOU BY ITS OWN LICENSOR
+UNDER ITS OWN LICENSE TERMS, NOT UNDER THE DBDOME EULA. Where a component's
+license conflicts with the DBDOME EULA, that component's license governs that
+component.
+
+Nothing in the DBDOME EULA restricts any right granted to you by an open source
+license below, including rights to use, modify, reverse engineer for
+interoperability, or obtain source code.
+
+DBEXPERT claims no ownership of these components. All trademarks are the
+property of their respective owners and are used for identification only.
+
+VERBATIM LICENSE TEXTS ARE DISTRIBUTED IN THE SUBDIRECTORY  licenses\
+    licenses\Microsoft-ODBC-Driver-18-for-SQL-Server.txt   (Microsoft's own file)
+    licenses\AGPL-3.0.txt                                  (Grafana and plugins)
+Additional per-package texts are installed under
+    <install>\bin\_internal\<package>-<version>.dist-info\
+
+
+================================================================================
+                          TABLE OF CONTENTS
+================================================================================
+
+  PART 1   AI models and inference runtimes
+             1.1 Ollama                          MIT
+             1.2 Microsoft Phi-3 / Phi-3.1       MIT
+             1.3 llama.cpp (ggml)                MIT
+             1.4 llama-cpp-python                MIT
+  PART 2   Database software and drivers
+             2.1 PostgreSQL                      PostgreSQL License  [FULL TEXT]
+             2.2 Microsoft ODBC Driver 18        PROPRIETARY - MICROSOFT
+             2.3 Database client libraries       various
+  PART 3   Grafana
+             3.1 Grafana OSS 12.2.0              AGPL-3.0            [COPYLEFT]
+             3.2 Grafana plugins                 AGPL-3.0            [COPYLEFT]
+  PART 4   Service and platform utilities
+  PART 5   Python runtime libraries
+  PART 6   Full license texts (MIT, BSD 3-Clause)
+  PART 7   Written offer for source code
+  PART 8   Components NOT distributed
+
+
+================================================================================
+PART 1 - AI MODELS AND INFERENCE RUNTIMES
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1  OLLAMA
+--------------------------------------------------------------------------------
+Component:      Ollama (OllamaSetup.exe; the "ollama" runtime and service)
+Publisher:      Ollama
+Homepage:       https://ollama.com   /   https://github.com/ollama/ollama
+License:        MIT License
+Source:         https://github.com/ollama/ollama
+How used:       Distributed on DBDOME installation media as the vendor's
+                unmodified installer, so installation requires no internet
+                access. Installed on the customer machine at the customer's
+                direction and registered as a local service. Ollama serves the
+                language model over the loopback interface only.
+Modifications:  None. The vendor installer is redistributed unmodified.
+
+    MIT License
+
+    Copyright (c) Ollama
+
+    [Full MIT License text: see PART 6, section 6.1]
+
+--------------------------------------------------------------------------------
+1.2  MICROSOFT PHI-3 / PHI-3.1 MINI 128K INSTRUCT
+--------------------------------------------------------------------------------
+Component:      Phi-3 language model weights, distributed in two forms:
+                  (a) the Ollama model store for tag "phi3:mini-128k"
+                  (b) Phi-3.1-mini-128k-instruct-Q4_K_M.gguf (GGUF quantization)
+Publisher:      Microsoft Corporation
+Homepage:       https://huggingface.co/microsoft/Phi-3-mini-128k-instruct
+License:        MIT License
+How used:       Executed locally on the customer's own hardware by the DBDOME
+                security agent to classify observed database activity. The model
+                is not fine-tuned or retrained by DBDOME; it is prompted at
+                inference time. In the default configuration no query text,
+                schema, credential or customer data is transmitted to Microsoft,
+                to DBEXPERT, or to any external service.
+Modifications:  The model weights are not modified. Form (b) is a quantization
+                of the published weights to the GGUF format.
+
+    MIT License
+
+    Copyright (c) Microsoft Corporation.
+
+    [Full MIT License text: see PART 6, section 6.1]
+
+    ADDITIONAL NOTICES REQUIRED BY MICROSOFT
+    Microsoft publishes a Model Card and Responsible AI guidance for Phi-3.
+    Users of DBDOME are subject to them and should read them:
+      https://huggingface.co/microsoft/Phi-3-mini-128k-instruct
+
+    Microsoft states, and DBEXPERT repeats here, that the model:
+      - may produce output that is inaccurate, incomplete, offensive or biased;
+      - is not intended to be a source of factual truth;
+      - should not be used, without independent human review, to make decisions
+        that materially affect individuals, including decisions relating to
+        employment, discipline, credit, legal exposure or security enforcement.
+
+    See Section 6 of the DBDOME EULA, which governs your use of AI output.
+
+    Note: the MIT license above covers the Phi-3 model weights as published by
+    Microsoft. It is separate from, and must not be confused with, the
+    proprietary Microsoft license governing the ODBC driver in section 2.2.
+
+--------------------------------------------------------------------------------
+1.3  LLAMA.CPP  (ggml)
+--------------------------------------------------------------------------------
+Component:      llama.cpp / ggml inference libraries (bundled native libraries
+                supporting the DBDOME security-agent sidecar)
+Publisher:      Georgi Gerganov and the ggml authors
+Homepage:       https://github.com/ggerganov/llama.cpp
+License:        MIT License
+Source:         https://github.com/ggerganov/llama.cpp
+
+    MIT License
+    Copyright (c) 2023-2024 The ggml authors
+    [Full MIT License text: see PART 6, section 6.1]
+
+--------------------------------------------------------------------------------
+1.4  LLAMA-CPP-PYTHON
+--------------------------------------------------------------------------------
+Component:      llama-cpp-python (Python bindings for llama.cpp)
+Publisher:      Andrei Betlen
+Homepage:       https://github.com/abetlen/llama-cpp-python
+License:        MIT License
+
+    MIT License
+    Copyright (c) 2023 Andrei Betlen
+    [Full MIT License text: see PART 6, section 6.1]
+
+
+================================================================================
+PART 2 - DATABASE SOFTWARE AND DRIVERS
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1  POSTGRESQL                                                     [FULL TEXT]
+--------------------------------------------------------------------------------
+Component:      PostgreSQL database server, client utilities and the pgcrypto
+                contrib module
+Publisher:      The PostgreSQL Global Development Group
+Homepage:       https://www.postgresql.org
+License:        The PostgreSQL License - a liberal OSI-approved BSD-style
+                license. Canonical text: https://www.postgresql.org/about/licence/
+How used:       Installed by the DBDOME installer, at the customer's direction,
+                as the repository database for DBDOME. Distributed unmodified.
+                pgcrypto is used by DBDOME for credential and detection-content
+                encryption.
+Modifications:  None to PostgreSQL itself. The DBDOME schema, functions, views
+                and SQL scripts created inside the database are DBEXPERT's own
+                work and are not derivative of PostgreSQL source code.
+
+    THE POSTGRESQL LICENSE
+
+    PostgreSQL Database Management System
+    (formerly known as Postgres, then as Postgres95)
+
+    Portions Copyright (c) 1996-2026, PostgreSQL Global Development Group
+
+    Portions Copyright (c) 1994, The Regents of the University of California
+
+    Permission to use, copy, modify, and distribute this software and its
+    documentation for any purpose, without fee, and without a written agreement
+    is hereby granted, provided that the above copyright notice and this
+    paragraph and the following two paragraphs appear in all copies.
+
+    IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+    DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
+    LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
+    EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+
+    THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
+    INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+    FITNESS FOR A PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN
+    "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO
+    PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+    PostgreSQL is a trademark of the PostgreSQL Community Association of Canada.
+    The PostgreSQL Global Development Group does not endorse and is not
+    affiliated with DBDOME or DBEXPERT.
+
+--------------------------------------------------------------------------------
+2.2  MICROSOFT ODBC DRIVER 18 FOR SQL SERVER          [PROPRIETARY - MICROSOFT]
+--------------------------------------------------------------------------------
+Component:      Microsoft ODBC Driver 18 for SQL Server (msodbcsql.msi)
+Publisher:      Microsoft Corporation
+License:        MICROSOFT SOFTWARE LICENSE TERMS.
+                THIS IS NOT OPEN SOURCE SOFTWARE.
+Full text:      licenses\Microsoft-ODBC-Driver-18-for-SQL-Server.txt
+                (Microsoft's own license file, reproduced verbatim and
+                unaltered, as distributed with the driver)
+How used:       Redistributed on DBDOME installation media as the vendor's
+                unmodified installer, and installed at the customer's direction,
+                so that DBDOME can connect to Microsoft SQL Server targets.
+Modifications:  None.
+
+    IMPORTANT - MICROSOFT'S OWN LICENSE TERMS APPLY TO THIS COMPONENT
+
+    This component is licensed to you directly by Microsoft Corporation under
+    the Microsoft Software License Terms for Microsoft ODBC Driver 18 for SQL
+    Server, and NOT under the DBDOME EULA. YOU MUST READ AND ACCEPT THOSE TERMS.
+    They are supplied in full at the path shown above, are presented by the
+    Microsoft installer, and are installed with the driver at:
+
+        C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\<ver>\License Terms\
+
+    Microsoft's terms state, in relevant part:
+
+      "IF YOU COMPLY WITH THESE LICENSE TERMS, YOU HAVE THE RIGHTS BELOW.
+       BY USING THE SOFTWARE, YOU ACCEPT THESE TERMS."
+
+      DISCLAIMER OF WARRANTY. "THE SOFTWARE IS LICENSED 'AS IS.' YOU BEAR THE
+      RISK OF USING IT. MICROSOFT GIVES NO EXPRESS WARRANTIES, GUARANTEES, OR
+      CONDITIONS. TO THE EXTENT PERMITTED UNDER APPLICABLE LAWS, MICROSOFT
+      EXCLUDES ALL IMPLIED WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE, AND NON-INFRINGEMENT."
+
+      LIMITATION ON AND EXCLUSION OF DAMAGES. "IF YOU HAVE ANY BASIS FOR
+      RECOVERING DAMAGES DESPITE THE PRECEDING DISCLAIMER OF WARRANTY, YOU CAN
+      RECOVER FROM MICROSOFT AND ITS SUPPLIERS ONLY DIRECT DAMAGES UP TO
+      U.S. $5.00. YOU CANNOT RECOVER ANY OTHER DAMAGES, INCLUDING
+      CONSEQUENTIAL, LOST PROFITS, SPECIAL, INDIRECT, OR INCIDENTAL DAMAGES."
+
+      EXPORT RESTRICTIONS. "You must comply with all domestic and international
+      export laws and regulations that apply to the software, which include
+      restrictions on destinations, end users, and end use."
+
+      SUPPORT. "Microsoft is not obligated under this agreement to provide any
+      support services for the software."
+
+    You may not reverse engineer, decompile or disassemble the driver, except to
+    the extent applicable law expressly permits despite this limitation.
+
+    TERMS ON WHICH DBEXPERT REDISTRIBUTES THIS DRIVER
+
+    Microsoft's terms permit redistribution of the driver with an application on
+    stated conditions. Accordingly, and as required by section 2(b) of those
+    terms:
+
+      - DBDOME adds significant primary functionality to the driver; the driver
+        is a supporting connectivity component, not the product;
+      - by accepting the DBDOME EULA you agree to terms that protect the driver
+        and Microsoft at least as much as Microsoft's own terms (see EULA
+        Section 5.5); and
+      - the DBDOME EULA passes Microsoft's disclaimers and liability limits
+        through to you, and requires you to indemnify Microsoft in the
+        circumstances Microsoft's terms specify (see EULA Section 13.5).
+
+    Microsoft does not endorse, and is not affiliated with, DBDOME or DBEXPERT.
+    Microsoft, SQL Server, Windows and Azure are trademarks of the Microsoft
+    group of companies.
+
+    [ACTION FOR DBEXPERT - verify before each release: confirm that the exact
+     msodbcsql package shipped remains on Microsoft's current redistributable
+     list at https://aka.ms/odbc18eularedist , and refresh the bundled license
+     file if Microsoft revises it.]
+
+--------------------------------------------------------------------------------
+2.3  DATABASE CLIENT LIBRARIES
+--------------------------------------------------------------------------------
+    psycopg2 / psycopg2-binary   PostgreSQL client
+                                 LGPL v3 with OpenSSL exception  -> see 5.2
+    PyMySQL                      MySQL / MariaDB client, MIT
+    pymongo                      MongoDB client, Apache License 2.0
+    clickhouse-connect           ClickHouse client, Apache License 2.0
+    SQLAlchemy                   MIT License
+
+    MySQL and Oracle are trademarks of Oracle Corporation. MariaDB is a
+    trademark of MariaDB Corporation Ab. MongoDB is a trademark of MongoDB, Inc.
+    ClickHouse is a trademark of ClickHouse, Inc. None of these companies
+    endorses or is affiliated with DBDOME.
+
+
+================================================================================
+PART 3 - GRAFANA
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1  GRAFANA OSS 12.2.0                                             [COPYLEFT]
+--------------------------------------------------------------------------------
+Component:      Grafana OSS, version 12.2.0 (grafana.exe and its supporting
+                files, distributed in the DBDOME bin directory and registered as
+                the DBDOME_Grafana service)
+Publisher:      Grafana Labs
+Homepage:       https://grafana.com
+License:        GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (AGPL-3.0)
+                Grafana OSS is AGPL-3.0 from version 8.0 onward. Version 12.2.0
+                is therefore AGPL-3.0 licensed.
+Full text:      licenses\AGPL-3.0.txt
+Source:         https://github.com/grafana/grafana
+                Source for this exact version:
+                https://github.com/grafana/grafana/releases/tag/v12.2.0
+How used:       Used as the DBDOME dashboard, visualization and alerting user
+                interface. Run as a separate program, in its own process,
+                communicating over a network socket. DBDOME does not link
+                against, embed, or incorporate Grafana source code.
+Modifications:  NONE. Grafana is redistributed unmodified.
+
+    Grafana is FREE SOFTWARE licensed under the GNU Affero General Public
+    License version 3. You may use, modify and redistribute it under the terms
+    of that license. It is distributed WITHOUT ANY WARRANTY, without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the AGPL-3.0 for details.
+
+    THE AGPL-3.0 NETWORK-USE PROVISION (SECTION 13). If you modify Grafana and
+    make your modified version available to users over a network, the AGPL
+    requires you to offer those users the corresponding source of your modified
+    version. DBEXPERT distributes Grafana UNMODIFIED and makes the corresponding
+    source available under PART 7 below and at the upstream URL above.
+
+    WHAT IS AND IS NOT COVERED. The AGPL-3.0 covers Grafana itself. It does not
+    extend to DBDOME's own dashboard definitions, datasource provisioning files,
+    configuration, SQL functions and report templates, which are independent
+    works authored by DBEXPERT that Grafana reads as data at runtime, and which
+    remain proprietary under the DBDOME EULA.
+
+    Nothing in the DBDOME EULA limits your rights under the AGPL-3.0. Section
+    5.3 of the EULA confirms this expressly.
+
+    Grafana is a trademark of Grafana Labs. Grafana Labs does not endorse and is
+    not affiliated with DBDOME or DBEXPERT.
+
+--------------------------------------------------------------------------------
+3.2  GRAFANA PLUGINS                                                [COPYLEFT]
+--------------------------------------------------------------------------------
+Component:      grafana-exploretraces-app
+                grafana-lokiexplore-app
+                grafana-metricsdrilldown-app
+                grafana-pyroscope-app
+Publisher:      Grafana Labs
+License:        GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (AGPL-3.0)
+Full text:      licenses\AGPL-3.0.txt, and the LICENSE file inside each plugin
+                directory as shipped by Grafana Labs
+Source:         https://github.com/grafana
+How used:       Distributed in the DBDOME Grafana plugin directory, unmodified,
+                and loaded by Grafana at runtime.
+Modifications:  None.
+
+    The notices, network-use provision and scope statements in section 3.1 apply
+    equally to these plugins.
+
+
+================================================================================
+PART 4 - SERVICE AND PLATFORM UTILITIES
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1  NSSM - THE NON-SUCKING SERVICE MANAGER
+--------------------------------------------------------------------------------
+Publisher:      Iain Patterson
+Homepage:       https://nssm.cc
+License:        PUBLIC DOMAIN
+How used:       Registers DBDOME components as Windows services. Redistributed
+                unmodified.
+
+    NSSM is public domain. The author has dedicated the work to the public
+    domain; it may be used for any purpose without restriction and without
+    warranty of any kind.
+
+--------------------------------------------------------------------------------
+4.2  NODE.JS
+--------------------------------------------------------------------------------
+Publisher:      OpenJS Foundation and Node.js contributors
+Homepage:       https://nodejs.org
+License:        MIT License
+How used:       Supporting runtime distributed on the installation media
+                (node.exe), unmodified.
+
+    Copyright Node.js contributors. All rights reserved.
+    [Full MIT License text: see PART 6, section 6.1]
+
+    Node.js itself bundles further components under their own licenses,
+    including OpenSSL (Apache License 2.0), V8 (BSD 3-Clause), libuv (MIT),
+    zlib (zlib license) and c-ares (MIT). The complete, authoritative notice
+    file is distributed with Node.js and is available at:
+        https://github.com/nodejs/node/blob/main/LICENSE
+
+    Node.js is a trademark of the OpenJS Foundation.
+
+--------------------------------------------------------------------------------
+4.3  PYTHON AND BUILD TOOLING
+--------------------------------------------------------------------------------
+Python:         Python Software Foundation License Version 2
+                Copyright (c) 2001-2026 Python Software Foundation.
+                https://docs.python.org/3/license.html
+                Portions of the CPython runtime are embedded in DBDOME
+                executables by PyInstaller.
+
+PyInstaller:    GPL 2.0 or later WITH a special bootloader exception that
+                expressly permits distributing non-GPL applications frozen with
+                it. DBDOME relies on that exception. PyInstaller is a build tool
+                and is not itself distributed as part of DBDOME.
+                https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt
+
+pywin32:        Python Software Foundation License / BSD-style.
+                Copyright (c) 1996-2008, Greg Stein and Mark Hammond.
+
+
+================================================================================
+PART 5 - PYTHON RUNTIME LIBRARIES
+================================================================================
+
+The following libraries are bundled inside DBDOME executables. Each retains its
+own license. The authoritative license text for every bundled distribution is
+installed with DBDOME under:
+
+    <install>\bin\_internal\<package>-<version>.dist-info\
+
+--------------------------------------------------------------------------------
+5.1  PERMISSIVE (MIT / BSD / APACHE)
+--------------------------------------------------------------------------------
+    MIT License                     APScheduler, SQLAlchemy, pytz, tzlocal,
+                                    zeep, attrs, NiceGUI, pydantic, PyMySQL
+    BSD 3-Clause                    click, MarkupSafe, websockets, ReportLab,
+                                    NumPy (BSD-3-Clause AND 0BSD AND MIT AND
+                                    Zlib AND CC0-1.0)
+    BSD 2-Clause                    invoke
+    BSD License                     itsdangerous, lz4
+    Apache License 2.0              clickhouse-connect, pymongo, tzdata,
+                                    requests
+    Dual (Apache-2.0 OR BSD-3)      cryptography
+    Dual (Apache-2.0 / BSD-3)       python-dateutil
+    The Unlicense (public domain)   email-validator
+    MPL-2.0 AND MIT                 tqdm  -> see 5.2
+
+    Full texts: MIT in PART 6.1, BSD 3-Clause in PART 6.2. The Apache License
+    2.0 is not reproduced here for length; the complete text is distributed in
+    the corresponding .dist-info directories and at
+    https://www.apache.org/licenses/LICENSE-2.0
+
+    Apache-2.0 attribution: where an Apache-licensed component ships a NOTICE
+    file, that NOTICE is preserved in its .dist-info directory as required by
+    Section 4(d) of the Apache License 2.0.
+
+--------------------------------------------------------------------------------
+5.2  COPYLEFT AND WEAK-COPYLEFT COMPONENTS                          [IMPORTANT]
+--------------------------------------------------------------------------------
+
+    psycopg2 / psycopg2-binary
+        License:  GNU Lesser General Public License v3 or later, WITH the
+                  OpenSSL linking exception ("LGPL with exceptions").
+        Copyright (c) Federico Di Gregorio and contributors.
+        Homepage: https://www.psycopg.org
+        Source:   https://github.com/psycopg/psycopg2
+
+    paramiko
+        License:  GNU Lesser General Public License v2.1 or later.
+        Copyright (c) Jeff Forcier and contributors.
+        Source:   https://github.com/paramiko/paramiko
+
+    tqdm
+        License:  Mozilla Public License 2.0 AND MIT.
+        Source:   https://github.com/tqdm/tqdm
+
+    YOUR RIGHTS IN THESE COMPONENTS
+
+    These are dynamically linked by DBDOME and are distributed WITHOUT
+    MODIFICATION. The LGPL and the MPL grant you rights that the DBDOME EULA
+    does NOT restrict, specifically:
+
+      - you may obtain the complete corresponding source code (see PART 7);
+      - you may modify these libraries and relink DBDOME against your modified
+        version for your own use; and
+      - you may reverse engineer DBDOME to the extent necessary to debug such
+        modifications.
+
+    Section 5.3 of the DBDOME EULA confirms these rights expressly.
+
+    Full license texts:
+      LGPL-3.0    https://www.gnu.org/licenses/lgpl-3.0.txt
+      LGPL-2.1    https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt
+      MPL-2.0     https://www.mozilla.org/MPL/2.0/
+    Copies are also installed in the corresponding .dist-info directories.
+
+
+================================================================================
+PART 6 - FULL LICENSE TEXTS
+================================================================================
+
+--------------------------------------------------------------------------------
+6.1  THE MIT LICENSE
+--------------------------------------------------------------------------------
+
+Applies to the components identified above as MIT-licensed, including Ollama
+(Copyright (c) Ollama), the Microsoft Phi-3 model weights (Copyright (c)
+Microsoft Corporation), llama.cpp (Copyright (c) 2023-2024 The ggml authors),
+llama-cpp-python (Copyright (c) 2023 Andrei Betlen), Node.js (Copyright Node.js
+contributors) and the MIT-licensed Python libraries in PART 5, each under its
+own copyright notice as stated above.
+
+    MIT License
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to
+    deal in the Software without restriction, including without limitation the
+    rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+    IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+6.2  THE BSD 3-CLAUSE LICENSE
+--------------------------------------------------------------------------------
+
+Applies to the components identified above as BSD 3-Clause licensed, each under
+its own copyright notice as stated in its .dist-info directory.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its
+       contributors may be used to endorse or promote products derived from this
+       software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------------
+6.3  OTHER FULL TEXTS DISTRIBUTED WITH DBDOME
+--------------------------------------------------------------------------------
+    AGPL-3.0 (Grafana, Grafana plugins)
+        licenses\AGPL-3.0.txt
+    Microsoft ODBC Driver 18 for SQL Server (proprietary)
+        licenses\Microsoft-ODBC-Driver-18-for-SQL-Server.txt
+    PostgreSQL License
+        PART 2.1 above (reproduced in full)
+    Per-package texts for every bundled Python distribution
+        <install>\bin\_internal\<package>-<version>.dist-info\
+
+
+================================================================================
+PART 7 - WRITTEN OFFER FOR SOURCE CODE
+================================================================================
+
+This offer is made to satisfy the source-availability requirements of the
+AGPL-3.0, LGPL-3.0, LGPL-2.1 and MPL-2.0 components identified above.
+
+    For a period of three (3) years from the date you received this copy of
+    DBDOME, DBEXPERT will provide to any third party, on written request and for
+    a charge no more than the cost of physically performing source distribution,
+    a complete machine-readable copy of the corresponding source code of the
+    AGPL-, LGPL- and MPL-licensed components distributed with DBDOME, under the
+    terms of the respective license.
+
+    Requests should be addressed to:
+
+        opensource@dbexpert.ai
+        DBEXPERT [INSERT REGISTERED LEGAL ENTITY NAME]
+        [INSERT REGISTERED ADDRESS]
+
+    Please identify the DBDOME version and the specific component requested.
+
+All such components are distributed by DBEXPERT UNMODIFIED. The corresponding
+source is therefore also available directly from each upstream project at the
+URLs given in the relevant section above, which you may use instead of this
+offer.
+
+
+================================================================================
+PART 8 - COMPONENTS NOT DISTRIBUTED
+================================================================================
+
+For clarity, DBDOME does not distribute, and this file makes no representation
+about, database server software that the customer already operates and that
+DBDOME merely connects to as a monitoring client. That includes Microsoft SQL
+Server, Oracle Database, MySQL, MariaDB, MongoDB and ClickHouse server software.
+The customer is responsible for licensing those products.
+
+
+================================================================================
+                          END OF NOTICES
+================================================================================
+
+If you believe a component is used in DBDOME without correct attribution, or
+that this file is inaccurate or incomplete, please contact opensource@dbexpert.ai
+so it can be corrected. Corrections are welcomed and will be acted on.
+
+Copyright (c) 2026 DBEXPERT. All rights reserved. DBDOME is a trademark of
+DBEXPERT. The DBDOME software itself is proprietary and is licensed under
+EULA.txt, not under any of the licenses reproduced above.

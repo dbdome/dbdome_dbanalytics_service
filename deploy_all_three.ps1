@@ -17,7 +17,18 @@ if (-not (Test-Path "$src\dbdome_service.exe"))     { throw "build missing: $src
 if (-not (Test-Path "$src\dbdome_dbanalytics.exe")) { throw "build missing: $src\dbdome_dbanalytics.exe" }
 if (-not (Test-Path "$src\_internal"))              { throw "build missing: $src\_internal" }
 
-$svcs = 'DBDOME_scheduler','DBDOME_web'
+# Resolve the service names from what is actually installed rather than
+# hardcoding them. Two topologies exist in the field: the older split pair
+# (DBDOME_scheduler + DBDOME_web) and the single combined service
+# (DBDOME_dbanalytics, started with --service full). Hardcoding the pair made
+# this script throw on Get-Service for the combined topology and abort the live
+# deploy, leaving the swap half-done.
+$svcs = @(
+    'DBDOME_dbanalytics','DBDOME_scheduler','DBDOME_web' |
+        Where-Object { Get-Service $_ -ErrorAction SilentlyContinue }
+)
+if (-not $svcs) { throw "no DBDOME service found (looked for DBDOME_dbanalytics, DBDOME_scheduler, DBDOME_web)" }
+Write-Host "Services to cycle: $($svcs -join ', ')" -ForegroundColor Cyan
 
 function Assert-DeployHealthy {
     # Fail loudly at deploy time if a service crashed on startup (e.g. a broken

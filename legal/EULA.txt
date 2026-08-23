@@ -1,0 +1,585 @@
+================================================================================
+DBDOME(TM) END USER LICENSE AGREEMENT
+================================================================================
+
+Product:          DBDOME Database Security and Monitoring Platform
+Licensor:         DBEXPERT [INSERT FULL REGISTERED LEGAL ENTITY NAME AND NUMBER]
+                  [INSERT REGISTERED ADDRESS]
+Contact:          legal@dbexpert.ai
+Agreement version: 1.0
+Effective date:   2026-08-22
+
+--------------------------------------------------------------------------------
+NOTICE TO THE CUSTOMER - READ BEFORE INSTALLING
+--------------------------------------------------------------------------------
+
+THIS END USER LICENSE AGREEMENT ("AGREEMENT") IS A BINDING LEGAL CONTRACT
+BETWEEN YOU, EITHER AN INDIVIDUAL OR THE LEGAL ENTITY ON WHOSE BEHALF YOU ACT
+("CUSTOMER"), AND THE LICENSOR NAMED ABOVE ("LICENSOR").
+
+BY INSTALLING, COPYING, ACCEPTING THIS AGREEMENT IN THE INSTALLER, OR OTHERWISE
+USING THE SOFTWARE, CUSTOMER ACCEPTS AND AGREES TO BE BOUND BY ALL TERMS OF THIS
+AGREEMENT. IF CUSTOMER DOES NOT AGREE, CUSTOMER MUST NOT INSTALL OR USE THE
+SOFTWARE AND MUST DESTROY ALL COPIES IN ITS POSSESSION.
+
+IF CUSTOMER IS ENTERING INTO THIS AGREEMENT ON BEHALF OF A COMPANY OR OTHER
+LEGAL ENTITY, CUSTOMER REPRESENTS THAT IT HAS THE AUTHORITY TO BIND THAT ENTITY.
+
+SECTION 11 (WARRANTY DISCLAIMER), SECTION 12 (LIMITATION OF LIABILITY) AND
+SECTION 6 (ARTIFICIAL INTELLIGENCE COMPONENTS) CONTAIN IMPORTANT LIMITATIONS ON
+LICENSOR'S OBLIGATIONS AND ON CUSTOMER'S REMEDIES. READ THEM CAREFULLY.
+
+
+================================================================================
+1. DEFINITIONS
+================================================================================
+
+1.1  "Software" means the DBDOME platform in object-code form, including the
+     collection service, web interface, scheduler, security agent, database
+     objects, dashboards, report templates, rule sets, installers and update
+     tooling, together with any Documentation and any Updates supplied under
+     this Agreement.
+
+1.2  "Documentation" means the user and administrator materials supplied with
+     the Software, in any medium.
+
+1.3  "Third-Party Components" means the software, models, drivers and data
+     supplied with or installed by the Software that are owned by parties other
+     than Licensor and licensed under their own terms, as identified in the file
+     THIRD_PARTY_NOTICES.txt delivered with the Software.
+
+1.4  "AI Components" means the local language model or models supplied with,
+     downloaded by, or invoked by the Software, and the Software features that
+     depend on them, including the DBDOME security agent.
+
+1.5  "Monitored System" means a database instance, host or service that Customer
+     configures the Software to observe.
+
+1.6  "Instance" means one installation of the Software on one physical or
+     virtual machine.
+
+1.7  "Order" means the quotation, order form, purchase order, tender award or
+     subscription record under which Licensor supplies the Software to Customer.
+
+1.8  "Subscription Term" means the period stated in the Order, or, if none is
+     stated, twelve (12) months from the date of delivery.
+
+1.9  "Customer Data" means data belonging to Customer that the Software reads
+     from, derives from, or stores about Monitored Systems.
+
+
+================================================================================
+2. GRANT OF LICENSE
+================================================================================
+
+2.1  Grant. Subject to Customer's compliance with this Agreement and payment of
+     all fees due under the Order, Licensor grants Customer a non-exclusive,
+     non-transferable, non-sublicensable, revocable license, during the
+     Subscription Term, to:
+
+     (a) install and run the Software on the number of Instances stated in the
+         Order;
+     (b) use the Software to monitor up to the number of Monitored Systems
+         stated in the Order;
+     (c) use the Documentation internally for that purpose; and
+     (d) make a reasonable number of copies solely for backup and disaster
+         recovery, each carrying all proprietary notices of the original.
+
+2.2  Affiliates. Customer may permit its affiliates and its contractors to use
+     the Software for Customer's internal business purposes, provided Customer
+     remains responsible for their compliance with this Agreement.
+
+2.3  Evaluation. Where the Order or delivery designates the Software as an
+     evaluation, trial, pilot, proof-of-concept or non-production copy, the
+     license in Section 2.1 is limited to internal evaluation for the stated
+     period, is limited to non-production Monitored Systems, and is granted
+     WITHOUT ANY WARRANTY AND WITHOUT ANY SUPPORT OBLIGATION WHATSOEVER.
+
+2.4  Reservation. All rights not expressly granted are reserved to Licensor.
+     No license is granted by implication, estoppel or otherwise.
+
+
+================================================================================
+3. RESTRICTIONS
+================================================================================
+
+Except to the extent this Section is unenforceable under applicable mandatory
+law, and except as Section 5.3 expressly permits for Third-Party Components,
+Customer shall not, and shall not permit any person to:
+
+3.1  reverse engineer, decompile, disassemble or otherwise attempt to derive the
+     source code, algorithms, structure or organization of the Software;
+
+3.2  modify, adapt, translate or create derivative works of the Software, other
+     than the configuration, rule, threshold, dashboard, report-template and
+     policy files that the Software is expressly designed to have edited;
+
+3.3  rent, lease, lend, sell, sublicense, assign, distribute, publish,
+     time-share, or provide the Software as a service or hosted offering to any
+     third party;
+
+3.4  remove, obscure or alter any proprietary notice, label, watermark or
+     attribution in or produced by the Software;
+
+3.5  use the Software to monitor systems that Customer does not own or is not
+     authorized in writing to monitor;
+
+3.6  circumvent or disable any license-enforcement, metering, entitlement or
+     security mechanism in the Software, or use the Software beyond the
+     Instance or Monitored System counts stated in the Order;
+
+3.7  publish or disclose any benchmark, performance or comparative test of the
+     Software without Licensor's prior written consent;
+
+3.8  use the Software to develop, train or improve a competing product; or
+
+3.9  use the Software in violation of any applicable law, including data
+     protection, computer misuse, interception, employment-monitoring and
+     export control law.
+
+
+================================================================================
+4. CUSTOMER RESPONSIBILITIES; LAWFUL MONITORING
+================================================================================
+
+4.1  Authorization. The Software observes database activity, which may include
+     statement text, login identifiers, client host and program names, and
+     access to columns that Customer classifies as sensitive. CUSTOMER IS SOLELY
+     RESPONSIBLE FOR ESTABLISHING A LAWFUL BASIS FOR THAT MONITORING, including
+     where required: notifying data subjects and employees, consulting works
+     councils or employee representatives, completing any data protection impact
+     assessment, and obtaining any consent or regulatory approval.
+
+4.2  Credentials. Customer is responsible for provisioning the Software with
+     least-privilege database credentials, for safeguarding those credentials
+     and the DBDOME encryption key, and for all activity occurring under them.
+
+4.3  Blocking and response actions. The Software can be configured to terminate
+     database sessions, block logins or apply masking. THESE ARE DISRUPTIVE
+     ACTIONS. Customer is solely responsible for testing them in a non-production
+     environment, for the configuration it enables, and for any consequence of
+     their operation, including denial of service to legitimate users.
+
+4.4  Environment. Customer is responsible for its own operating systems,
+     networks, database platforms, backups and their security, and for the
+     capacity and availability of the host on which the Software runs.
+
+4.5  Roles. As between the parties and where data protection law applies,
+     Customer is the controller of Customer Data and Licensor is a processor
+     acting only on Customer's instructions. Where Licensor processes personal
+     data on Customer's behalf, the parties shall enter into a data processing
+     agreement, which prevails over this Agreement as to that processing.
+
+
+================================================================================
+5. THIRD-PARTY COMPONENTS
+================================================================================
+
+5.1  Identification. The Software is supplied with, and its installers may
+     install, Third-Party Components. These are listed, with their licensors and
+     license terms, in the file THIRD_PARTY_NOTICES.txt delivered alongside this
+     Agreement and installed into the DBDOME program directory.
+
+5.2  Third-party terms prevail. Each Third-Party Component is licensed to
+     Customer by its own licensor under its own license, and NOT under this
+     Agreement. To the extent a Third-Party Component's license conflicts with
+     this Agreement, that license governs that component. Nothing in Sections 2
+     or 3 is intended to restrict, and shall not be construed to restrict, any
+     right Customer has under an open source license.
+
+5.3  Open source rights preserved. Certain Third-Party Components are licensed
+     under the GNU Affero General Public License (including Grafana and its
+     plugins), the GNU Lesser General Public License (including psycopg2 and
+     paramiko), the Mozilla Public License, or similar licenses that grant
+     rights of modification, reverse engineering for interoperability, and
+     receipt of corresponding source code. THOSE RIGHTS ARE GRANTED TO CUSTOMER
+     IN FULL AND ARE NOT LIMITED BY SECTION 3, WHICH SHALL BE READ AS SUBJECT TO
+     THEM. The applicable source code, and the written offer required by those
+     licenses, are set out in THIRD_PARTY_NOTICES.txt. Licensor distributes
+     those components unmodified, and DBDOME's own dashboards, provisioning
+     files, SQL objects, rule sets and report templates are independent works
+     that are not derivative of them.
+
+5.4  No warranty from Licensor. Third-Party Components are provided AS IS.
+     Licensor gives no warranty, indemnity or support in respect of any
+     Third-Party Component except to the extent expressly stated in the Order.
+
+5.5  Microsoft components. Certain Microsoft components, including the Microsoft
+     ODBC Driver for SQL Server and the Phi-3 model, are supplied subject to
+     Microsoft's own license terms reproduced or referenced in
+     THIRD_PARTY_NOTICES.txt. Customer's acceptance of this Agreement includes
+     acceptance of those terms. Microsoft and its suppliers disclaim all
+     warranties and liability in respect of those components.
+
+5.6  Separately installed software. Where Customer directs the Software or its
+     installers to install a third-party product on Customer's machine
+     (including the Ollama runtime and the PostgreSQL database server), Customer
+     is the installing party and licensee of that product under its own license,
+     and Customer is responsible for its ongoing patching and support.
+
+
+================================================================================
+6. ARTIFICIAL INTELLIGENCE COMPONENTS
+================================================================================
+
+THIS SECTION IS FUNDAMENTAL TO THE BARGAIN BETWEEN THE PARTIES.
+
+6.1  What the AI Components do. The Software may use a local language model to
+     assess whether observed database activity resembles a genuine security
+     finding or ordinary application traffic, and to record a written reason
+     alongside an alert.
+
+6.2  Probabilistic, not authoritative. AI Component output is generated by a
+     statistical model. IT IS NOT DETERMINISTIC, NOT GUARANTEED TO BE CORRECT,
+     AND NOT A STATEMENT OF FACT BY LICENSOR. It will produce false positives
+     and false negatives. It may produce reasoning that is fluent, confident and
+     wrong, including assertions about a query that are not accurate.
+
+6.3  No reliance for decisions of consequence. CUSTOMER SHALL NOT RELY ON AI
+     COMPONENT OUTPUT AS THE SOLE OR DECISIVE BASIS FOR ANY SECURITY, LEGAL,
+     DISCIPLINARY, EMPLOYMENT, REGULATORY, FORENSIC OR EVIDENTIAL DETERMINATION,
+     nor for suppressing an alert, without independent human review by a
+     qualified person. Customer is responsible for the human oversight of any
+     automated evaluation performed by the Software.
+
+6.4  Suppression is opt-in and at Customer's risk. Any configuration in which an
+     AI Component's assessment causes an alert to be withheld, downgraded or not
+     delivered is DISABLED BY DEFAULT and is enabled solely at Customer's
+     election and risk. Licensor shall have no liability for a security event
+     that went unreported in consequence of such a configuration.
+
+6.5  Local processing. The AI Components supplied by Licensor are designed to
+     execute on Customer's own hardware, and in their default configuration
+     transmit no query text, schema, credential or Customer Data to Licensor or
+     to any external service. If Customer reconfigures the Software to use an
+     external or hosted model endpoint, Customer does so at its own risk and is
+     solely responsible for the resulting disclosure of Customer Data to that
+     third party and for any consequent breach of confidentiality or data
+     protection obligation.
+
+6.6  Model provenance. Model weights supplied with the Software are third-party
+     works licensed under Section 5. Licensor did not create them, does not
+     control their training data, and makes no representation as to their
+     accuracy, bias, fitness or non-infringement.
+
+6.7  No professional advice. Output of the Software, including compliance
+     reports and root-cause explanations, is informational. It does not
+     constitute legal, regulatory, audit or professional advice, and does not
+     itself establish compliance with any standard, framework or law.
+
+
+================================================================================
+7. OWNERSHIP AND INTELLECTUAL PROPERTY
+================================================================================
+
+7.1  Licensor's property. The Software is licensed, not sold. Licensor and its
+     suppliers retain all right, title and interest in and to the Software,
+     including all intellectual property rights, its rule sets, detection
+     content, root-cause catalogue, dashboards and report templates. Customer
+     receives only the limited license in Section 2.
+
+7.2  Customer's property. Customer retains all right, title and interest in
+     Customer Data. Licensor acquires no ownership in Customer Data.
+
+7.3  Feedback. If Customer provides suggestions or feedback about the Software,
+     Licensor may use it without restriction or obligation. Customer is not
+     required to provide feedback.
+
+7.4  Trademarks. DBDOME and DBEXPERT are trademarks of Licensor. This Agreement
+     grants no right to use them. Third-party names are the marks of their
+     owners and are used for identification only.
+
+
+================================================================================
+8. CONFIDENTIALITY
+================================================================================
+
+8.1  Each party shall protect the other's confidential information with at least
+     reasonable care, use it only to perform this Agreement, and disclose it
+     only to personnel with a need to know who are bound by comparable
+     obligations. The Software, its detection content and any non-public
+     Documentation are Licensor's confidential information.
+
+8.2  These obligations do not apply to information that is or becomes public
+     without breach, was lawfully known without obligation, is independently
+     developed, or is lawfully received from a third party. A party may disclose
+     as required by law, giving the other reasonable prior notice where legally
+     permitted.
+
+
+================================================================================
+9. FEES, AUDIT AND TERM
+================================================================================
+
+9.1  Fees. Customer shall pay the fees stated in the Order. Unless stated
+     otherwise, fees are exclusive of taxes, are payable within thirty (30) days
+     of invoice, and are non-refundable once the Subscription Term has begun.
+
+9.2  Verification. No more than once in any twelve (12) month period, on thirty
+     (30) days' written notice, during business hours and without unreasonable
+     disruption, Licensor may verify Customer's Instance and Monitored System
+     counts. Customer shall promptly license and pay for any excess found.
+     Licensor shall treat all information obtained as Customer's confidential
+     information.
+
+9.3  Term. This Agreement begins on the earlier of Customer's acceptance or
+     first installation, and continues for the Subscription Term unless
+     terminated earlier.
+
+9.4  Termination. Either party may terminate for the other's material breach not
+     cured within thirty (30) days of written notice. Licensor may terminate
+     immediately for breach of Section 3 or non-payment persisting sixty (60)
+     days past due.
+
+9.5  Effect of termination. On expiry or termination, the license in Section 2
+     ends; Customer shall cease all use and, within thirty (30) days, destroy or
+     return all copies of the Software and certify that it has done so.
+     Customer's rights under any open source license in Section 5.3 survive
+     according to their own terms. Sections 1, 3, 5, 6, 7, 8, 9.5, 11, 12, 13
+     and 15 survive.
+
+9.6  Customer Data on exit. For thirty (30) days after termination, Customer may
+     export its Customer Data using the Software's own export facilities.
+     Thereafter Licensor has no obligation to retain it.
+
+
+================================================================================
+10. SUPPORT, UPDATES AND MODIFICATIONS
+================================================================================
+
+10.1 Support. Licensor shall provide the support and service levels stated in
+     the Order. If none are stated, support is provided on a commercially
+     reasonable efforts basis during Licensor's normal business hours and is not
+     a warranty of resolution.
+
+10.2 Updates. Updates supplied by Licensor form part of the Software and are
+     governed by this Agreement. Licensor may, but is not obliged to, provide
+     them. Customer is responsible for testing and applying them.
+
+10.3 Effect of Customer changes. Licensor has no obligation in respect of, and
+     disclaims all liability for, any defect arising from Customer's
+     modification of the Software, of its rule, threshold or configuration
+     files, of the DBDOME database schema, or from operation on an unsupported
+     platform or with an unsupported third-party version.
+
+
+================================================================================
+11. WARRANTY AND DISCLAIMER
+================================================================================
+
+11.1 Limited warranty. Licensor warrants that, for ninety (90) days after
+     delivery, the Software will perform substantially in accordance with the
+     Documentation when properly installed on a supported platform. Customer's
+     exclusive remedy, and Licensor's entire liability, for breach of this
+     warranty is, at Licensor's option, repair, replacement, or refund of the
+     fees paid for the non-conforming Software. This warranty does not apply to
+     evaluation copies, Third-Party Components, AI Component output, or defects
+     within Section 10.3.
+
+11.2 DISCLAIMER. EXCEPT AS EXPRESSLY STATED IN SECTION 11.1, AND TO THE MAXIMUM
+     EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE, THE AI COMPONENTS AND ALL
+     THIRD-PARTY COMPONENTS ARE PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT
+     WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR STATUTORY, INCLUDING ANY IMPLIED
+     WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE,
+     ACCURACY, QUIET ENJOYMENT OR NON-INFRINGEMENT.
+
+11.3 NO WARRANTY OF SECURITY OUTCOME. LICENSOR DOES NOT WARRANT THAT THE
+     SOFTWARE WILL DETECT, IDENTIFY, PREVENT OR MITIGATE ANY PARTICULAR THREAT,
+     INTRUSION, RANSOMWARE EVENT, DATA EXFILTRATION, INSIDER MISUSE, MALICIOUS
+     ACT OR VULNERABILITY, THAT IT WILL OPERATE UNINTERRUPTED OR ERROR-FREE,
+     THAT ITS ALERTS WILL BE COMPLETE, TIMELY OR FREE OF FALSE POSITIVES, OR
+     THAT IT WILL CAUSE CUSTOMER TO BE COMPLIANT WITH ANY LAW, STANDARD OR
+     FRAMEWORK. THE SOFTWARE IS ONE CONTROL AMONG MANY AND IS NOT A SUBSTITUTE
+     FOR A COMPLETE SECURITY PROGRAM, FOR BACKUPS, OR FOR QUALIFIED PERSONNEL.
+
+11.4 High-risk use. The Software is not designed or intended for use in the
+     operation of nuclear facilities, aircraft navigation or communication,
+     life-support systems, weapons systems, or any environment where failure
+     could lead to death, personal injury or severe physical or environmental
+     damage. Licensor disclaims any express or implied warranty of fitness for
+     such purposes.
+
+11.5 Mandatory rights. Some jurisdictions do not allow the exclusion of implied
+     warranties or of consumer guarantees. To that extent the exclusions in this
+     Section do not apply, and Customer may have additional rights that vary by
+     jurisdiction. Nothing in this Agreement excludes any right that cannot
+     lawfully be excluded.
+
+
+================================================================================
+12. LIMITATION OF LIABILITY
+================================================================================
+
+     [REVIEW WITH COUNSEL: the cap in 12.2 and the carve-outs in 12.3 must be
+     checked against the governing law chosen in Section 15.1 and against any
+     tender or framework terms that override them.]
+
+12.1 EXCLUSION OF INDIRECT DAMAGES. TO THE MAXIMUM EXTENT PERMITTED BY LAW,
+     NEITHER PARTY SHALL BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+     CONSEQUENTIAL, PUNITIVE OR EXEMPLARY DAMAGES, OR FOR ANY LOSS OF PROFITS,
+     REVENUE, GOODWILL, BUSINESS, ANTICIPATED SAVINGS, OR FOR LOSS, CORRUPTION
+     OR INACCESSIBILITY OF DATA, OR FOR BUSINESS INTERRUPTION, ARISING OUT OF OR
+     RELATING TO THIS AGREEMENT, HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+     EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES AND EVEN IF A REMEDY
+     FAILS OF ITS ESSENTIAL PURPOSE.
+
+12.2 CAP. TO THE MAXIMUM EXTENT PERMITTED BY LAW, EACH PARTY'S TOTAL AGGREGATE
+     LIABILITY ARISING OUT OF OR RELATING TO THIS AGREEMENT SHALL NOT EXCEED THE
+     TOTAL FEES PAID BY CUSTOMER TO LICENSOR UNDER THE ORDER IN THE TWELVE (12)
+     MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO THE LIABILITY. WHERE
+     THE SOFTWARE WAS SUPPLIED WITHOUT CHARGE OR FOR EVALUATION, THAT LIABILITY
+     SHALL NOT EXCEED ONE HUNDRED UNITED STATES DOLLARS (USD 100).
+
+12.3 EXCEPTIONS. Sections 12.1 and 12.2 do not limit liability for: death or
+     personal injury caused by negligence; fraud or fraudulent
+     misrepresentation; Customer's breach of Section 3 or failure to pay fees;
+     either party's breach of Section 8; or any other liability that cannot
+     lawfully be limited.
+
+12.4 SECURITY EVENTS. WITHOUT LIMITING THE ABOVE, LICENSOR SHALL HAVE NO
+     LIABILITY FOR ANY SECURITY BREACH, RANSOMWARE INCIDENT, DATA LOSS,
+     REGULATORY FINE OR THIRD-PARTY CLAIM ARISING FROM AN EVENT THE SOFTWARE DID
+     NOT DETECT, DETECTED BUT DID NOT CLASSIFY AS AN ALERT, CLASSIFIED
+     INCORRECTLY, OR REPORTED AFTER THE FACT.
+
+12.5 ALLOCATION OF RISK. Customer acknowledges that the fees reflect the
+     allocation of risk in this Agreement, that Licensor would not enter into it
+     on these fees without these limitations, and that these limitations are an
+     essential basis of the bargain and apply notwithstanding any failure of
+     essential purpose.
+
+
+================================================================================
+13. INDEMNIFICATION
+================================================================================
+
+13.1 By Licensor. Licensor shall defend Customer against any third-party claim
+     that the Software, as supplied and used in accordance with this Agreement,
+     infringes that party's patent, copyright or trade secret, and shall pay
+     damages finally awarded or agreed in settlement, provided Customer promptly
+     notifies Licensor, gives Licensor sole control of the defense, and provides
+     reasonable cooperation.
+
+13.2 Exclusions. Licensor has no obligation under Section 13.1 for a claim
+     arising from: any Third-Party Component; any AI Component output; Customer
+     Data; modification of the Software other than by Licensor; combination with
+     anything not supplied by Licensor where the claim would not arise but for
+     the combination; use after notice to cease; or use in breach of this
+     Agreement.
+
+13.3 Remedies. If the Software is or may become subject to such a claim,
+     Licensor may at its option procure the right to continue use, replace or
+     modify the Software to be non-infringing, or terminate the license and
+     refund a pro-rata portion of prepaid fees. Sections 13.1 and 13.3 state
+     Licensor's entire liability and Customer's sole remedy for infringement.
+
+13.4 By Customer. Customer shall indemnify Licensor against any third-party
+     claim arising from Customer's breach of Section 3, Section 4.1 or Section
+     4.3, or from Customer's use of the Software in violation of law.
+
+13.5 Microsoft components. As a condition of the redistribution rights granted
+     to Licensor by Microsoft in respect of the Microsoft ODBC Driver for SQL
+     Server, Customer agrees that: (a) Microsoft's own license terms for that
+     driver, supplied in THIRD_PARTY_NOTICES.txt and with the driver itself,
+     govern Customer's use of it; (b) Microsoft's disclaimers of warranty and
+     limitations of liability apply to Customer directly and are not enlarged by
+     this Agreement; (c) Customer shall not use Microsoft's trademarks or trade
+     dress in a way suggesting endorsement by Microsoft; (d) Customer shall not
+     distribute or modify the driver so that any part of it becomes subject to a
+     license requiring source-code disclosure or a right in others to modify it;
+     and (e) Customer shall indemnify, defend and hold harmless Microsoft from
+     any claim, including reasonable attorneys' fees, related to Customer's
+     distribution or use of the driver, except to the extent a claim is based
+     solely on the unmodified driver as supplied by Microsoft. Microsoft is an
+     intended third-party beneficiary of this Section 13.5.
+
+
+================================================================================
+14. EXPORT, SANCTIONS AND ANTI-CORRUPTION
+================================================================================
+
+14.1 The Software and the AI Components may be subject to export control and
+     sanctions laws, including those of the State of Israel, the United States
+     and the European Union. Customer shall comply with all such laws and shall
+     not export, re-export, transfer or make the Software available, directly or
+     indirectly, to any embargoed or sanctioned country, entity or person, or
+     for any prohibited end use including weapons of mass destruction.
+
+14.2 Customer represents that it is not owned or controlled by, and is not
+     acting on behalf of, any such sanctioned party.
+
+14.3 Each party shall comply with applicable anti-bribery and anti-corruption
+     law.
+
+
+================================================================================
+15. GENERAL
+================================================================================
+
+     [REVIEW WITH COUNSEL: confirm the forum in 15.1 and whether an arbitration
+     clause is preferred for cross-border customers.]
+
+15.1 Governing law and forum. This Agreement is governed by the laws of the
+     State of Israel, without regard to conflict-of-laws rules. The competent
+     courts of Tel Aviv-Yafo shall have exclusive jurisdiction. The United
+     Nations Convention on Contracts for the International Sale of Goods does
+     not apply. Nothing prevents either party from seeking injunctive relief in
+     any court of competent jurisdiction.
+
+15.2 Entire agreement. This Agreement, together with the Order, any data
+     processing agreement, and THIRD_PARTY_NOTICES.txt, is the entire agreement
+     between the parties on its subject matter and supersedes all prior
+     proposals and communications. Terms in a Customer purchase order or portal
+     do not apply and are rejected, unless signed by an authorized
+     representative of Licensor.
+
+15.3 Order of precedence. In case of conflict: (a) a signed negotiated agreement
+     between the parties; (b) the Order; (c) this Agreement; (d) the
+     Documentation. Section 5.2 prevails as to Third-Party Components.
+
+15.4 Amendment and waiver. Amendments must be in writing and signed by both
+     parties. Failure to enforce a provision is not a waiver of it.
+
+15.5 Severability. If a provision is held unenforceable, it shall be modified to
+     the minimum extent necessary to make it enforceable, or severed, and the
+     remainder shall continue in full force.
+
+15.6 Assignment. Customer may not assign this Agreement without Licensor's prior
+     written consent, except to a successor of all or substantially all of its
+     business that is not a competitor of Licensor and that assumes this
+     Agreement in writing. Any other attempted assignment is void.
+
+15.7 Force majeure. Neither party is liable for failure to perform, other than a
+     payment obligation, due to a cause beyond its reasonable control.
+
+15.8 Independent contractors. The parties are independent contractors. Nothing
+     creates a partnership, agency, employment or joint venture.
+
+15.9 Notices. Notices to Licensor shall be sent to legal@dbexpert.ai and to the
+     registered address above; notices to Customer shall be sent to the contact
+     in the Order. Notices are effective on receipt.
+
+15.10 Government end users. If Customer is a government entity, the Software is
+     "commercial computer software" supplied with only those rights granted to
+     all other end users under this Agreement, and any additional rights must be
+     expressly agreed in writing.
+
+15.11 Publicity. Neither party may use the other's name or marks in publicity
+     without prior written consent, except that Licensor may identify Customer
+     as a customer in a customer list where Customer has consented in the Order.
+
+15.12 Language. This Agreement is executed in English. Where a translation is
+     supplied for convenience, the English version prevails to the extent
+     permitted by applicable law.
+
+
+================================================================================
+                          END OF AGREEMENT
+================================================================================
+
+Third-party attributions required by the licenses of components distributed with
+this Software are set out in THIRD_PARTY_NOTICES.txt, installed in the DBDOME
+program directory and included on the installation media. That file forms part
+of this Agreement.
+
+Copyright (c) 2026 DBEXPERT. All rights reserved.

@@ -99,6 +99,7 @@ def get_function_by_name(name):
     from processes.gmmr_maintenance import run_gmmr_maintain
     from processes.dump_metrics import run_dump_and_prune_metrics
     from processes.retention_space_alert import run_retention_space_alert
+    from security_agent.runner import run_annotation_sweep
     from processes.blocker import run_blocker
     from processes.auto_mask import run_auto_mask
     from processes.alert_auto_resolve import run_alert_auto_resolve
@@ -158,6 +159,13 @@ def get_function_by_name(name):
         "vulnerability_scan":            run_vulnerability_scan,
         "retention_enforcement":         run_retention_enforcement,
         "evidence_package_generation":   run_evidence_package_generation,
+        # Annotates alerts with the security agent's verdict AFTER they are
+        # dispatched, so triage never delays alerting. Registering the row in
+        # metrics.registered_processes is not enough on its own: without an
+        # entry here the scheduler logs "Unknown process name - skipping" and
+        # the sweep silently never runs. That is exactly what happened -
+        # 206 alerts sat untriaged with the process showing is_active=true.
+        "security_agent_annotate":       run_annotation_sweep,
     }
     return mapping.get(name)
 
