@@ -22,8 +22,6 @@ never affected by the model.
 | `dbdome_service.exe`, `dbdome_dbanalytics.exe` | the service (agent code is compiled in) |
 | `OllamaSetup.exe` | 1.49 GB - Ollama installer, so the install needs no internet |
 | `ollama_models\` | 2.03 GB - pre-pulled `phi3:mini-128k` store |
-| `secagent\dbdome_secagent.exe` | llama.cpp sidecar (its own `_internal`, do not merge) |
-| `security_agent\models\Phi-3.1-mini-128k-instruct-Q4_K_M.gguf` | 2.23 GB - sidecar model, used only when Ollama is unavailable |
 | `_internal\security_agent\rules.json` | threat rules + the root-cause catalogue |
 | `_internal\sql_scripts\76*.sql` | database objects (see step 3) |
 
@@ -67,23 +65,28 @@ nightly maintenance job will alert every night.
 
 ## 4. Runtime - nothing to choose
 
-The media carries **both** runtimes, so there is no decision to make and no
-network needed:
+The media carries **one** runtime and one model, so there is no decision to make
+and no network needed: the installer sets Ollama up from `OllamaSetup.exe`,
+stages the pre-pulled `phi3:mini-128k` store machine-wide, and registers it as
+the `DBDOME_Ollama` service.
 
-* the installer sets Ollama up from `OllamaSetup.exe`, stages the pre-pulled
-  model store machine-wide, and registers it as the `DBDOME_Ollama` service.
-  This is what normally serves the model.
-* `security_agent\models\Phi-3.1-mini-128k-instruct-Q4_K_M.gguf` backs the
-  bundled llama.cpp sidecar, for machines where Ollama cannot be installed.
+**That is the only runtime.** `SECURITY_AGENT_BACKEND` defaults to `ollama`
+(`auto` is still accepted and resolves to the same thing). The installers warn
+loudly if it is not usable: an agent with no model fails open, so alerts still
+fire, they just arrive without a reason.
 
-`SECURITY_AGENT_BACKEND=auto` (the default) prefers Ollama when it is reachable
-with the model present, and falls back to the sidecar otherwise. Both installers
-warn loudly if neither is usable: an agent with no model fails open, so alerts
-still fire, they just arrive without a reason.
+**The llama.cpp sidecar was removed** (2026-08-28). It shipped a 2.3 GB GGUF and
+a 67 MB frozen `dbdome_secagent.exe` as an offline fallback, but it never worked:
+the media carried the GGUF at `bin\security_agent\*.gguf` while
+`config.model_path()` looked for it under
+`bin\security_agent\models\Phi-3-mini-4k-instruct-q4.gguf` — wrong directory and
+wrong filename — so any box that fell back to it got `LlamaUnavailable`, i.e.
+exactly the same inert agent as having no fallback at all. The GGUF, the exe and
+`dbdome_secagent.spec` are all gone; nothing builds or ships a sidecar now.
 
-To force one, set `SECURITY_AGENT_BACKEND=ollama` or `=sidecar`. For the sidecar
-also set
-`SECURITY_AGENT_MODEL=security_agent/models/Phi-3.1-mini-128k-instruct-Q4_K_M.gguf`.
+`SECURITY_AGENT_BACKEND=sidecar` is still honoured in code for anyone who
+provisions their own GGUF *and* builds their own sidecar, but neither is
+supplied, and `SECURITY_AGENT_MODEL` no longer has a default.
 
 **Q4_K_M rather than plain q4 is deliberate.** The plain-q4 build was observed
 emitting stray tokens inside its JSON (`"confidence": 0 Cookies`), which the
@@ -173,7 +176,7 @@ All in `<bin>\.env`. Changes need a `DBDOME_dbanalytics` restart, except
 | Variable | Default | Notes |
 |---|---|---|
 | `SECURITY_AGENT_ENABLED` | `false` | the only one you must set |
-| `SECURITY_AGENT_BACKEND` | `auto` | `auto` / `ollama` / `sidecar` |
+| `SECURITY_AGENT_BACKEND` | `ollama` | `ollama` (`auto` resolves to it); `sidecar` needs a self-built exe |
 | `SECURITY_AGENT_SUPPRESS` | `false` | **leave off.** Lets a verdict stop an alert |
 | `SECURITY_AGENT_ANNOTATE_INLINE` | `false` | **leave off.** `true` puts triage back in the alert path |
 | `SECURITY_AGENT_ANNOTATE_BATCH` | `25` | alerts annotated per sweep |
@@ -182,7 +185,7 @@ All in `<bin>\.env`. Changes need a `DBDOME_dbanalytics` restart, except
 | `SECURITY_AGENT_OLLAMA_URL` | `http://127.0.0.1:11434` | loopback; nothing leaves the box |
 | `SECURITY_AGENT_OLLAMA_KEEP_ALIVE` | `24h` | `-1` keeps it loaded forever |
 | `SECURITY_AGENT_TIMEOUT_SECS` | `90` | per alert; exceeded means no reason attached |
-| `SECURITY_AGENT_MODEL` | bundled GGUF | sidecar backend only |
+| `SECURITY_AGENT_MODEL` | (none) | sidecar backend only; nothing ships a GGUF |
 | `SECURITY_AGENT_DOMAINS` | `*` | which alert domains get annotated |
 | `SECURITY_AGENT_MIN_CONFIDENCE` | `0.75` | only consulted if suppression is on |
 

@@ -101,16 +101,18 @@ def min_confidence() -> float:
 
 # ---------------------------------------------------------------- backend
 def backend_setting() -> str:
-    """Raw setting: 'auto' (default), 'ollama' or 'sidecar'."""
-    v = _env("SECURITY_AGENT_BACKEND", "auto").strip().lower()
-    return v if v in ("auto", "sidecar", "ollama") else "auto"
+    """Raw setting: 'ollama' (default) or 'sidecar'.
+
+    'auto' is still accepted for compatibility with existing .env files, but it
+    now resolves to 'ollama' -- see backend()."""
+    v = _env("SECURITY_AGENT_BACKEND", "ollama").strip().lower()
+    return v if v in ("auto", "sidecar", "ollama") else "ollama"
 
 
 def backend() -> str:
-    """Which runtime to use for THIS call: 'ollama' or 'sidecar'.
+    """Which runtime to use for THIS call. ONE MODEL: Ollama `phi3:mini-128k`.
 
-    AUTO is the default and prefers Ollama when it is reachable with the model
-    present, falling back to the bundled sidecar otherwise. Measured on this box
+    Ollama was always the better runtime where it existed. Measured on this box
     (2026-08-21), same three cases, same prompt:
 
                         sidecar (GGUF)   ollama phi3:mini-128k
@@ -119,19 +121,23 @@ def backend() -> str:
         JSON corruption   needed salvage       none
         mundane query     false positive       correct KNOWN_QUERY
 
-    So Ollama is better where it exists. But it cannot be a hard requirement:
-    `ollama pull` needs internet, and a customer's database server is usually
-    air-gapped. The sidecar ships in the bundle with its GGUF and works with no
-    network at all, so it stays as the fallback and the product keeps its
-    fully-offline install story.
+    The sidecar was kept as an offline fallback, but it never actually worked:
+    the payload shipped the GGUF at bin\\security_agent\\*.gguf while
+    model_path() below pointed at bin\\security_agent\\models\\Phi-3-mini-4k-
+    instruct-q4.gguf -- wrong directory, wrong filename. Any box that fell back
+    to it got LlamaUnavailable, i.e. exactly the same inert agent as having no
+    fallback, for 2.3 GB of media. The GGUF has since been dropped from the
+    payload entirely, so 'auto' would now be choosing between one real runtime
+    and one that cannot load.
 
-    The probe is cheap (a 2s call to /api/tags on loopback) and its result is
-    cached, so this does not add a round trip per alert.
+    Default is therefore 'ollama'. 'sidecar' is still honoured if set
+    EXPLICITLY, for anyone who provisions their own GGUF and points
+    SECURITY_AGENT_MODEL at it, but nothing ships one any more.
     """
     setting = backend_setting()
-    if setting in ("sidecar", "ollama"):
-        return setting
-    return "ollama" if _ollama_detected() else "sidecar"
+    if setting == "sidecar":
+        return "sidecar"
+    return "ollama"
 
 
 # Auto-detection is cached: the answer changes only when Ollama is installed,
@@ -252,10 +258,23 @@ def annotate_batch_size() -> int:
 
 # ---------------------------------------------------------------- model
 def model_path() -> str:
-    raw = _env(
-        "SECURITY_AGENT_MODEL",
-        "security_agent/models/Phi-3-mini-4k-instruct-q4.gguf",
-    )
+    """GGUF path for the OPT-IN sidecar backend. Nothing ships one any more.
+
+    There is no default: the old one ("security_agent/models/Phi-3-mini-4k-
+    instruct-q4.gguf") named a file that was never in the payload -- the media
+    carried Phi-3.1-mini-128k-instruct-Q4_K_M.gguf one directory up -- so it
+    silently resolved to a non-existent path and the sidecar failed to load
+    wherever it was used. An empty default is honest about that: llm.py raises
+    LlamaUnavailable with the path it tried, instead of pointing at a plausible
+    filename that never existed.
+
+    Set SECURITY_AGENT_MODEL (absolute, or relative to the install root) only if
+    you are deliberately running SECURITY_AGENT_BACKEND=sidecar with a GGUF you
+    provisioned yourself. The shipped runtime is Ollama `phi3:mini-128k`.
+    """
+    raw = _env("SECURITY_AGENT_MODEL", "").strip()
+    if not raw:
+        return ""
     p = Path(raw)
     if not p.is_absolute():
         p = _base_dir() / raw
