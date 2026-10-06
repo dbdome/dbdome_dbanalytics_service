@@ -47,34 +47,51 @@ def _recipients(cur):
 def _send_mail(cur, subject, body):
     cur.execute("""SELECT mail_sender, smtp_port, smtp_user, smtp_password, tls, smtp_server
                    FROM config.mail_config LIMIT 1""")
+    from email_utils.mail_log import log_mail_skipped
     mc = cur.fetchone()
     if not mc:
+        log_mail_skipped("config.mail_config is empty - no SMTP server configured",
+                         channel="internal", routine="internal_health_monitor._send_mail",
+                         subject=subject)
         raise RuntimeError("config.mail_config is empty")
     sender, port, user, pw, tls, server = mc
     rcpts = _recipients(cur)
     if not rcpts:
+        log_mail_skipped("no active recipients in config.mail_groups",
+                         channel="internal", routine="internal_health_monitor._send_mail",
+                         smtp_server=server, smtp_port=port, tls=tls, user=user,
+                         subject=subject)
         raise RuntimeError("no active recipients in config.mail_groups")
 
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = sender
+    # An anonymous relay has no smtp_user to fall back on, and a NULL mail_sender
+    # would otherwise produce a message with an empty From that the relay rejects.
+    msg["From"] = (sender or "").strip() or (user or "").strip() or "dbdome@localhost"
     msg["To"] = ", ".join(rcpts)
     msg.set_content(body)
 
-    s = smtplib.SMTP(server, int(port), timeout=30)
-    try:
-        s.ehlo()
-        if tls:
-            s.starttls()
-            s.ehlo()
-        if user and str(user).strip():
-            s.login(user, decrypt_secret(pw))
-        s.send_message(msg, to_addrs=rcpts)
-    finally:
+    from email_utils.mail_log import mail_attempt
+    with mail_attempt(channel="internal", routine="internal_health_monitor._send_mail",
+                      smtp_server=server, smtp_port=port, tls=tls, user=user,
+                      mail_sender=msg["From"], recipients=rcpts, subject=subject) as _att:
+        _att.stage("connect")
+        s = smtplib.SMTP(server, int(port), timeout=30)
         try:
-            s.quit()
-        except Exception:
-            pass
+            s.ehlo()
+            if tls:
+                s.starttls()
+                s.ehlo()
+            if user and str(user).strip():
+                _att.stage("auth")
+                s.login(user, decrypt_secret(pw))
+            _att.stage("send")
+            s.send_message(msg, to_addrs=rcpts)
+        finally:
+            try:
+                s.quit()
+            except Exception:
+                pass
     return rcpts
 
 

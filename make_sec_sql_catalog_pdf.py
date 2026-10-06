@@ -23,9 +23,12 @@ for line in open("C:/dev/dbdome_dbanalytics_service/.env"):
         k, v = line.split("=", 1)
         env[k] = v
 
+# HA/DR: PG_HOST may be a comma-separated primary,alternate list; libpq takes it
+# directly. Failover kwargs added only when a list is present.
+_ha = {"target_session_attrs": "read-write", "connect_timeout": 10} if "," in str(env["PG_HOST"]) else {}
 conn = psycopg2.connect(host=env["PG_HOST"], port=env["PG_PORT"],
                         user=env["PG_USER"], password=env["PG_PASSWORD"],
-                        dbname=env["PG_DB"])
+                        dbname=env["PG_DB"], **_ha)
 cur = conn.cursor()
 cur.execute("""
     SELECT DISTINCT v.area_code, v.area_name, v.issue_name, i.description,

@@ -9,6 +9,7 @@ from datetime import datetime
 from utils.config_dotenv import get_connection_string
 from utils.log4dbexpert import db_write_log
 from utils.secrets_crypto import decrypt_secret, encrypt_secret
+from email_utils.mail_log import mail_attempt, log_mail, log_mail_skipped
 from utils.alert_resultset import fetch_alert_resultset
 from email.mime.application import MIMEApplication
 from ssrs.ssrs_report_download import ssrs_download_alert_report , ssrs_download_alert_report_with_params
@@ -32,6 +33,55 @@ _smtp_cache = {"conn": None, "key": None}
 # instead of being hammered into a permanent block.
 _smtp_state = {"cooldown_until": 0.0}
 _SMTP_COOLDOWN = 600  # seconds
+
+
+# --- Anonymous (unauthenticated) SMTP support -----------------------------------
+# An SMTP configuration with NO user / password is a normal deployment: most
+# corporate installs relay through an internal MTA that accepts mail from known
+# hosts and grants no mailbox credentials at all. Such a relay typically does not
+# advertise AUTH, and offering it an empty login is answered with
+# "503 AUTH not available" / "530 authentication required" rather than being
+# ignored - so the login has to be SKIPPED, not attempted with blank strings.
+# Leave smtp_user (and smtp_password) empty on /mailconfiguration to use one.
+
+def smtp_needs_auth(user):
+    """True only when a real SMTP username is configured. NULL, empty and
+    whitespace-only all mean 'anonymous relay - do not authenticate'."""
+    return bool(user and str(user).strip())
+
+
+def smtp_from(mail_sender, smtp_user=None):
+    """The address to put in From / the envelope. `mail_sender` wins; `smtp_user`
+    is the legacy fallback for configs written before mail_sender existed. With an
+    anonymous relay there is no smtp_user, so senders that used it directly would
+    build a message with an empty From - hence this helper."""
+    for cand in (mail_sender, smtp_user):
+        if cand and str(cand).strip():
+            return str(cand).strip()
+    return "dbdome@localhost"
+
+
+def smtp_connect(host, port, tls=False, user=None, password=None, timeout=30):
+    """Open an SMTP session for a single send.
+
+    Port 465 means implicit TLS (SMTP_SSL); every other port is plain SMTP with
+    optional STARTTLS, which is what an internal relay on 25 (or a submission
+    port with STARTTLS) needs. Authenticates only when smtp_needs_auth() says a
+    username is configured, so a credential-free relay works. `password` may be
+    an enc:v1: value - it is decrypted here."""
+    port = int(port or 25)
+    if port == 465:
+        s = smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=timeout)
+        s.ehlo()
+    else:
+        s = smtplib.SMTP(host, port, timeout=timeout)
+        s.ehlo()
+        if tls:
+            s.starttls(context=ssl.create_default_context())
+            s.ehlo()
+    if smtp_needs_auth(user):
+        s.login(user, decrypt_secret(password))
+    return s
 
 
 def _reset_smtp_cache():
@@ -61,13 +111,7 @@ def _get_smtp_connection(server_host, port, tls, user, password):
         except Exception:
             pass
     _reset_smtp_cache()
-    s = smtplib.SMTP(server_host, int(port), timeout=15)
-    s.ehlo()
-    if tls:
-        s.starttls()
-        s.ehlo()
-    if user and str(user).strip():
-        s.login(user, decrypt_secret(password))
+    s = smtp_connect(server_host, port, tls=tls, user=user, password=password, timeout=15)
     _smtp_cache["conn"] = s
     _smtp_cache["key"] = key
     return s
@@ -245,10 +289,9 @@ def send_mail_alert_no_attachment(
     _area_is_nan = (not isinstance(area_name, str)) and (area_name is None or pandas.isna(area_name))
     _area_token  = "" if _area_is_nan else str(area_name).strip().lower()
     if _area_is_nan or _area_token in ("nan", "none", "na", "null"):
-        db_write_log(
-            f"Alert skipped for {root_cause_id} on {server} - area is NaN ('{area_name}')",
-            0, "send_mail_alert_no_attachment", server,
-        )
+        log_mail_skipped(f"area is NaN ('{area_name}') - suppressed as garbage metadata",
+                         channel="alert", routine="send_mail_alert_no_attachment",
+                         stage="skipped", server_name=server, root_cause_id=root_cause_id)
         return
 
     # ========== Mail-authorisation gate ==========
@@ -270,10 +313,10 @@ def send_mail_alert_no_attachment(
         gate_row = gate_cur.fetchone()
         if gate_row is None or not gate_row[0]:
             gate_cur.close(); gate_conn.close()
-            db_write_log(
-                f"Alert skipped for {root_cause_id} on {server} - risk_level '{risk_level}' is disabled or unknown",
-                0, "send_mail_alert_no_attachment", server,
-            )
+            log_mail_skipped(
+                f"risk_level '{risk_level}' is disabled or unknown in rootcause.risk_level",
+                channel="alert", routine="send_mail_alert_no_attachment",
+                stage="skipped", server_name=server, root_cause_id=root_cause_id)
             return
         gate_cur.execute(
             "SELECT 1 FROM config.webook_alerts "
@@ -286,21 +329,27 @@ def send_mail_alert_no_attachment(
         wa_ok = gate_cur.fetchone() is not None
         gate_cur.close(); gate_conn.close()
         if not wa_ok:
-            db_write_log(
-                f"Alert skipped for {root_cause_id} on {server} - mail not enabled in "
-                f"webook_alerts (domain '{domain_name}', risk '{risk_level}')",
-                0, "send_mail_alert_no_attachment", server,
-            )
+            log_mail_skipped(
+                f"mail not enabled in config.webook_alerts for domain '{domain_name}' / "
+                f"risk '{risk_level}' (needs send_mail_alert = true AND is_active)",
+                channel="alert", routine="send_mail_alert_no_attachment",
+                stage="skipped", server_name=server, root_cause_id=root_cause_id)
             return
     except Exception as _gate_ex:
-        db_write_log(f"mail-authorisation gate check failed: {_gate_ex}", 0,
+        # Fails OPEN (the send continues), so this has to be loud: a gate that
+        # cannot be read is not the same as a gate that said yes.
+        db_write_log(f"mail-authorisation gate check FAILED (failing open): {_gate_ex}", 2,
                      "send_mail_alert_no_attachment", server)
 
     # ========== SMTP circuit breaker: skip while cooling down after a failure ====
     if time.time() < _smtp_state.get("cooldown_until", 0):
-        db_write_log(
-            f"Alert send skipped for {root_cause_id} on {server} - SMTP in cooldown after a recent failure",
-            0, "send_mail_alert_no_attachment", server)
+        # Suppression was previously invisible: alerts simply stopped for 10
+        # minutes after one SMTP failure with no trace of why.
+        _cool_left = int(_smtp_state.get("cooldown_until", 0) - time.time())
+        log_mail_skipped(
+            f"SMTP circuit breaker open after a recent failure - {_cool_left}s of cooldown left",
+            channel="alert", routine="send_mail_alert_no_attachment",
+            stage="skipped", server_name=server, root_cause_id=root_cause_id)
         return
 
     # ========== Dedup: skip if same alert sent within 72 hours ==========
@@ -326,10 +375,12 @@ def send_mail_alert_no_attachment(
         dedup_cur.close()
         dedup_conn.close()
         if already_sent:
-            db_write_log(
-                f"Alert skipped for {root_cause_id} on {server} - already sent within 72 hours",
-                0, "send_mail_alert_no_attachment", server
-            )
+            # Not a fault - but "the alert stopped arriving" is usually THIS, and
+            # it was indistinguishable from a broken mail server until now.
+            log_mail_skipped(
+                "an identical alert was already mailed within the last 72 hours (dedup)",
+                channel="alert", routine="send_mail_alert_no_attachment",
+                stage="skipped", server_name=server, root_cause_id=root_cause_id)
             return
     except Exception as dedup_ex:
         db_write_log(f"Alert dedup check failed: {dedup_ex}", 0, "send_mail_alert_no_attachment", server)
@@ -502,6 +553,14 @@ def send_mail_alert_no_attachment(
         conn.commit()   # release the config-read transaction BEFORE the SMTP send,
                         # so the connection is never left "idle in transaction"
                         # while blocked on the (potentially slow) mail server.
+        if not row:
+            # Was a silent no-op: no send, no error, nothing logged at all.
+            log_mail_skipped(
+                "config.mail_config / config.mail_groups returned no row - "
+                "no SMTP server or recipient group is configured",
+                channel="alert", routine="send_mail_alert_no_attachment",
+                server_name=server, root_cause_id=root_cause_id,
+                subject=formated_subject)
         if row:
             mail_sender, smtp_port, smtp_user, smtp_password, tls, smtp_server, recipients = row
             try:
@@ -512,16 +571,25 @@ def send_mail_alert_no_attachment(
                 msg.set_content(f"🚨 Security alert detected: {formated_subject}. Please view this email in HTML")
                 msg.add_alternative(formatted_description, subtype="html")
                 with _smtp_lock:
-                    try:
-                        mail_server = _get_smtp_connection(smtp_server, smtp_port, tls, smtp_user, smtp_password)
-                        mail_server.send_message(msg)
-                        _smtp_state["cooldown_until"] = 0  # success clears any cooldown
-                    except Exception:
-                        # login/send failed -> drop the cached connection and start a
-                        # cooldown so we stop hammering a rate-limited server (454).
-                        _reset_smtp_cache()
-                        _smtp_state["cooldown_until"] = time.time() + _SMTP_COOLDOWN
-                        raise  # logged by the outer handler
+                    with mail_attempt(channel="alert",
+                                      routine="send_mail_alert_no_attachment",
+                                      smtp_server=smtp_server, smtp_port=smtp_port,
+                                      tls=tls, user=smtp_user, mail_sender=mail_sender,
+                                      recipients=recipients, subject=formated_subject,
+                                      server_name=server,
+                                      root_cause_id=root_cause_id) as _att:
+                        try:
+                            _att.stage("connect")
+                            mail_server = _get_smtp_connection(smtp_server, smtp_port, tls, smtp_user, smtp_password)
+                            _att.stage("send")
+                            mail_server.send_message(msg)
+                            _smtp_state["cooldown_until"] = 0  # success clears any cooldown
+                        except Exception:
+                            # login/send failed -> drop the cached connection and start a
+                            # cooldown so we stop hammering a rate-limited server (454).
+                            _reset_smtp_cache()
+                            _smtp_state["cooldown_until"] = time.time() + _SMTP_COOLDOWN
+                            raise  # recorded by mail_attempt, then the outer handler
                 # connection kept open for reuse (no per-alert quit/login)
 
                 # Log to mail_alert_log for 72-hour dedup
@@ -585,8 +653,9 @@ def send_alert_email_and_log(
     file_path = ssrs_download_alert_report(report_url,report_user , report_password , filename ,  output_dir="." )
     # --- Send Email ---
     try:
+        sender = smtp_from(None, smtp_user)
         msg = MIMEMultipart()
-        msg["From"] = smtp_user
+        msg["From"] = sender
         msg["To"] = recipients
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
@@ -595,18 +664,25 @@ def send_alert_email_and_log(
             part = MIMEApplication(f.read(), Name=file_path)
             part['Content-Disposition'] = f'attachment; filename="{file_path}"'
             msg.attach(part)
-        context = ssl.create_default_context()
 
-        if use_tls:
-            smtp_port = 587
-            server = smtplib.SMTP(smtp_server, smtp_port, timeout=20)
-            server.starttls(context=context)
-        else:
-            server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context, timeout=10)
-
-        server.login(smtp_user, decrypt_secret(smtp_password))
-        server.sendmail(smtp_user, recipients, msg.as_string())
-        server.quit()
+        # smtp_connect() honours the CONFIGURED port (the old code forced 587 for
+        # TLS and implicit SSL otherwise, which cannot reach a plain relay on 25)
+        # and authenticates only when a username is configured.
+        with mail_attempt(channel="alert", routine="send_alert_email_and_log",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=use_tls,
+                          user=smtp_user, mail_sender=sender, recipients=recipients,
+                          subject=subject, attachments=file_path) as _att:
+            _att.stage("connect")
+            smtp = smtp_connect(smtp_server, smtp_port or (587 if use_tls else 25),
+                                tls=use_tls, user=smtp_user, password=smtp_password, timeout=20)
+            try:
+                _att.stage("send")
+                smtp.sendmail(sender, recipients, msg.as_string())
+            finally:
+                try:
+                    smtp.quit()
+                except Exception:
+                    pass
 
     except Exception as e:
         status = "FAILED"
@@ -636,61 +712,46 @@ def send_alert_email_and_log(
     return status, error_msg
 
 def send_mail_with_pdf_attachment( report_name , recipients , source ,file_name , smtp_user , smtp_server , smtp_port , password ,mail_sender,tls):
-    if smtp_user is None : 
-        try:    
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
+    """Mail a PDF report. Authenticates only when an SMTP user is configured, so a
+    credential-free relay works. (Previously this was two copy-pasted branches
+    keyed on `smtp_user is None`, which still tried to log in when the form had
+    left the user blank rather than unset - the common case from the UI.)"""
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = f"DBDOME – {report_name}"
+        msg["From"] = smtp_from(mail_sender, smtp_user)
+        msg["To"] = recipients
+        msg.set_content(f"{report_name}")
 
-            with open(file_name, "rb") as f:
-                msg.add_attachment(
+        with open(file_name, "rb") as f:
+            msg.add_attachment(
                 f.read(),
                 maintype="application",
                 subtype="pdf",
                 filename=file_name
             )
 
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-    
-    else:
-        try:  
-            msg = EmailMessage()
-            msg["Subject"] = f"DBDOME – {report_name}"
-            msg["From"] = mail_sender
-            msg["To"] = recipients
-            msg.set_content(f"{report_name}")
-
-            with open(file_name, "rb") as f:
-                msg.add_attachment(
-                f.read(),
-                maintype="application",
-                subtype="pdf",
-                filename=file_name
-            )
-
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            if tls:
-                server.starttls()
-            server.login(smtp_user, decrypt_secret(password))
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            status = "FAILED"        
-            db_write_log(f"send_mail_with_attachment failed with error:{e}"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment" )  
-        finally:
-            db_write_log(f"send_mail_with_attachment completed"   ,0,"send_mail_with_attachment" , "send_mail_with_attachment completed" )  
-      
+        with mail_attempt(channel="report", routine="send_mail_with_pdf_attachment",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                          user=smtp_user, mail_sender=mail_sender, recipients=recipients,
+                          subject=report_name, attachments=file_name) as _att:
+            _att.stage("connect")
+            server = smtp_connect(smtp_server, smtp_port, tls=tls,
+                                  user=smtp_user, password=password)
+            try:
+                _att.stage("send")
+                server.send_message(msg)
+            finally:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
+    except Exception as e:
+        # This sender intentionally does NOT re-raise (historic behaviour), which
+        # is exactly why the failure has to be recorded: alerts.mail_send_log is
+        # now the only place a swallowed send shows up.
+        db_write_log(f"send_mail_with_pdf_attachment failed with error:{e}", 2,
+                     "send_mail_with_pdf_attachment", "")
 
 
 def send_email_with_attachment(
@@ -714,8 +775,9 @@ def send_email_with_attachment(
    file_path = ssrs_download_alert_report_with_params(report_url,report_user , report_password , filename ,  start_time , end_time ,  output_dir="." )
     # --- Send Email ---
    try:
+        sender = smtp_from(None, smtp_user)
         msg = MIMEMultipart()
-        msg["From"] = smtp_user
+        msg["From"] = sender
         msg["To"] = recipients
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
@@ -724,18 +786,22 @@ def send_email_with_attachment(
             part = MIMEApplication(f.read(), Name=file_path)
             part['Content-Disposition'] = f'attachment; filename="{file_path}"'
             msg.attach(part)
-        context = ssl.create_default_context()
 
-        if tls:
-            smtp_port = 587
-            server = smtplib.SMTP(smtp_server, smtp_port, timeout=20)
-            server.starttls(context=context)
-        else:
-            server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context, timeout=10)
-
-        server.login(smtp_user, decrypt_secret(smtp_password))
-        server.sendmail(smtp_user, recipients, msg.as_string())
-        server.quit()
+        with mail_attempt(channel="alert", routine="send_email_with_attachment",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                          user=smtp_user, mail_sender=sender, recipients=recipients,
+                          subject=subject, attachments=file_path) as _att:
+            _att.stage("connect")
+            smtp = smtp_connect(smtp_server, smtp_port or (587 if tls else 25),
+                                tls=tls, user=smtp_user, password=smtp_password, timeout=20)
+            try:
+                _att.stage("send")
+                smtp.sendmail(sender, recipients, msg.as_string())
+            finally:
+                try:
+                    smtp.quit()
+                except Exception:
+                    pass
 
    except Exception as e:
         status = "FAILED"
@@ -764,16 +830,27 @@ def send_mail_with_attachment( pdf_path ,  report_name , recipients , source ,fi
                 filename=file_name
             )
 
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        if tls:
-            server.starttls()
-        if smtp_user is not None:
-            server.login(smtp_user, decrypt_secret(password))
-        server.send_message(msg)
-        server.quit()
-        db_write_log(f"send_mail_with_attachment sent '{report_name}' to {recipients}", 0, "send_mail_with_attachment", "")
+        # Authenticate only when a user is configured - a blank user means an
+        # anonymous relay (`is not None` used to let "" through into login()).
+        with mail_attempt(channel="report", routine="send_mail_with_attachment",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                          user=smtp_user, mail_sender=mail_sender, recipients=recipients,
+                          subject=report_name, attachments=file_name) as _att:
+            _att.stage("connect")
+            server = smtp_connect(smtp_server, smtp_port, tls=tls,
+                                  user=smtp_user, password=password)
+            try:
+                _att.stage("send")
+                server.send_message(msg)
+            finally:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
     except Exception as e:
-        db_write_log(f"send_mail_with_attachment failed with error:{e}", 0, "send_mail_with_attachment", "send_mail_with_attachment")
+        # mail_attempt already recorded the structured failure; keep the legacy
+        # line for callers that grep for it, then re-raise as before.
+        db_write_log(f"send_mail_with_attachment failed with error:{e}", 2, "send_mail_with_attachment", "")
         raise
 
 
@@ -845,31 +922,32 @@ WHERE h.file_name = %s
             filename=pdf_file
         )
 
-        server = smtplib.SMTP(smtp_server, smtp_port)
-
-        if tls:
-            server.starttls()
-
-        if smtp_user:
-            server.login(smtp_user, decrypt_secret(smtp_password))
-
-        server.send_message(msg)
-        server.quit()
-
-        db_write_log(
-            "send_mail_with_attachment completed",
-            0,
-            "send_mail_with_attachment",
-            "send_mail_with_attachment completed"
-        )
+        with mail_attempt(channel="report", routine="send_mail_with_html_attachment",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                          user=smtp_user, mail_sender=mail_sender, recipients=recipients,
+                          subject=str(report), attachments=f"{pdf_file}, {html_file}") as _att:
+            _att.stage("connect")
+            server = smtp_connect(smtp_server, smtp_port, tls=tls,
+                                  user=smtp_user, password=smtp_password)
+            try:
+                _att.stage("send")
+                server.send_message(msg)
+            finally:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
 
     except Exception as e:
-
+        # Swallowed on purpose (historic behaviour) - the structured row written
+        # by mail_attempt is what makes this failure findable at all. The three
+        # senders that used to share the routine name "send_mail_with_attachment"
+        # now log under their own names.
         db_write_log(
-            f"send_mail_with_attachment failed with error:{e}",
-            0,
-            "send_mail_with_attachment",
-            "send_mail_with_attachment"
+            f"send_mail_with_html_attachment failed with error:{e}",
+            2,
+            "send_mail_with_html_attachment",
+            ""
         )
 
 
@@ -914,18 +992,21 @@ def send_report_files_email(subject, recipients, file_paths, mail_sender,
     for (payload, maintype, subtype, filename) in atts:
         msg.add_attachment(payload, maintype=maintype, subtype=subtype, filename=filename)
     attached = [a[3] for a in atts]
-    s = smtplib.SMTP(smtp_server, int(smtp_port), timeout=30)
-    try:
-        if tls:
-            s.starttls()
-        if smtp_user and str(smtp_user).strip():
-            s.login(smtp_user, decrypt_secret(smtp_password))
-        s.send_message(msg)
-    finally:
+    with mail_attempt(channel="report", routine="send_report_files_email",
+                      smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                      user=smtp_user, mail_sender=mail_sender, recipients=recipients,
+                      subject=subject, attachments=attached) as _att:
+        _att.stage("connect")
+        s = smtp_connect(smtp_server, smtp_port, tls=tls,
+                         user=smtp_user, password=smtp_password)
         try:
-            s.quit()
-        except Exception:
-            pass
+            _att.stage("send")
+            s.send_message(msg)
+        finally:
+            try:
+                s.quit()
+            except Exception:
+                pass
     return attached
 
 

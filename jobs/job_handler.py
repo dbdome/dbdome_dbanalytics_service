@@ -21,6 +21,7 @@ import os
 from datetime import datetime
 import smtplib
 from  email_utils.smtp_email_sender import send_mail_with_attachment , send_mail_with_pdf_attachment , send_report_files_email
+from email_utils.mail_log import log_mail_skipped
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle,
     Image, Paragraph, Spacer
@@ -244,12 +245,13 @@ def job_next_run():
                                             cur.execute("CALL jobs.job_schedule_insert(%s, %s);", (report_id, job_id))
                                             conn.commit()
                                 else:
-                                            db_write_log(
-                                                f"scheduled report '{report_name}' NOT sent — "
-                                                f"config.mail_config is empty (no SMTP configured)",
-                                                0, "job_next_run", "")
+                                            log_mail_skipped(
+                                                "config.mail_config is empty - no SMTP server configured",
+                                                channel="report", routine="job_next_run",
+                                                recipients=recipients, subject=report_name)
                             except Exception as e:
-                                    db_write_log(f"generate_report '{report_name}' failed with error:{e}", 0, "generate_report", "generate_report")
+                                    db_write_log(f"generate_report '{report_name}' failed with error:{e} "
+                                                 f"(mail attempts: alerts.v_mail_send_errors)", 2, "generate_report", "")
                                     continue   # leave it due; the next cycle retries it
                             finally:
                                             #  Clean up
@@ -304,7 +306,8 @@ def job_next_run():
                                 # One failed report must not abort the rest of the
                                 # queue; leave it due (no job_schedule_insert) so
                                 # the next cycle retries it.
-                                db_write_log(f"scheduled report '{report_name}' FAILED: {e}", 0, "job_next_run", "")
+                                db_write_log(f"scheduled report '{report_name}' FAILED: {e} "
+                                             f"(mail attempts: alerts.v_mail_send_errors)", 2, "job_next_run", "")
                                 continue
                             finally:
                                 for _tmp in (pdf_path, csv_path):

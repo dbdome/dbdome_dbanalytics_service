@@ -46,9 +46,12 @@ PG_DB   = os.getenv("PG_DB", "dbanalytics")
 
 # Connect as an admin role for the one-off migration; the running service uses its
 # own (engine) role. Password default matches the platform install convention.
+# HA/DR: PG_HOST may be a comma-separated primary,alternate list; libpq takes it
+# directly. Failover kwargs added only when a list is present.
+_ha = {"target_session_attrs": "read-write", "connect_timeout": 10} if "," in str(PG_HOST) else {}
 conn = psycopg2.connect(host=PG_HOST, port=PG_PORT, dbname=PG_DB,
                         user=os.getenv("MIGRATE_PG_USER", "dbdome_adm"),
-                        password=os.getenv("MIGRATE_PG_PASSWORD", "Yd2243796Anz!!"))
+                        password=os.getenv("MIGRATE_PG_PASSWORD", "Yd2243796Anz!!"), **_ha)
 conn.autocommit = False
 cur = conn.cursor()
 

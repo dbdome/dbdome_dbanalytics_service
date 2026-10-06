@@ -607,11 +607,17 @@ def addrecipients(request:Request):
       <label for="smtp_port">SMTP port</label>
       <input type="number" id="smtp_port" name="smtp_port" value="{smtp_port}" placeholder="587" required>
 
-      <label for="smtp_user">SMTP user</label>
+      <label for="smtp_user">SMTP user <span style="color:#9fa1a4;font-weight:normal;">(optional)</span></label>
       <input type="text" id="smtp_user" name="smtp_user" value="{smtp_user}" placeholder="alerts@company.com">
 
-      <label for="smtp_password">SMTP password</label>
+      <label for="smtp_password">SMTP password <span style="color:#9fa1a4;font-weight:normal;">(optional)</span></label>
       <input type="password" id="smtp_password" name="smtp_password" value="{smtp_password}">
+      <div style="font-size:12px;color:#9fa1a4;margin-top:-12px;margin-bottom:20px;">
+        Leave both blank for an <b>anonymous relay</b> &mdash; an internal mail server that accepts
+        mail from this host without credentials. DBDOME then skips the SMTP login entirely, which is
+        what such relays require: they usually do not offer AUTH and reject an attempt to use it.
+        Mail is sent from the <b>Mail sender</b> address below.
+      </div>
 
       <div class="checkbox">
         <input type="checkbox" id="tls" name="tls" value="true" {tls_checked}>
@@ -817,26 +823,35 @@ async def mailconfiguration_test(
         f"Server: {smtp_server}:{smtp_port}  TLS: {bool(tls)}\n"
         "If you received this, outgoing mail is configured correctly."
     )
+    from email_utils.mail_log import mail_attempt, log_mail
     try:
-        server = smtplib.SMTP(smtp_server, int(smtp_port), timeout=20)
-        try:
-            server.ehlo()
-            if tls:
-                server.starttls()
-                server.ehlo()
-            if smtp_user and str(smtp_user).strip():
-                server.login(smtp_user, smtp_password)
-            server.send_message(msg, to_addrs=recipients)
-        finally:
+        from email_utils.smtp_email_sender import smtp_connect, smtp_needs_auth
+        with mail_attempt(channel="test", routine="mailconfiguration_test",
+                          smtp_server=smtp_server, smtp_port=smtp_port, tls=tls,
+                          user=smtp_user, mail_sender=smtp_sender,
+                          recipients=recipients, subject="DBDOME SMTP test") as _att:
+            _att.stage("connect")
+            server = smtp_connect(smtp_server, smtp_port, tls=tls,
+                                  user=smtp_user, password=smtp_password, timeout=20)
             try:
-                server.quit()
-            except Exception:
-                pass
-        db_write_log(f"mailconfiguration test sent to {recipients} via {smtp_server}:{smtp_port}", 0, "mailconfiguration_test", "")
-        return JSONResponse({"ok": True, "message": f"Test email sent to {', '.join(recipients)}."})
+                _att.stage("send")
+                server.send_message(msg, to_addrs=recipients)
+            finally:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
+        mode = "authenticated" if smtp_needs_auth(smtp_user) else "anonymous (no SMTP login)"
+        db_write_log(f"mailconfiguration test sent to {recipients} via {smtp_server}:{smtp_port} [{mode}]",
+                     0, "mailconfiguration_test", "")
+        return JSONResponse({"ok": True,
+                             "message": f"Test email sent to {', '.join(recipients)} - {mode}."})
     except Exception as e:
+        # mail_attempt wrote the structured row (stage + SMTP code) already.
         db_write_log(f"mailconfiguration test failed: {e}", 2, "mailconfiguration_test", "")
-        return JSONResponse({"ok": False, "message": f"Send failed: {e}"}, status_code=200)
+        return JSONResponse({"ok": False,
+                             "message": f"Send failed: {e} - see alerts.v_mail_send_errors "
+                                        f"for the stage and SMTP code."}, status_code=200)
 
 
 @app.get("/capture_report/{reportname}", response_class=HTMLResponse)
@@ -5843,20 +5858,26 @@ def _send_pdf_email(pdf_path, pdf_filename, recipients, subject, body, mc):
             subtype=subtype,
             filename=pdf_filename,
         )
-    server = smtplib.SMTP(mc["smtp_server"], mc["smtp_port"], timeout=30)
-    try:
-        server.ehlo()
-        if mc.get("tls"):
-            server.starttls()
-            server.ehlo()
-        if mc.get("smtp_user") and str(mc["smtp_user"]).strip():
-            server.login(mc["smtp_user"], mc["smtp_password"])
-        server.send_message(msg, to_addrs=recipients)
-    finally:
+    from email_utils.smtp_email_sender import smtp_connect, smtp_from
+    from email_utils.mail_log import mail_attempt
+    msg.replace_header("From", smtp_from(mc.get("mail_sender"), mc.get("smtp_user")))
+    with mail_attempt(channel="report", routine="_send_pdf_email",
+                      smtp_server=mc.get("smtp_server"), smtp_port=mc.get("smtp_port"),
+                      tls=mc.get("tls"), user=mc.get("smtp_user"),
+                      mail_sender=mc.get("mail_sender"), recipients=recipients,
+                      subject=subject, attachments=pdf_filename) as _att:
+        _att.stage("connect")
+        server = smtp_connect(mc["smtp_server"], mc["smtp_port"], tls=mc.get("tls"),
+                              user=mc.get("smtp_user"), password=mc.get("smtp_password"),
+                              timeout=30)
         try:
-            server.quit()
-        except Exception:
-            pass
+            _att.stage("send")
+            server.send_message(msg, to_addrs=recipients)
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 
 @app.get("/api/print-panel")
@@ -10118,6 +10139,444 @@ def api_console_config_section(name: str):
     except Exception as e:
         return JSONResponse({"title": title, "detail": str(e)[:300]}, status_code=500)
 
+# ---------------------------------------------------------------------------
+# /tester -- Oracle root-cause query tester in the browser.
+#
+#   /tester                     the page: pick/enter the Oracle target, type the
+#                               USER the test should run as, run, get a PDF
+#   /api/tester/info            queries file (bin/oracle_rootcause_queries.json)
+#                               + registered oracle servers (no passwords)
+#   /api/tester/test-connection verify the supplied credentials
+#   /api/tester/run             start a run in the background -> run_id
+#   /api/tester/status          progress / result of a run
+#   /api/tester/stop            abort a running test
+#   /api/tester/report/{file}   the produced PDF (inline)
+#
+# The run itself lives in utils/oracle_tester.py, which also writes every result
+# to monitoring.oracle_verification_results -- the same table the CLI tester
+# (scripts/oracle_rootcause_tester.py) writes, so both agree.
+# ---------------------------------------------------------------------------
+import threading as _threading
+
+_TESTER_RUNS = {}                 # run_id -> state dict
+_TESTER_LOCK = _threading.Lock()
+_TESTER_KEEP = 20                 # completed runs kept in memory
+
+
+def _tester_state(run_id):
+    with _TESTER_LOCK:
+        return _TESTER_RUNS.get(run_id)
+
+
+def _tester_prune():
+    """Keep the run registry small: drop the oldest finished runs."""
+    with _TESTER_LOCK:
+        done = [(s["started_ts"], rid) for rid, s in _TESTER_RUNS.items()
+                if s["state"] in ("done", "failed", "stopped")]
+        for _, rid in sorted(done)[:-_TESTER_KEEP]:
+            _TESTER_RUNS.pop(rid, None)
+
+
+def _tester_worker(run_id, cfg):
+    from utils import oracle_tester as ot
+    st = _tester_state(run_id)
+
+    def progress(p):
+        with _TESTER_LOCK:
+            st.update(done=p["done"], total=p["total"], success=p["success"],
+                      failed=p["failed"], detections=p["detections"])
+            last = p["last"]
+            st["recent"].append({
+                "root_cause_id": last["root_cause_id"],
+                "name": last["root_cause_name"],
+                "status": last["status"],
+                "rows": last["rows"],
+                "elapsed_ms": last["elapsed_ms"],
+                "matched": last["matched"],
+                "error": last["error"],
+            })
+            del st["recent"][:-50]
+
+    try:
+        summary = ot.run_tests(cfg, on_progress=progress,
+                               should_stop=lambda: _tester_state(run_id)["stop"])
+        with _TESTER_LOCK:
+            st["state"] = "stopped" if summary.get("stopped") else "done"
+            st["summary"] = {
+                "run_id": summary["run_id"], "server": summary["server"],
+                "host": summary["host"], "port": summary["port"],
+                "service_name": summary["service_name"], "username": summary["username"],
+                "banner": (summary.get("banner") or "")[:120],
+                "queries_file": summary["queries_file"],
+                "queries_available": summary["queries_available"],
+                "limit": summary["limit"], "rc_filter": summary["rc_filter"],
+                "total": summary["total"], "success": summary["success"],
+                "failed": summary["failed"], "detections": summary["detections"],
+                "duration_s": summary["duration_s"], "persisted": summary["persisted"],
+                "stopped": summary["stopped"],
+                "finished": summary["finished"].strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            st["pdf"] = summary["pdf_filename"]
+    except Exception as e:
+        db_write_log(f"tester run failed: {e}", 0, "http_server.tester",
+                     cfg.get("server_label") or "")
+        with _TESTER_LOCK:
+            st["state"] = "failed"
+            st["error"] = str(e).splitlines()[0][:400]
+    finally:
+        _tester_prune()
+
+
+@app.get("/api/tester/info")
+def api_tester_info():
+    """Queries file that will be used plus the registered Oracle servers."""
+    from utils import oracle_tester as ot
+    out = {"ok": True, "bin_dir": ot.APP_DIR, "queries_file": None,
+           "queries_count": 0, "queries_meta": {}, "servers": [], "warning": None}
+    try:
+        qf = ot.resolve_queries_file()
+        if qf:
+            meta, items = ot.load_queries(qf)
+            out.update(queries_file=qf, queries_count=len(items), queries_meta=meta)
+        else:
+            out["warning"] = (f"oracle_rootcause_queries.json was not found in {ot.APP_DIR}. "
+                              "Copy it there (the bin directory) and reload this page.")
+    except Exception as e:
+        out["warning"] = f"queries file could not be read: {e}"
+    try:
+        out["servers"] = [{
+            "servername": s["servername"],
+            "host": (str(s["server"]).split(":")[0] if s["server"] else ""),
+            "port": s["port"], "username": s["username"],
+            "service_name": s["service_name"], "has_password": s["has_password"],
+        } for s in ot.list_oracle_servers()]
+    except Exception as e:
+        out["warning"] = (out["warning"] or "") + f" server list unavailable: {e}"
+    return JSONResponse(out)
+
+
+@app.post("/api/tester/test-connection")
+async def api_tester_test_connection(request: Request):
+    """Connect to Oracle with the credentials typed on the page."""
+    from utils import oracle_tester as ot
+    body = await request.json()
+    try:
+        pw = body.get("password") or ""
+        if body.get("use_stored") and body.get("servername"):
+            pw = ot.stored_password(body["servername"]) or ""
+        banner = ot.test_connection(body.get("username", ""), pw,
+                                    body.get("host", ""), body.get("port") or 1521,
+                                    body.get("service_name", ""))
+        return JSONResponse({"ok": True, "message": f"Connected: {banner[:120]}"})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e).splitlines()[0][:300]})
+
+
+@app.post("/api/tester/run")
+async def api_tester_run(request: Request):
+    """Start a background run. Returns the run_id to poll with /api/tester/status."""
+    from utils import oracle_tester as ot
+    body = await request.json()
+    try:
+        if not (body.get("host") or "").strip():
+            raise ValueError("host is required")
+        if not (body.get("username") or "").strip():
+            raise ValueError("the Oracle user to run the test as is required")
+        pw = body.get("password") or ""
+        if body.get("use_stored") and body.get("servername"):
+            pw = ot.stored_password(body["servername"]) or ""
+            if not pw:
+                raise ValueError(f"no stored password for {body['servername']}")
+        cfg = {
+            "host": body.get("host"), "port": body.get("port") or 1521,
+            "service_name": body.get("service_name") or "",
+            "username": body.get("username"), "password": pw,
+            "server_label": body.get("servername") or body.get("host"),
+            "rc_filter": body.get("rc_filter") or "",
+            "limit": body.get("limit") or None,
+            "sample": body.get("sample") or 2,
+            "fetch_cap": body.get("fetch_cap") or 5000,
+            "persist": bool(body.get("persist", True)),
+        }
+        run_id = datetime.now().strftime("%H%M%S") + "-" + os.urandom(3).hex()
+        with _TESTER_LOCK:
+            _TESTER_RUNS[run_id] = {
+                "state": "running", "stop": False, "done": 0, "total": 0,
+                "success": 0, "failed": 0, "detections": 0, "recent": [],
+                "summary": None, "pdf": None, "error": None,
+                "server": cfg["server_label"], "started_ts": time.time(),
+                "started": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        _threading.Thread(target=_tester_worker, args=(run_id, cfg),
+                          name=f"tester-{run_id}", daemon=True).start()
+        db_write_log(f"tester run {run_id} started on {cfg['server_label']} "
+                     f"as {cfg['username']}", 0, "http_server.tester", cfg["server_label"])
+        return JSONResponse({"ok": True, "run_id": run_id})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e).splitlines()[0][:300]})
+
+
+@app.get("/api/tester/status")
+def api_tester_status(run_id: str):
+    st = _tester_state(run_id)
+    if not st:
+        return JSONResponse({"ok": False, "error": "unknown run_id"}, status_code=404)
+    with _TESTER_LOCK:
+        out = {k: v for k, v in st.items() if k not in ("stop", "started_ts")}
+    out["ok"] = True
+    out["run_id"] = run_id
+    return JSONResponse(out)
+
+
+@app.post("/api/tester/stop")
+async def api_tester_stop(request: Request):
+    body = await request.json()
+    st = _tester_state(body.get("run_id"))
+    if not st:
+        return JSONResponse({"ok": False, "error": "unknown run_id"}, status_code=404)
+    with _TESTER_LOCK:
+        st["stop"] = True
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/tester/report/{filename}")
+def api_tester_report(filename: str):
+    """Serve a produced tester PDF (inline, so the browser shows it)."""
+    from utils import oracle_tester as ot
+    safe = os.path.basename(filename)
+    path = os.path.join(ot.REPORT_DIR, safe)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="report not found")
+    return FileResponse(path, media_type="application/pdf", filename=safe,
+                        content_disposition_type="inline")
+
+
+@app.get("/api/tester/reports")
+def api_tester_reports():
+    """Previously produced tester PDFs, newest first."""
+    from utils import oracle_tester as ot
+    try:
+        if not os.path.isdir(ot.REPORT_DIR):
+            return JSONResponse({"ok": True, "reports": []})
+        out = []
+        for name in os.listdir(ot.REPORT_DIR):
+            if not name.lower().endswith(".pdf"):
+                continue
+            p = os.path.join(ot.REPORT_DIR, name)
+            out.append({"filename": name,
+                        "generated_at": datetime.fromtimestamp(
+                            os.path.getmtime(p)).strftime("%Y-%m-%d %H:%M"),
+                        "size_kb": round(os.path.getsize(p) / 1024, 1)})
+        out.sort(key=lambda r: r["generated_at"], reverse=True)
+        return JSONResponse({"ok": True, "reports": out[:50]})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:300], "reports": []})
+
+
+@app.get("/tester", response_class=HTMLResponse)
+def tester_page(request: Request):
+    """Oracle root-cause tester: run the shipped Oracle detection queries against
+    an instance using a user-supplied account, and download the PDF report."""
+    return """
+<html lang="en"><head><meta charset="UTF-8"><title>Oracle Root-Cause Tester</title>
+<style>
+ body{background:#111217;color:#d8d9da;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;}
+ .panel{max-width:1100px;margin:24px auto;background:#181b1f;border:1px solid #2c3235;border-radius:6px;padding:24px;}
+ .panel-header{font-size:18px;font-weight:600;margin-bottom:6px;color:#fff;}
+ .panel-sub{font-size:12px;color:#9aa0a6;margin-bottom:16px;line-height:1.55;}
+ h3{color:#fff;font-size:15px;margin-top:26px;border-top:1px solid #2c3235;padding-top:16px;}
+ button{background:#3d71d9;color:#fff;border:none;border-radius:4px;padding:9px 16px;font-size:13px;cursor:pointer;margin-right:8px;}
+ button:hover{background:#345fb4;} button.minor{background:#2c3235;} button.minor:hover{background:#3a4146;}
+ button.danger{background:#6e2226;} button:disabled{opacity:.45;cursor:not-allowed;}
+ input[type=text],input[type=password],input[type=number],select{background:#111217;color:#d8d9da;border:1px solid #2c3235;border-radius:4px;padding:8px 10px;font-size:13px;}
+ .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}
+ .f label{display:block;color:#9aa0a6;font-size:12px;margin-bottom:4px;}
+ .note{font-size:12px;color:#9aa0a6;margin-top:8px;line-height:1.5;}
+ code{background:#0d0e12;padding:1px 5px;border-radius:3px;}
+ .msg{margin-top:10px;font-size:13px;min-height:18px;white-space:pre-wrap;} .ok{color:#4caf50;} .err{color:#f56b6b;} .warn{color:#e0b400;}
+ table{width:100%;border-collapse:collapse;margin:10px 0;}
+ th,td{text-align:left;padding:5px 8px;border-bottom:1px solid #2c3235;font-size:12px;vertical-align:top;}
+ th{color:#9aa0a6;font-weight:600;}
+ .bar{height:10px;background:#0d0e12;border:1px solid #2c3235;border-radius:5px;overflow:hidden;margin:12px 0 6px;}
+ .bar > div{height:100%;background:#3d71d9;width:0%;transition:width .3s;}
+ .stats span{display:inline-block;margin-right:18px;font-size:13px;}
+ .big{font-size:15px;font-weight:600;color:#fff;}
+ .hit{color:#f56b6b;font-weight:600;} .fail{color:#e0b400;}
+</style></head><body>
+ <div class="panel">
+   <div class="panel-header">Oracle Root-Cause Tester</div>
+   <div class="panel-sub">Runs every Oracle detection query DBDOME ships
+     (<code>oracle_rootcause_queries.json</code>, read from the appliance <code>bin</code> directory)
+     against one Oracle instance and produces a <b>PDF report</b>: which root causes were detected,
+     which queries failed (usually a missing grant or a view the account cannot see), row counts and timings.
+     <br>Enter the <b>Oracle user the test should run as</b> below &mdash; the queries execute with exactly
+     that account's privileges, so this is also how you verify a monitoring user is granted enough.
+     Results are also written to <code>monitoring.oracle_verification_results</code>.</div>
+
+   <div id="qinfo" class="note"></div>
+
+   <h3>Target</h3>
+   <div class="row">
+     <div class="f"><label>Registered server (optional &mdash; fills the fields)</label>
+       <select id="servername" style="width:230px" onchange="pickServer()"><option value="">-- manual --</option></select></div>
+     <div class="f"><label>Host / IP</label><input type="text" id="host" style="width:170px" placeholder="10.0.0.15"></div>
+     <div class="f"><label>Port</label><input type="number" id="port" style="width:90px" value="1521"></div>
+     <div class="f"><label>Service name</label><input type="text" id="service_name" style="width:150px" placeholder="ORCLPDB1"></div>
+   </div>
+
+   <h3>Run as</h3>
+   <div class="row">
+     <div class="f"><label>Oracle user</label><input type="text" id="username" style="width:180px" placeholder="dbdome_test"></div>
+     <div class="f"><label>Password</label><input type="password" id="password" style="width:180px"></div>
+     <div class="f"><label><input type="checkbox" id="use_stored" onchange="togglePw()"> use the stored password</label>
+       <div class="note" style="margin:0">only for a registered server</div></div>
+     <div class="f"><button class="minor" onclick="testConn()">Test connection</button></div>
+   </div>
+
+   <h3>Scope</h3>
+   <div class="row">
+     <div class="f"><label>Root-cause filter (substring, optional)</label><input type="text" id="rc_filter" style="width:210px" placeholder="SEC-SQL-ACC"></div>
+     <div class="f"><label>Max queries (blank = all)</label><input type="number" id="limit" style="width:120px"></div>
+     <div class="f"><label>Sample rows kept</label><input type="number" id="sample" style="width:100px" value="2"></div>
+     <div class="f"><label>Row fetch cap</label><input type="number" id="fetch_cap" style="width:110px" value="5000"></div>
+     <div class="f"><label><input type="checkbox" id="persist" checked> save results to the database</label></div>
+   </div>
+
+   <div style="margin-top:18px">
+     <button id="runbtn" onclick="run()">&#9654; Run test &amp; build PDF</button>
+     <button id="stopbtn" class="danger" onclick="stopRun()" disabled>Stop</button>
+     <button class="minor" onclick="loadReports()">Previous reports</button>
+   </div>
+   <div class="bar"><div id="barfill"></div></div>
+   <div class="stats" id="stats"></div>
+   <div class="msg" id="msg"></div>
+
+   <div id="resultbox" style="display:none">
+     <h3>Result</h3>
+     <div id="summary"></div>
+     <button onclick="openPdf()">&#128438; Open the PDF report</button>
+     <div class="note">The PDF is also kept on the appliance under <code>reports/tester</code>.</div>
+   </div>
+
+   <h3>Latest queries</h3>
+   <table><thead><tr><th style="width:190px">Root cause</th><th>Name</th><th style="width:70px">Status</th>
+     <th style="width:60px">Rows</th><th style="width:60px">ms</th><th style="width:80px">Detected</th><th>Error</th></tr></thead>
+     <tbody id="recent"><tr><td colspan="7"><i>No run yet.</i></td></tr></tbody></table>
+
+   <div id="reportsbox" style="display:none">
+     <h3>Previous reports</h3>
+     <table><thead><tr><th>File</th><th style="width:150px">Generated</th><th style="width:90px">Size</th></tr></thead>
+       <tbody id="reports"></tbody></table>
+   </div>
+ </div>
+<script>
+ let RUN=null, TIMER=null, PDF=null, SERVERS=[];
+ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function el(id){return document.getElementById(id);}
+ function msg(t,c){const m=el('msg');m.textContent=t||'';m.className='msg '+(c||'');}
+ function togglePw(){el('password').disabled=el('use_stored').checked;}
+
+ async function info(){
+   try{
+     const j=await (await fetch('/api/tester/info')).json();
+     SERVERS=j.servers||[];
+     el('servername').innerHTML='<option value="">-- manual --</option>'+
+       SERVERS.map(s=>'<option value="'+esc(s.servername)+'">'+esc(s.servername)+' ('+esc(s.host)+')</option>').join('');
+     const meta=j.queries_meta||{};
+     el('qinfo').innerHTML = j.queries_file
+       ? 'Queries file: <code>'+esc(j.queries_file)+'</code> &mdash; <b>'+j.queries_count+'</b> detection queries'
+         +(meta.amended_at||meta.generated_at?' (generated '+esc(meta.amended_at||meta.generated_at)+')':'')
+       : '<span class="err">'+esc(j.warning||'queries file not found')+'</span>';
+     if(j.warning && j.queries_file) msg(j.warning,'warn');
+   }catch(e){msg('Could not load page data: '+e.message,'err');}
+ }
+ function pickServer(){
+   const s=SERVERS.find(x=>x.servername===el('servername').value);
+   if(!s){el('use_stored').checked=false;togglePw();return;}
+   el('host').value=s.host||''; el('port').value=s.port||1521;
+   el('service_name').value=s.service_name||''; el('username').value=s.username||'';
+ }
+ function body(){
+   return {servername:el('servername').value, host:el('host').value.trim(),
+     port:parseInt(el('port').value||'1521',10), service_name:el('service_name').value.trim(),
+     username:el('username').value.trim(), password:el('password').value,
+     use_stored:el('use_stored').checked, rc_filter:el('rc_filter').value.trim(),
+     limit:parseInt(el('limit').value||'0',10)||null,
+     sample:parseInt(el('sample').value||'2',10), fetch_cap:parseInt(el('fetch_cap').value||'5000',10),
+     persist:el('persist').checked};
+ }
+ async function post(url,b){
+   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+   return await r.json();
+ }
+ async function testConn(){
+   msg('Connecting ...');
+   try{const j=await post('/api/tester/test-connection',body());
+       msg(j.ok?j.message:'Connection failed: '+j.error, j.ok?'ok':'err');
+   }catch(e){msg('Connection failed: '+e.message,'err');}
+ }
+ async function run(){
+   el('resultbox').style.display='none'; el('recent').innerHTML='';
+   msg('Starting ...');
+   try{
+     const j=await post('/api/tester/run',body());
+     if(!j.ok){msg('Could not start: '+j.error,'err');return;}
+     RUN=j.run_id; el('runbtn').disabled=true; el('stopbtn').disabled=false;
+     msg('Running. This can take several minutes for the full catalogue - you can leave the page open.');
+     TIMER=setInterval(poll,1500); poll();
+   }catch(e){msg('Could not start: '+e.message,'err');}
+ }
+ async function stopRun(){ if(RUN){ await post('/api/tester/stop',{run_id:RUN}); msg('Stopping after the current query ...','warn'); } }
+ function finish(){ clearInterval(TIMER); TIMER=null; el('runbtn').disabled=false; el('stopbtn').disabled=true; }
+ async function poll(){
+   if(!RUN) return;
+   try{
+     const j=await (await fetch('/api/tester/status?run_id='+encodeURIComponent(RUN))).json();
+     if(!j.ok) throw new Error(j.error||'status failed');
+     const pct=j.total?Math.round(100*j.done/j.total):0;
+     el('barfill').style.width=pct+'%';
+     el('stats').innerHTML='<span class="big">'+j.done+' / '+(j.total||'?')+'</span>'
+       +'<span>succeeded: '+j.success+'</span><span class="fail">failed: '+j.failed+'</span>'
+       +'<span class="hit">detections: '+j.detections+'</span>';
+     const rows=(j.recent||[]).slice().reverse();
+     el('recent').innerHTML = rows.length? rows.map(r=>
+       '<tr><td><code>'+esc(r.root_cause_id)+'</code></td><td>'+esc(r.name)+'</td>'
+       +'<td class="'+(r.status==='failed'?'fail':'')+'">'+esc(r.status)+'</td>'
+       +'<td>'+esc(r.rows==null?'-':r.rows)+'</td><td>'+esc(Math.round(r.elapsed_ms))+'</td>'
+       +'<td>'+(r.matched?'<span class="hit">YES</span>':'')+'</td>'
+       +'<td>'+esc(r.error||'')+'</td></tr>').join('') : '<tr><td colspan="7"><i>waiting ...</i></td></tr>';
+     if(j.state==='done'||j.state==='stopped'){
+       finish(); PDF=j.pdf; const s=j.summary||{};
+       el('summary').innerHTML='<table><tr><th>Server</th><td>'+esc(s.server)+' ('+esc(s.host)+':'+esc(s.port)+'/'+esc(s.service_name)+')</td></tr>'
+         +'<tr><th>Ran as</th><td>'+esc(s.username)+'</td></tr>'
+         +'<tr><th>Queries</th><td>'+esc(s.total)+' of '+esc(s.queries_available)+' in the file &mdash; '
+         +esc(s.success)+' succeeded, '+esc(s.failed)+' failed'
+         +(s.rc_filter?' (filter: '+esc(s.rc_filter)+')':'')+(s.limit?' (capped at '+esc(s.limit)+')':'')+'</td></tr>'
+         +'<tr><th>Detections</th><td class="hit">'+esc(s.detections)+'</td></tr>'
+         +'<tr><th>Duration</th><td>'+esc(s.duration_s)+' s</td></tr>'
+         +'<tr><th>PDF</th><td><code>'+esc(j.pdf)+'</code></td></tr></table>';
+       el('resultbox').style.display='block';
+       msg(j.state==='stopped'?'Stopped - the PDF covers the queries that ran.':'Done - the PDF report is ready.', j.state==='stopped'?'warn':'ok');
+       openPdf();
+     } else if(j.state==='failed'){ finish(); msg('Run failed: '+esc(j.error),'err'); }
+   }catch(e){ finish(); msg('Lost the run: '+e.message,'err'); }
+ }
+ function openPdf(){ if(PDF) window.open('/api/tester/report/'+encodeURIComponent(PDF),'_blank'); }
+ async function loadReports(){
+   try{
+     const j=await (await fetch('/api/tester/reports')).json();
+     el('reportsbox').style.display='block';
+     el('reports').innerHTML=(j.reports||[]).length? j.reports.map(r=>
+       '<tr><td><a href="/api/tester/report/'+encodeURIComponent(r.filename)+'" target="_blank" style="color:#6ea8fe">'
+       +esc(r.filename)+'</a></td><td>'+esc(r.generated_at)+'</td><td>'+esc(r.size_kb)+' KB</td></tr>').join('')
+       : '<tr><td colspan="3"><i>No reports yet.</i></td></tr>';
+   }catch(e){msg('Could not list reports: '+e.message,'err');}
+ }
+ info();
+</script></body></html>
+"""
+
+
 if __name__ == "__main__":
     _ip = get_public_or_ip ()
     print(f"Starting FastAPI server...")
@@ -10128,6 +10587,7 @@ if __name__ == "__main__":
     print(f"Customized report Form: http://{_ip}:8080/add-customized_metrics")
     print(f"Mail Config Form: http://{_ip}:8080/configure-mail")
     print(f"SIEM Config Form: http://{_ip}:8080/configure-siem")
+    print(f"Oracle root-cause tester: http://{_ip}:8080/tester")
     print(f"logout Form: http://{_ip}:8080/logout")
     print(f"logout Form: http://{_ip}:8080/sendreportbymail_connectivity")
     print(f"Press Ctrl+C to stop the server")

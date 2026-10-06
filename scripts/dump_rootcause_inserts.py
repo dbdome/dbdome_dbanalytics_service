@@ -107,8 +107,13 @@ def main():
     args = ap.parse_args()
 
     env = load_env()
+    # HA/DR: PG_HOST may be a comma-separated primary,alternate list; libpq's
+    # host param accepts it directly. The extra kwargs (writable-node selection
+    # + a bounded connect timeout) are added only when a failover list is
+    # actually present, so single-host behaviour is unchanged.
+    _ha = {"target_session_attrs": "read-write", "connect_timeout": 10} if "," in str(env["PG_HOST"]) else {}
     con = psycopg2.connect(host=env["PG_HOST"], port=env["PG_PORT"], user=env["PG_USER"],
-                           password=env["PG_PASSWORD"], dbname=env["PG_DB"])
+                           password=env["PG_PASSWORD"], dbname=env["PG_DB"], **_ha)
     con.set_session(readonly=True)
     cur = con.cursor()
 

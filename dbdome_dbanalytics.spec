@@ -122,6 +122,10 @@ a = Analysis(
         ('icons', 'icons'),
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
+        # Fallback copy of the /tester queries: the primary location is the
+        # bin directory next to the exe (operator-replaceable); this bundled
+        # copy keeps the page working on a fresh install before one is dropped there.
+        ('scripts/oracle_rootcause_queries.json', 'scripts'),
         # security_agent/rules.json is DATA, not code: PyInstaller compiles .py
         # into the PYZ archive but would leave this out entirely, and rules.py
         # would then silently fall back to its minimal built-in rule set -- the
@@ -221,6 +225,10 @@ a_svc = Analysis(
         ('icons', 'icons'),
         ('sql_scripts', 'sql_scripts'),
         ('scripts/oracle_verification_queries.json', 'scripts'),
+        # Fallback copy of the /tester queries: the primary location is the
+        # bin directory next to the exe (operator-replaceable); this bundled
+        # copy keeps the page working on a fresh install before one is dropped there.
+        ('scripts/oracle_rootcause_queries.json', 'scripts'),
         # security_agent/rules.json is DATA, not code: PyInstaller compiles .py
         # into the PYZ archive but would leave this out entirely, and rules.py
         # would then silently fall back to its minimal built-in rule set -- the
