@@ -1,0 +1,98 @@
+%% DBDOME dbanalytics - rootcause schema ERD (taxonomy + detection/resolution content)
+%% (FK) = database-enforced foreign key; (join) = application-level; (self) = self-reference
+erDiagram
+  database_types { varchar code PK
+    varchar slug
+    varchar name }
+  vendors { varchar slug PK
+    varchar name
+    varchar database_type_code FK }
+  domains { varchar code PK
+    varchar name
+    bool is_enabled }
+  areas { varchar code PK
+    varchar database_type_code PK
+    varchar name
+    char category_id }
+  issues { varchar issue_id PK
+    varchar domain_code FK
+    varchar area_code FK
+    varchar database_type_code FK
+    varchar name }
+  root_causes { varchar root_cause_id PK
+    varchar issue_id
+    varchar name
+    array vendors_applicable
+    bool is_informational }
+  issue_root_causes_vendor_query { varchar issue_id PK
+    bigint root_cause_number PK
+    varchar vendor PK
+    text query
+    bool is_active }
+  issue_decision_trees { int id PK
+    varchar issue_id FK
+    varchar vendor_slug
+    bool is_active }
+  issue_decision_tree_nodes { int id PK
+    int tree_id FK
+    int parent_node_id FK
+    int tier
+    int gate_detection_step_id
+    varchar on_match_rc_id }
+  detection_steps { int id PK
+    varchar vendor_slug FK
+    varchar step_type
+    jsonb content }
+  detection_paths { int id PK
+    varchar root_cause_id
+    varchar vendor_slug
+    varchar path_type
+    int superseded_by_id }
+  detection_path_steps { int id PK
+    int detection_path_id FK
+    int detection_step_id FK
+    int sequence }
+  resolution_steps { int id PK
+    varchar vendor_slug FK
+    varchar step_type
+    varchar risk_level
+    bool is_reversible }
+  resolution_paths { int id PK
+    varchar root_cause_id
+    varchar vendor_slug
+    varchar execution_mode
+    varchar status }
+  resolution_path_steps { int id PK
+    int resolution_path_id FK
+    int resolution_step_id FK
+    int step_order }
+  parameter_tuning { bigint row_id PK
+    varchar server
+    varchar root_cause_id
+    text param_name
+    numeric current_value }
+
+  vendors }o--|| database_types : "database_type_code (join)"
+  areas }o--|| database_types : "database_type_code (join)"
+  issues }o--|| domains : "domain_code (FK)"
+  issues }o--|| areas : "area_code + db_type (FK)"
+  root_causes }o--|| issues : "issue_id (join)"
+  issue_root_causes_vendor_query }o--|| issues : "issue_id (join)"
+  issue_root_causes_vendor_query }o--o| vendors : "vendor (join)"
+  issue_decision_trees }o--|| issues : "issue_id (FK)"
+  issue_decision_tree_nodes }o--|| issue_decision_trees : "tree_id (FK)"
+  issue_decision_tree_nodes ||--o{ issue_decision_tree_nodes : "parent_node_id (self)"
+  issue_decision_tree_nodes }o--o| detection_steps : "gate_step (join)"
+  issue_decision_tree_nodes }o--o| root_causes : "on_match_rc_id (join)"
+  detection_paths }o--|| root_causes : "root_cause_id (join)"
+  detection_paths }o--o| vendors : "vendor_slug (join)"
+  detection_paths ||--o{ detection_paths : "superseded_by_id (self)"
+  detection_path_steps }o--|| detection_paths : "detection_path_id (join)"
+  detection_path_steps }o--|| detection_steps : "detection_step_id (join)"
+  detection_steps }o--|| vendors : "vendor_slug (join)"
+  resolution_paths }o--|| root_causes : "root_cause_id (join)"
+  resolution_paths }o--o| vendors : "vendor_slug (join)"
+  resolution_path_steps }o--|| resolution_paths : "resolution_path_id (join)"
+  resolution_path_steps }o--|| resolution_steps : "resolution_step_id (join)"
+  resolution_steps }o--|| vendors : "vendor_slug (FK)"
+  parameter_tuning }o--o| root_causes : "root_cause_id (join)"

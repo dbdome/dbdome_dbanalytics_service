@@ -380,6 +380,49 @@ def install_customer_cert(cert_bytes, key_bytes, password=None):
     return summary
 
 
+def install_customer_pfx(pfx_bytes, password=None):
+    """Install a customer certificate from a PKCS#12 bundle (.pfx / .p12).
+
+    A PFX holds the certificate, its chain and the private key together in one
+    encrypted file. We split it in-process with the ``cryptography`` library
+    (which loads legacy RC2/3DES-encrypted Windows exports too), emit a PEM cert
+    chain + an unencrypted PEM key, and hand them to install_customer_cert() so
+    the exact same validate-then-promote path runs. ``password`` is the PFX
+    import password (empty/None for an unprotected bundle).
+
+    Returns the cert summary dict. Raises ValueError on a bad password or an
+    unreadable bundle, or if the bundle carries no private key.
+    """
+    from cryptography.hazmat.primitives.serialization import (
+        pkcs12, Encoding, PrivateFormat, NoEncryption,
+    )
+
+    if isinstance(password, str):
+        password = password.encode("utf-8") if password else None
+
+    try:
+        key, cert, extra = pkcs12.load_key_and_certificates(bytes(pfx_bytes), password)
+    except Exception as e:
+        # wrong import password or a corrupt/unsupported bundle
+        raise ValueError(f"Could not read the .pfx/.p12 file "
+                         f"(wrong import password, or unsupported bundle): {e}") from e
+
+    if key is None:
+        raise ValueError("The .pfx/.p12 contains no private key — it cannot be used "
+                         "as a server certificate.")
+    if cert is None:
+        raise ValueError("The .pfx/.p12 contains no certificate.")
+
+    # Leaf first, then any intermediate chain certificates.
+    cert_pem = cert.public_bytes(Encoding.PEM)
+    for c in (extra or []):
+        cert_pem += c.public_bytes(Encoding.PEM)
+    key_pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+
+    # key is now unencrypted PEM -> no key password to store
+    return install_customer_cert(cert_pem, key_pem, None)
+
+
 def revert_to_personal():
     """Switch the active certificate back to the self-signed personal cert."""
     ensure_personal_cert()

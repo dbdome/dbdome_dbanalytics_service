@@ -1,0 +1,78 @@
+%% DBDOME dbanalytics - operational core ERD (telemetry -> alert -> incident)
+%% Hub = metrics.servers; join keys = server, metric_result_row_id, root_cause_id
+erDiagram
+  metrics_servers { int row_id PK
+    uuid server_id
+    text server
+    text db_vendor
+    text db_version
+    bool is_active }
+  metrics_metrics { int row_id PK
+    varchar metric_name
+    varchar metric_type }
+  metrics_sensitive_columns { bigint row_id PK
+    text server FK
+    text table_name
+    text column_name
+    text pii_category }
+  monitoring_metric_results { int row_id PK
+    varchar server FK
+    int metric_id FK
+    varchar metric_name
+    numeric metric_result }
+  monitoring_active_sessions { int row_id PK
+    varchar server FK
+    int session_id
+    int blocking_session_id }
+  threats_session_threats { int row_id PK
+    varchar server FK
+    int session_id
+    varchar status }
+  alerts_alert_log { int row_id PK
+    varchar server FK
+    varchar root_cause_id FK
+    varchar risk_level
+    bigint metric_result_row_id FK
+    text login_name }
+  alerts_alert_incidents { bigint incident_id PK
+    varchar server FK
+    varchar root_cause_id FK
+    varchar status
+    int occurrences }
+  alerts_blocks { int row_id PK
+    bigint metric_result_row_id FK
+    varchar server FK
+    varchar metric_name }
+  log_ddl_audit_log { bigint ddl_audit_id PK
+    varchar server_name FK
+    varchar object_name
+    varchar ddl_command }
+  config_masking_rules { int rule_id PK
+    varchar server_name FK
+    varchar column_name
+    varchar pii_type
+    varchar mask_type }
+  processes_organization { int row_id PK
+    text organization_name }
+  processes_organizations_servers { int organization_id FK
+    int server_row_id FK }
+  rootcause_root_causes { varchar root_cause_id PK
+    varchar issue_id
+    varchar name }
+
+  metrics_servers ||--o{ monitoring_metric_results : "server"
+  metrics_servers ||--o{ monitoring_active_sessions : "server"
+  metrics_servers ||--o{ metrics_sensitive_columns : "server"
+  metrics_servers ||--o{ threats_session_threats : "server"
+  metrics_servers ||--o{ alerts_alert_log : "server"
+  metrics_servers ||--o{ log_ddl_audit_log : "server_name"
+  metrics_servers ||--o{ config_masking_rules : "server_name"
+  metrics_servers ||--o{ processes_organizations_servers : "row_id (FK)"
+  processes_organization ||--o{ processes_organizations_servers : "organization_id (FK)"
+  metrics_metrics ||--o{ monitoring_metric_results : "metric_id"
+  monitoring_metric_results ||--o{ alerts_alert_log : "metric_result_row_id"
+  monitoring_metric_results ||--o{ alerts_blocks : "metric_result_row_id"
+  alerts_alert_log }o--|| alerts_alert_incidents : "server + root_cause_id"
+  alerts_alert_log }o--|| rootcause_root_causes : "root_cause_id"
+  alerts_alert_incidents }o--|| rootcause_root_causes : "root_cause_id"
+  metrics_sensitive_columns ||--o{ config_masking_rules : "pii column"

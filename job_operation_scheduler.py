@@ -105,6 +105,7 @@ def get_function_by_name(name):
     from processes.alert_auto_resolve import run_alert_auto_resolve
     from processes.alert_threshold_tuner import run_alert_threshold_tuner
     from processes.internal_health_monitor import run_internal_health_monitor
+    from processes.pg_failover_monitor import run_pg_failover_monitor
     from processes.app_login_guard import run_app_login_guard
     from processes.ransomware_guard import run_ransomware_guard
     from functools import partial
@@ -114,6 +115,7 @@ def get_function_by_name(name):
         "alert_auto_resolve": run_alert_auto_resolve,
         "alert_threshold_tuner": run_alert_threshold_tuner,
         "internal_health_monitor": run_internal_health_monitor,
+        "pg_failover_monitor": run_pg_failover_monitor,
         "gmmr_maintain": run_gmmr_maintain,
         "dump_and_prune_metrics": run_dump_and_prune_metrics,
         "retention_space_alert": run_retention_space_alert,

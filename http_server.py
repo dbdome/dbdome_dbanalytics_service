@@ -1802,17 +1802,22 @@ def ssl_certificate_page(request: Request):
    <div id="status">Loading status&hellip;</div>
 
    <h3>Install customer certificate</h3>
+   <div class="field"><label>Upload a single <b>.pfx / .p12</b> bundle (recommended), <i>or</i> a PEM certificate + key below</label>
+     <input type="file" id="pfx_file" accept=".pfx,.p12"></div>
+   <div class="note" style="margin-bottom:14px;">A <code>.pfx</code> contains the certificate, its chain and the private key in one file &mdash;
+     DBDOME splits it for you. Enter its import password below.</div>
+
    <div class="field"><label>Certificate (PEM &mdash; .crt/.pem, full chain if applicable)</label>
      <input type="file" id="cert_file" accept=".crt,.pem,.cer"></div>
    <div class="field"><label>Private key (PEM &mdash; .key/.pem)</label>
      <input type="file" id="key_file" accept=".key,.pem"></div>
-   <div class="field"><label>Key password (only if the private key is encrypted)</label>
+   <div class="field"><label>Password <span style="color:#9aa0a6">(PFX import password, or the key passphrase if the PEM key is encrypted)</span></label>
      <input type="password" id="key_pw" placeholder="leave blank if none"></div>
    <button onclick="upload()">Install &amp; activate</button>
    <button class="danger" onclick="revert()">Revert to personal</button>
    <div class="msg" id="msg"></div>
    <div class="note">The certificate and key are validated together before anything is changed &mdash; a bad pair never
-     replaces a working certificate. Encrypted key passwords are stored encrypted on the host.</div>
+     replaces a working certificate. Encrypted key / PFX passwords are stored encrypted on the host.</div>
  </div>
 <script>
  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -1847,10 +1852,16 @@ def ssl_certificate_page(request: Request):
    }catch(e){document.getElementById('status').innerHTML='<span class="err">Status failed: '+esc(e.message)+'</span>';}
  }
  async function upload(){
+   const pf=document.getElementById('pfx_file').files[0];
    const cf=document.getElementById('cert_file').files[0];
    const kf=document.getElementById('key_file').files[0];
-   if(!cf||!kf){msg('Choose both a certificate and a private key file.','err');return;}
-   const fd=new FormData();fd.append('cert',cf);fd.append('key',kf);
+   const fd=new FormData();
+   if(pf){
+     fd.append('pfx',pf);
+   }else{
+     if(!cf||!kf){msg('Choose a .pfx/.p12 bundle, or both a certificate and a private key file.','err');return;}
+     fd.append('cert',cf);fd.append('key',kf);
+   }
    fd.append('password',document.getElementById('key_pw').value||'');
    msg('Validating and installingâ€¦');
    try{const r=await fetch('/api/ssl/upload',{method:'POST',body:fd});const j=await r.json();
@@ -1883,16 +1894,32 @@ def api_ssl_status(request: Request):
 
 
 @app.post("/api/ssl/upload")
-async def api_ssl_upload(cert: UploadFile = File(...),
-                         key: UploadFile = File(...),
+async def api_ssl_upload(cert: UploadFile = File(None),
+                         key: UploadFile = File(None),
+                         pfx: UploadFile = File(None),
                          password: str = Form("")):
-    """Install a customer-supplied certificate + private key and activate it."""
+    """Install a customer certificate and activate it.
+
+    Accepts either a PKCS#12 bundle (``pfx`` — .pfx/.p12, split server-side) or a
+    separate PEM certificate + private key (``cert`` + ``key``). ``password`` is
+    the PFX import password for a bundle, or the key passphrase for an encrypted
+    PEM key.
+    """
     try:
-        from utils.ssl_cert import install_customer_cert
-        cert_bytes = await cert.read()
-        key_bytes = await key.read()
+        from utils.ssl_cert import install_customer_cert, install_customer_pfx
+        pfx_bytes = await pfx.read() if pfx is not None else b""
+        if pfx_bytes:
+            summary = install_customer_pfx(pfx_bytes, (password or None))
+            db_write_log(f"customer TLS cert installed from pfx: subject={summary.get('subject')} "
+                         f"issuer={summary.get('issuer')} expires={summary.get('not_after')}",
+                         "INFO", "api_ssl_upload", "")
+            return JSONResponse({"ok": True, "summary": summary})
+
+        cert_bytes = await cert.read() if cert is not None else b""
+        key_bytes = await key.read() if key is not None else b""
         if not cert_bytes or not key_bytes:
-            return JSONResponse({"ok": False, "error": "empty certificate or key file"},
+            return JSONResponse({"ok": False, "error": "provide a .pfx/.p12 bundle, "
+                                 "or both a certificate and a private key file"},
                                 status_code=400)
         summary = install_customer_cert(cert_bytes, key_bytes, (password or None))
         db_write_log(f"customer TLS cert installed: subject={summary.get('subject')} "
